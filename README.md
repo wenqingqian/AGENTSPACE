@@ -15,7 +15,7 @@
 
 ```
 <项目>/
-├── AGENTS.md                  # 根引导: 项目背景 + 实验环境 + 何时读取规则
+├── AGENTS.md                  # 根引导: 项目背景 + 实验环境 + 关键代码仓库 + 何时读取规则
 └── AGENTSPACE/                # 独立 git 仓库
     ├── AGENTS.md              # 核心入口: 结构/模块 what-when-how/纪律
     ├── plan.md                # 入口: Todo + Done(最近10条, 完成/失败/放弃)
@@ -36,7 +36,7 @@
 ## 使用
 
 ```text
-/init-agentspace      # 显式初始化(唯一入口, 幂等)
+/init-agentspace      # 显式初始化(唯一入口, 幂等; init 时先分析工作区, 再询问 goal/运行环境/关键代码仓库)
 ```
 
 之后日常对话中(agent 自动判断, 项目无关会话不介入):
