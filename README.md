@@ -22,10 +22,12 @@ Initialize with explicit `/init-agentspace` to create `AGENTSPACE/` (independent
     ├── plan/{index.md, todo/, done/}
     ├── iterations.md          # Entry: in-progress + latest completed (10)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
+    ├── data.md + data/        # Shared data (training sets / model weights / symlinks; gitignored)
+    ├── examples.md + examples/ # Reusable experiment configs (YAML/JSON); pairs with tests/
     ├── utils.md + utils/      # Reusable tools (plotting / machine status / log analysis...)
     ├── tests.md + tests/      # Experiment env (container/conda/GPU) + test scripts
     ├── notes.md + notes/      # Persistent knowledge (with source evidence)
-    ├── register.md            # On-demand module registry (e.g. examples)
+    ├── register.md            # On-demand module registry (project-specific extensions)
     ├── .agentspace-version.json       # Workspace version tracking
     ├── .agentspace-architecture.json  # Current architecture snapshot
     ├── templates/  scripts/  .gitignore

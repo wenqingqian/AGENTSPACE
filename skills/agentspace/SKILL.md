@@ -56,9 +56,11 @@ Fill the plan document's "结果" section; if there are transferable lessons →
 
 ### Tools / Environment / Knowledge / Extensions
 - Need a utility tool (plotting / machine status / runtime status / log analysis)? Check `utils.md` first — reuse, don't rewrite. New tools go into `utils/` and are registered in `utils.md`
+- Shared data (training sets, model weights, symlinks)? Put in `data/` and register in `data.md`; large files gitignored by default
+- Reusable experiment configs (YAML/JSON)? Put in `examples/` and register in `examples.md`; test scripts in `tests/` reference these configs
 - Environment change (container / conda / machine / dependency)? Update `tests.md` the same day. Test scripts go in `tests/` and are registered
 - Pitfalls / transferable conclusions → `notes/` (template `templates/note.md`), **must include source** (plan:NNNN / iteration_NNNN)
-- New module (e.g., examples for fixed test configs): **confirm with user first** → `AGENTSPACE/scripts/register-module.sh <name> "purpose"`
+- New module (not built-in): **confirm with user first** → `AGENTSPACE/scripts/register-module.sh <name> "purpose"`
 
 ## 3. Discipline
 
@@ -76,5 +78,5 @@ Triggers: plan creation/completion, iteration creation/closure, module registrat
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <summary>"
 ```
-Type examples: `plan` / `iteration` / `notes` / `utils` / `tests` / `register` / `docs`.
+Type examples: `plan` / `iteration` / `notes` / `data` / `examples` / `utils` / `tests` / `register` / `docs`.
 Report to user after commit (commit summary). **Only operate on the AGENTSPACE repo**; never add/commit the host repo. Host code state recorded via commit sha; diff (against host HEAD) saved to data/ when needed.

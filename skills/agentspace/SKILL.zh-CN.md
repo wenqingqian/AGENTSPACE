@@ -56,9 +56,11 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 ### 工具 / 环境 / 知识 / 扩展模块
 - 需要辅助工具(做图 / 机器状态 / 运行状态 / 日志分析)先查 `utils.md`, 复用而非重写; 新工具写入 `utils/` 并在 `utils.md` 登记
+- 公用数据(训练集/模型权重/软连接)放 `data/` 并在 `data.md` 登记; 大文件默认 gitignore
+- 可复用实验配置(YAML/JSON)放 `examples/` 并在 `examples.md` 登记; tests/ 放脚本, examples/ 放配置
 - 环境变化(容器 / conda / 机器 / 依赖)当天更新 `tests.md`; 测试脚本放 `tests/` 并登记
 - 踩坑 / 可迁移结论 → `notes/`(模板 `templates/note.md`), **必须带来源**(plan:NNNN / iteration_NNNN)
-- 新模块(如 examples 存固定测试配置): **先与用户确认** → `AGENTSPACE/scripts/register-module.sh <name> "用途"`
+- 新模块(非内置模块): **先与用户确认** → `AGENTSPACE/scripts/register-module.sh <name> "用途"`
 
 ## 3. 纪律
 
@@ -76,5 +78,5 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <摘要>"
 ```
-type 示例: `plan` / `iteration` / `notes` / `utils` / `tests` / `register` / `docs`。
+type 示例: `plan` / `iteration` / `notes` / `data` / `examples` / `utils` / `tests` / `register` / `docs`。
 提交后告知用户(commit 摘要)。**只操作 AGENTSPACE 仓库**, 绝不 add/commit 宿主仓库; 宿主代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/。

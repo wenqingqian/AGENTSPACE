@@ -23,6 +23,8 @@ AGENTSPACE/
 ├── plan/              ← index.md(全量索引) + todo/ + done/(含 完成/失败/放弃)
 ├── iterations.md      ← iteration 入口视图 (进行中 + 最近完成 10 条)
 ├── iterations/        ← index.md(全量索引) + latest 软连接 + iteration_NNNN/{readme.md, data/}
+├── data.md + data/    ← 公用数据(训练集/模型权重/软连接; 大文件 gitignore)
+├── examples.md + examples/ ← 可复用实验配置(YAML/JSON); 与 tests/ 配合(脚本在 tests/, 配置在 examples/)
 ├── utils.md + utils/  ← 复用工具(做图/机器状态/运行状态/日志分析等)
 ├── tests.md + tests/  ← 实验环境(容器/conda/GPU) + 测试脚本
 ├── notes.md + notes/  ← 持久知识(可迁移结论/踩坑)
@@ -47,6 +49,14 @@ AGENTSPACE/
   2. 支持重定向 → `cmd > iteration_NNNN/data/xxx.log`
   3. fallback → 在工作区找到本轮产出的结果文件, `mv` 进 `iteration_NNNN/data/`
 
+### data —— 公用数据 (data.md + data/)
+- **what**: 项目公用数据(训练集、模型权重、预处理数据等); 也可以是对其他位置的软连接
+- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; 大文件/权重默认 gitignore, 小型共享文件可取消注释
+
+### examples —— 实验配置 (examples.md + examples/)
+- **what**: 可复用的实验配置文件(YAML/JSON 等); 与 tests/ 配合: tests/ 放入口脚本(如何跑), examples/ 放配置(用什么参数跑)
+- **when/how**: 有可复用的实验参数/配置时放入 examples/ 并在 examples.md 登记; 测试脚本通过路径引用 examples/ 下的配置
+
 ### utils —— 复用工具 (utils.md + utils/)
 - **what**: 频繁使用的辅助工具(做图 / 机器状态查询 / 运行状态查询 / 日志分析等)
 - **when/how**: 需要工具先查 utils.md, 复用而非重写; 新工具写入 utils/ 并在 utils.md 登记一行
@@ -60,7 +70,7 @@ AGENTSPACE/
 - **when/how**: plan 完成产出可迁移教训、或发现坑时立即记录; 每条笔记必须带"来源"(plan:NNNN / iteration_NNNN); 模板 templates/note.md
 
 ### register —— 按需扩展模块 (register.md)
-- **what**: 按需注册的模块登记处(例如 examples.md + examples/ 存放固定测试配置)
+- **what**: 按需注册的模块登记处(按项目需要扩展, 如 visualization.md + visualization/)
 - **how**: 先与用户确认 → `scripts/register-module.sh <name> "用途"`
 
 ## 读取规则

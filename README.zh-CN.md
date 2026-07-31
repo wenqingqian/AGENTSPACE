@@ -22,10 +22,12 @@
     ├── plan/{index.md, todo/, done/}
     ├── iterations.md          # 入口: 进行中 + 最近完成(10条)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
+    ├── data.md + data/        # 公用数据(训练集/模型权重/软连接; 大文件 gitignore)
+    ├── examples.md + examples/ # 可复用实验配置(YAML/JSON); 与 tests/ 配合
     ├── utils.md + utils/      # 复用工具(做图/机器状态/日志分析...)
     ├── tests.md + tests/      # 实验环境(容器/conda/GPU) + 测试脚本
     ├── notes.md + notes/      # 持久知识(带来源证据)
-    ├── register.md            # 按需扩展模块(如 examples)
+    ├── register.md            # 按需扩展模块(项目特定扩展)
     ├── .agentspace-version.json       # 工作区版本追踪
     ├── .agentspace-architecture.json  # 当前架构快照
     ├── templates/  scripts/  .gitignore

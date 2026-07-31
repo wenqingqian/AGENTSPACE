@@ -23,9 +23,10 @@ fi
 mkdir -p "$TARGET"
 cp -R "$ASSETS_DIR/agentspace/." "$TARGET/"
 mkdir -p "$TARGET/plan/todo" "$TARGET/plan/done" "$TARGET/iterations" \
-         "$TARGET/utils" "$TARGET/tests" "$TARGET/notes"
+         "$TARGET/data" "$TARGET/examples" "$TARGET/utils" "$TARGET/tests" "$TARGET/notes"
 # git 需要文件才能跟踪空目录
 touch "$TARGET/plan/todo/.gitkeep" "$TARGET/plan/done/.gitkeep" \
+      "$TARGET/data/.gitkeep" "$TARGET/examples/.gitkeep" \
       "$TARGET/utils/.gitkeep" "$TARGET/tests/.gitkeep" "$TARGET/notes/.gitkeep"
 # 替换版本文件中的日期占位符 (BSD/GNU 兼容)
 if [ -f "$TARGET/.agentspace-version.json" ]; then
