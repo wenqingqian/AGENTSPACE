@@ -21,7 +21,7 @@ Only proceed when the user explicitly executes `/init-agentspace`. Under no othe
    ```markdown
    <!-- AGENTSPACE -->
    ## AGENTSPACE
-   本项目的实验与迭代状态由 AGENTSPACE/ 管理(独立 git 仓库): plan(任务计划)、iterations(实验轮次)、utils(复用工具)、tests(环境与测试)、notes(知识)。
+   本项目的实验与迭代状态由 AGENTSPACE/ 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、utils(复用工具)、tests(环境与测试)、notes(知识)。
    - 何时读取 AGENTSPACE/AGENTS.md: 对话涉及本项目的实验、代码改动、项目迭代或状态查询/变更时 → 先读 AGENTSPACE/AGENTS.md 并按其规则工作
    - 何时不必读取: 与本项目无关的问答、无状态变化的纯查询, 且用户未明确要求使用 AGENTSPACE 时
    - 硬规则: 初始化只通过显式 /init-agentspace; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写

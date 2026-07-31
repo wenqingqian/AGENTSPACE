@@ -15,7 +15,7 @@
 
 ## AGENTSPACE
 
-本项目的实验与迭代状态由 `AGENTSPACE/` 管理(独立 git 仓库): plan(任务计划)、iterations(实验轮次)、utils(复用工具)、tests(环境与测试)、notes(知识)。
+本项目的实验与迭代状态由 `AGENTSPACE/` 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、utils(复用工具)、tests(环境与测试)、notes(知识)。
 
 ### 何时读取 AGENTSPACE/AGENTS.md
 

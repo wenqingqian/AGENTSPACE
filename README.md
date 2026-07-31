@@ -6,7 +6,7 @@ Initialize with explicit `/init-agentspace` to create `AGENTSPACE/` (independent
 
 ## Core Concepts
 
-- **Plan → Iteration strict one-to-many**: a task becomes one or more plans (globally incrementing index, never reused); each iteration belongs to exactly one plan
+- **Plan → Iteration strict one-to-many**: a task becomes one or more plans (globally incrementing index, never reused); each iteration is a code/state change step within a plan, belonging to exactly one plan
 - **Entry files are views, filesystem is source of truth**: `plan.md`/`iterations.md` maintain only Todo + latest 10 Done; full history in `plan/index.md`/`iterations/index.md`; all indexes written exclusively by `AGENTSPACE/scripts/`
 - **Content documents authored by agent**: plan docs, iteration readmes, notes use `templates/` scaffolds
 - **Experiment data saved locally, excluded from git**: `iteration_NNNN/data/` is gitignored regardless of size

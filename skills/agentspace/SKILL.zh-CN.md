@@ -41,10 +41,20 @@ AGENTSPACE/scripts/new-plan.sh "English plan title"   # 输出 plan:NNNN
 然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
 
 ### 开始一轮迭代 → 建 iteration(plan-id 必填: 一个 iteration 必属且仅属一个 plan)
+
+**iteration = 实现 plan 过程中的一次代码/仓库状态变更**(递进关系, 一轮接一轮)。常伴随实验验证, 所以有 readme + data/。
+
+**Iteration 创建规则 (MUST)**:
+- **只为 plan 创建** — iteration 服务于实现某个 plan, 没有 plan-id 绝不创建
+- **必须向用户确认** — 未经用户同意不得创建 iteration
+- **只对有意义的代码变更创建** — 简单改动、快速修复、文件移动等不建 iteration。iteration 用于: 实现功能的步骤、重构、伴随实验验证的显著变更
+- **与 commit 无一一对应** — 一个 plan 常含 1+ 个 commit, 一个 commit 可能含多个 iteration, 部分 commit 是用户自行处理的。plan / iteration / commit 之间**没有必然对应关系**
+
 ```bash
 AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteration_NNNN
 ```
-- 更新 readme: 目标 / 改动摘要 / 环境(宿主 commit sha)
+- 更新 readme: 目标 / 代码变更摘要 / 环境(宿主起始+结束 commit sha)
+- **代码 diff**: 变更涉及代码时, 保存宿主仓库 diff 到 data/: `git -C <宿主> diff <起始>..<结束> > data/diff-<起始>..<结束>.patch`; 在 readme"代码变更 (diff)"节登记
 - **data 收集三策略**(产物全量进 `iteration_NNNN/data/`, 该目录已 gitignore):
   1. 程序支持设置 output 位置 → 直接指向 `iteration_NNNN/data/`
   2. 支持重定向 → `cmd > iteration_NNNN/data/xxx.log`

@@ -22,7 +22,7 @@ AGENTSPACE/
 ├── plan.md            ← plan 入口视图 (Todo + 最近 Done 10 条)
 ├── plan/              ← index.md(全量索引) + todo/ + done/(含 完成/失败/放弃)
 ├── iterations.md      ← iteration 入口视图 (进行中 + 最近完成 10 条)
-├── iterations/        ← index.md(全量索引) + latest 软连接 + iteration_NNNN/{readme.md, data/}
+├── iterations/        ← index.md(全量索引) + latest 软连接 + iteration_NNNN/{readme.md, data/(实验产物+代码diff)}
 ├── data.md + data/    ← 公用数据(训练集/模型权重/软连接; 全部 gitignore)
 ├── examples.md + examples/ ← 可复用实验配置(YAML/JSON); 与 tests/ 配合(脚本在 tests/, 配置在 examples/)
 ├── utils.md + utils/  ← 复用工具(做图/机器状态/运行状态/日志分析等)
@@ -40,11 +40,12 @@ AGENTSPACE/
 - **when**: 有新任务/目标时创建; 到达明确终点(完成/失败/放弃)时关闭
 - **how**: `scripts/new-plan.sh "标题"` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) → `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`
 
-### iterations —— 实验轮次 (iterations.md + iterations/)
-- **what**: 一轮实验/迭代的完整记录(readme + data/); **每个 iteration 必属且仅属一个 plan**, 一个 plan 可含多个 iteration
-- **when**: 开始一轮新的实验尝试/评估时创建; 结果落盘且 readme 完成时关闭
+### iterations —— 代码变更迭代 (iterations.md + iterations/)
+- **what**: 实现 plan 过程中的一次**代码/仓库状态变更**(递进关系, 一轮接一轮); 常伴随实验验证, 所以有 readme + data/; **每个 iteration 必属且仅属一个 plan**, 一个 plan 可含多个 iteration
+- **when**: 在 plan 内推进一个有意义的代码变更时创建; 简单改动不建 iteration; 创建前须与用户确认; 结果落盘且 readme 完成时关闭
 - **how**: `scripts/new-iteration.sh <plan-id> "本轮内容"` → 工作并及时更新 readme → `scripts/close-iteration.sh <id> "结果"`
-- **data 收集三策略** (产物全量放入 iteration_NNNN/data/, 该目录已被 gitignore):
+- **代码 diff**: readme"环境"节记录宿主仓库起始/结束 commit sha; 有关键代码变更时把 `git diff <起始>..<结束>` 存到 `iteration_NNNN/data/`
+- **data 收集三策略** (实验产物全量放入 iteration_NNNN/data/, 该目录已被 gitignore):
   1. 程序支持设置 output 位置 → 直接指向 `iteration_NNNN/data/`
   2. 支持重定向 → `cmd > iteration_NNNN/data/xxx.log`
   3. fallback → 在工作区找到本轮产出的结果文件, `mv` 进 `iteration_NNNN/data/`

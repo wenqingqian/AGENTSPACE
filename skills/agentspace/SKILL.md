@@ -37,10 +37,20 @@ AGENTSPACE/scripts/new-plan.sh "English plan title"   # Outputs plan:NNNN
 Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. Milestone commit (see §4).
 
 ### Start an Iteration → Create Iteration (plan-id required: each iteration belongs to exactly one plan)
+
+**Iteration = a code/state change step within a plan** (progressive: one after another). It often carries experiment validation — hence readme + data/.
+
+**Iteration creation rules (MUST)**:
+- **Only for a plan** — iterations exist to implement a plan; never create one without a plan-id
+- **Confirm with user first** — never create an iteration without the user's explicit approval
+- **Only for meaningful code changes** — simple edits, quick fixes, file moves do NOT need iterations. Iterations are for: implementing a feature step, refactoring, a significant change with experiment validation
+- **No 1:1 mapping to commits** — a plan often spans 1+ commits, a commit may span multiple iterations, and some commits are made by the user directly. plan/iteration/commit have NO necessary correspondence
+
 ```bash
 AGENTSPACE/scripts/new-iteration.sh <plan-id> "This iteration's content"   # Outputs iteration_NNNN
 ```
-- Update readme: goal / change summary / environment (host commit sha)
+- Update readme: goal / code-change summary / environment (host start + end commit sha)
+- **Code diff**: when the change involves code, save the host repo diff to data/: `git -C <host> diff <start>..<end> > data/diff-<start>..<end>.patch`; register it in the "代码变更 (diff)" section
 - **Data collection — three strategies** (all output goes to `iteration_NNNN/data/`, gitignored):
   1. Program supports setting output location → point directly to `iteration_NNNN/data/`
   2. Supports redirection → `cmd > iteration_NNNN/data/xxx.log`

@@ -6,7 +6,7 @@
 
 ## 核心概念
 
-- **plan → iteration 严格一对多**: 一个任务写成一个或多个 plan(全局递增索引, 永不复用); 每轮实验是一个 iteration, 必属且仅属一个 plan
+- **plan → iteration 严格一对多**: 一个任务写成一个或多个 plan(全局递增索引, 永不复用); 每个 iteration 是 plan 内的一次代码/状态变更, 必属且仅属一个 plan
 - **入口是视图, 文件系统是真源**: `plan.md`/`iterations.md` 只维护 Todo + 最近 10 条 Done; 完整历史在 `plan/index.md`/`iterations/index.md`; 所有索引由 `AGENTSPACE/scripts/` 下的脚本改写, agent 不手编表格
 - **内容文档由 agent 撰写**: plan 文档、iteration readme、notes 等使用 `templates/` 模板直接生成
 - **实验产物全量本地保存**: `iteration_NNNN/data/` 已 gitignore, 不入 git
