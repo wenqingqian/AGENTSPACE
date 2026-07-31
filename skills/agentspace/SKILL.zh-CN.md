@@ -56,7 +56,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 ### 工具 / 环境 / 知识 / 扩展模块
 - 需要辅助工具(做图 / 机器状态 / 运行状态 / 日志分析)先查 `utils.md`, 复用而非重写; 新工具写入 `utils/` 并在 `utils.md` 登记
-- 公用数据(训练集/模型权重/软连接)放 `data/` 并在 `data.md` 登记; 大文件默认 gitignore
+- 公用数据(训练集/模型权重/软连接)放 `data/` 并在 `data.md` 登记; data/ 全部 gitignore
 - 可复用实验配置(YAML/JSON)放 `examples/` 并在 `examples.md` 登记; tests/ 放脚本, examples/ 放配置
 - 环境变化(容器 / conda / 机器 / 依赖)当天更新 `tests.md`; 测试脚本放 `tests/` 并登记
 - 踩坑 / 可迁移结论 → `notes/`(模板 `templates/note.md`), **必须带来源**(plan:NNNN / iteration_NNNN)

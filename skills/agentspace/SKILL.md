@@ -56,7 +56,7 @@ Fill the plan document's "结果" section; if there are transferable lessons →
 
 ### Tools / Environment / Knowledge / Extensions
 - Need a utility tool (plotting / machine status / runtime status / log analysis)? Check `utils.md` first — reuse, don't rewrite. New tools go into `utils/` and are registered in `utils.md`
-- Shared data (training sets, model weights, symlinks)? Put in `data/` and register in `data.md`; large files gitignored by default
+- Shared data (training sets, model weights, symlinks)? Put in `data/` and register in `data.md`; entire data/ is gitignored
 - Reusable experiment configs (YAML/JSON)? Put in `examples/` and register in `examples.md`; test scripts in `tests/` reference these configs
 - Environment change (container / conda / machine / dependency)? Update `tests.md` the same day. Test scripts go in `tests/` and are registered
 - Pitfalls / transferable conclusions → `notes/` (template `templates/note.md`), **must include source** (plan:NNNN / iteration_NNNN)

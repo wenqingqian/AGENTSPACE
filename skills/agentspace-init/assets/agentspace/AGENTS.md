@@ -23,7 +23,7 @@ AGENTSPACE/
 ├── plan/              ← index.md(全量索引) + todo/ + done/(含 完成/失败/放弃)
 ├── iterations.md      ← iteration 入口视图 (进行中 + 最近完成 10 条)
 ├── iterations/        ← index.md(全量索引) + latest 软连接 + iteration_NNNN/{readme.md, data/}
-├── data.md + data/    ← 公用数据(训练集/模型权重/软连接; 大文件 gitignore)
+├── data.md + data/    ← 公用数据(训练集/模型权重/软连接; 全部 gitignore)
 ├── examples.md + examples/ ← 可复用实验配置(YAML/JSON); 与 tests/ 配合(脚本在 tests/, 配置在 examples/)
 ├── utils.md + utils/  ← 复用工具(做图/机器状态/运行状态/日志分析等)
 ├── tests.md + tests/  ← 实验环境(容器/conda/GPU) + 测试脚本
