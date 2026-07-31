@@ -25,8 +25,14 @@ Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` 
 ## 2. Workflows
 
 ### New Task → Create Plan (one task may span multiple plans)
+
+**Plan creation rules (MUST)**:
+- **English titles ONLY** — plan titles become filenames; CJK characters cause encoding issues. Content inside the plan doc can be any language.
+- **Confirm with user first** — never create a plan without the user's explicit approval. Describe what the plan covers and ask before proceeding.
+- **Plans are for specific, bounded events** — do NOT create plans for trivial tasks like: quick confirmation, verification, searching, reading files, answering questions. Plans are for: implementing a feature, fixing a bug, refactoring code, running an experiment, making structural changes.
+
 ```bash
-AGENTSPACE/scripts/new-plan.sh "Plan title"        # Outputs plan:NNNN
+AGENTSPACE/scripts/new-plan.sh "English plan title"   # Outputs plan:NNNN
 ```
 Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. Milestone commit (see §4).
 

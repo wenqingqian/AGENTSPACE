@@ -26,7 +26,17 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 
 ### 新任务 → 建 plan(一个任务可拆成多个 plan)
 ```bash
-AGENTSPACE/scripts/new-plan.sh "计划标题"        # 输出 plan:NNNN
+### 新任务 → 建 plan(一个任务可拆成多个 plan)
+
+**Plan 创建规则 (MUST)**:
+- **文件名必须英文** — plan 标题会成为文件名, CJK 字符会导致编码问题。plan 文档内容不限语言。
+- **必须向用户确认** — 未经用户明确同意不得创建 plan。先描述 plan 涵盖的内容, 确认后再创建。
+- **plan 是特定、有界的事件** — 简单的确认、验证、搜索、读文件、回答问题等不要建 plan。plan 用于: 实现功能、修复 bug、重构代码、运行实验、做结构性变更。
+
+```bash
+AGENTSPACE/scripts/new-plan.sh "English plan title"   # 输出 plan:NNNN
+```
+然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
 ```
 然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
 

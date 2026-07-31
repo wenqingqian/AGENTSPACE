@@ -49,11 +49,10 @@ Upgrade from v{PREVIOUS}. Date: YYYY-MM-DD
 
 ## Changes
 
-### [Breaking/Schema/Addition] Change title
+### [Breaking/Schema/Addition/Fix] Change title
 - **What**: precise description of the change
 - **Why**: design rationale
-- **Conservative migration**: what the agent should do in conservative mode (list affected content, ask user)
-- **Aggressive migration**: what the agent should do in aggressive mode (direct action)
+- **Migration**: exact steps the update agent must execute (see quality requirements below)
 ```
 
 Tags:
@@ -61,6 +60,38 @@ Tags:
 - `[Schema]` — table column changes; existing data may need transformation
 - `[Addition]` — new files/sections; non-destructive
 - `[Fix]` — bug fix or wording correction; non-destructive
+
+**CHANGELOG quality requirements (MUST)**:
+
+The changelog is the update agent's ONLY source of migration guidance. It MUST be detailed enough for the agent to execute the migration without guessing. For each change:
+
+1. **Exact files to create/modify/delete** — full paths relative to workspace root (e.g., `AGENTSPACE/data.md`, `AGENTSPACE/.gitignore`)
+2. **Exact text to insert** — for AGENTS.md changes, include the COMPLETE markdown text to insert, not a summary. Include the section heading, bullet points, and code blocks.
+3. **Exact insertion points** — specify WHERE in the file to insert (e.g., "before `### utils` in the 模块 section", "after the `iterations/*/data/` line in .gitignore")
+4. **Structure tree updates** — for new modules, include the exact line to add to the 结构 code block in AGENTS.md
+5. **Handled by update flow** — if a change is automatically handled by step 8a (scripts/templates/.gitignore replacement from assets), state this explicitly. The agent doesn't need to do manual work for these changes.
+
+Example of a GOOD migration instruction:
+```markdown
+**Migration**:
+1. Create directory: `mkdir -p AGENTSPACE/data`
+2. Copy template: `skills/agentspace-init/assets/agentspace/data.md` → `AGENTSPACE/data.md`
+3. Update `.gitignore`: add `data/` after the `iterations/*/data/` line
+4. Update `AGENTSPACE/AGENTS.md`:
+   - In 结构 code block, add before `utils.md`: `├── data.md + data/    ← 公用数据`
+   - In 模块 section, add before `### utils`:
+     ```markdown
+     ### data —— 公用数据 (data.md + data/)
+     - **what**: ...
+     - **when/how**: ...
+     ```
+```
+
+Example of a BAD migration instruction:
+```markdown
+**Migration**: create data/ directory + data.md entry file; no existing content affected
+```
+(too vague — doesn't specify where, how, or what to put in AGENTS.md)
 
 ### Step 3: Create architecture.json
 
