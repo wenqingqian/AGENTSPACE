@@ -77,3 +77,4 @@ AGENTSPACE/
 - **里程碑 git 提交**: plan 创建/完成、iteration 创建/关闭、模块注册、重要文档更新 → `git -C AGENTSPACE add -A && commit`, 并告知用户
 - 只在 AGENTSPACE/ 内做 git 操作; 宿主仓库代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/
 - 状态自检: `scripts/status.sh`; 一致性检查与修复: `scripts/doctor.sh`
+- **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用; 这些数据仅用于插件自身开发
