@@ -1,0 +1,13 @@
+# ---- 实验数据: 全量本地保存, 不入 git ----
+iterations/*/data/
+
+# ---- 其他不由 agent 生成/改动的内容, 按项目需要取消注释/补充 ----
+# *.log
+# *.out
+# __pycache__/
+# .ipynb_checkpoints/
+# wandb/
+# checkpoints/
+# runs/
+
+.DS_Store
