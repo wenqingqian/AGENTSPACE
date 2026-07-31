@@ -27,6 +27,12 @@ mkdir -p "$TARGET/plan/todo" "$TARGET/plan/done" "$TARGET/iterations" \
 # git 需要文件才能跟踪空目录
 touch "$TARGET/plan/todo/.gitkeep" "$TARGET/plan/done/.gitkeep" \
       "$TARGET/utils/.gitkeep" "$TARGET/tests/.gitkeep" "$TARGET/notes/.gitkeep"
+# 替换版本文件中的日期占位符 (BSD/GNU 兼容)
+if [ -f "$TARGET/.agentspace-version.json" ]; then
+  _tmp="$TARGET/.agentspace-version.json.tmp"
+  sed "s/{{DATE}}/$(date +%F)/g" "$TARGET/.agentspace-version.json" > "$_tmp" \
+    && mv "$_tmp" "$TARGET/.agentspace-version.json"
+fi
 chmod +x "$TARGET"/scripts/*.sh
 
 # ---- 项目根 AGENTS.md (已存在则不覆盖) ----

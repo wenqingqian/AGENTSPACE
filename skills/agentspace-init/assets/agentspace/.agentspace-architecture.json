@@ -1,0 +1,152 @@
+{
+  "version": "0.1.0",
+  "files": {
+    "AGENTS.md": {
+      "type": "content",
+      "managedBy": "agent",
+      "sections": {
+        "项目简介": {},
+        "根仓库简介": {},
+        "结构": {},
+        "模块: what / when / how": {
+          "subsections": [
+            "plan —— 任务计划 (plan.md + plan/)",
+            "iterations —— 实验轮次 (iterations.md + iterations/)",
+            "utils —— 复用工具 (utils.md + utils/)",
+            "tests —— 实验环境与测试 (tests.md + tests/)",
+            "notes —— 持久知识 (notes.md + notes/)",
+            "register —— 按需扩展模块 (register.md)"
+          ]
+        },
+        "读取规则": {},
+        "纪律": {}
+      }
+    },
+    "plan.md": {
+      "type": "view",
+      "managedBy": "scripts",
+      "sections": {
+        "Todo": {
+          "columns": ["ID", "计划", "创建日期", "链接"],
+          "maxRows": null
+        },
+        "Done (最近 10 条)": {
+          "columns": ["ID", "计划", "状态", "结果", "完成日期", "链接"],
+          "maxRows": 10
+        }
+      }
+    },
+    "plan/index.md": {
+      "type": "index",
+      "managedBy": "scripts",
+      "sections": {
+        "_default": {
+          "columns": ["ID", "计划", "状态", "创建日期", "完成日期", "结果", "链接"]
+        }
+      }
+    },
+    "iterations.md": {
+      "type": "view",
+      "managedBy": "scripts",
+      "sections": {
+        "进行中": {
+          "columns": ["ID", "Plan", "内容", "开始日期", "链接"],
+          "maxRows": null
+        },
+        "最近完成 (10 条)": {
+          "columns": ["ID", "Plan", "内容", "结果", "完成日期", "链接"],
+          "maxRows": 10
+        }
+      }
+    },
+    "iterations/index.md": {
+      "type": "index",
+      "managedBy": "scripts",
+      "sections": {
+        "_default": {
+          "columns": ["ID", "Plan", "内容", "状态", "开始日期", "完成日期", "结果", "链接"]
+        }
+      }
+    },
+    "register.md": {
+      "type": "view",
+      "managedBy": "scripts",
+      "sections": {
+        "已注册模块": {
+          "columns": ["模块", "用途", "入口", "注册日期"],
+          "maxRows": null
+        }
+      }
+    },
+    "utils.md": {
+      "type": "content",
+      "managedBy": "agent",
+      "sections": {
+        "条目": {
+          "columns": ["工具", "用途", "何时使用", "用法", "链接"]
+        }
+      }
+    },
+    "tests.md": {
+      "type": "content",
+      "managedBy": "agent",
+      "sections": {
+        "实验环境": {
+          "columns": ["项", "值"]
+        },
+        "测试脚本": {
+          "columns": ["脚本", "目的", "用法", "链接"]
+        }
+      }
+    },
+    "notes.md": {
+      "type": "content",
+      "managedBy": "agent",
+      "sections": {
+        "条目": {
+          "columns": ["主题", "一句话结论", "来源", "日期", "链接"]
+        }
+      }
+    },
+    "templates/plan.md": {
+      "type": "template",
+      "managedBy": "plugin",
+      "sections": ["目标", "背景", "方案与步骤", "相关迭代", "结果"]
+    },
+    "templates/iteration-readme.md": {
+      "type": "template",
+      "managedBy": "plugin",
+      "sections": ["当前状态 · 下一步", "目标", "改动摘要", "环境", "结果", "data 产物清单", "日志"]
+    },
+    "templates/module-entry.md": {
+      "type": "template",
+      "managedBy": "plugin",
+      "sections": ["这是什么 / 何时使用", "如何更新", "索引"]
+    },
+    "templates/note.md": {
+      "type": "template",
+      "managedBy": "plugin",
+      "sections": ["结论", "详情"]
+    },
+    "scripts/lib.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/new-plan.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/complete-plan.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/new-iteration.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/close-iteration.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/register-module.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/status.sh": { "type": "script", "managedBy": "plugin" },
+    "scripts/doctor.sh": { "type": "script", "managedBy": "plugin" },
+    ".gitignore": { "type": "config", "managedBy": "plugin" }
+  },
+  "modules": ["plan", "iterations", "utils", "tests", "notes", "register"],
+  "constants": {
+    "SEC_TODO": "Todo",
+    "SEC_DONE": "Done (最近 10 条)",
+    "SEC_PROGRESS": "进行中",
+    "SEC_RECENT": "最近完成 (10 条)",
+    "SEC_RELATED": "相关迭代",
+    "SEC_REGISTERED": "已注册模块",
+    "STATUS_TODO": "> 状态: todo",
+    "STATUS_PROGRESS": "> 状态: 进行中"
+  }
+}

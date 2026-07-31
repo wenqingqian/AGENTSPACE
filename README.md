@@ -1,63 +1,74 @@
 # AGENTSPACE
 
-面向实验/迭代型项目的 **git 管理 agent 工作区** ZCode 插件。
+A ZCode plugin providing git-managed agent workspaces for experiment/iteration-driven projects.
 
-通过显式 `/init-agentspace` 在项目根目录初始化 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
+Initialize with explicit `/init-agentspace` to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
 
-## 核心概念
+## Core Concepts
 
-- **plan → iteration 严格一对多**: 一个任务写成一个或多个 plan(全局递增索引, 永不复用); 每轮实验是一个 iteration, 必属且仅属一个 plan
-- **入口是视图, 文件系统是真源**: `plan.md`/`iterations.md` 只维护 Todo + 最近 10 条 Done; 完整历史在 `plan/index.md`/`iterations/index.md`; 所有索引由 `AGENTSPACE/scripts/` 下的脚本改写, agent 不手编表格
-- **内容文档由 agent 撰写**: plan 文档、iteration readme、notes 等使用 `templates/` 模板直接生成
-- **实验产物全量本地保存**: `iteration_NNNN/data/` 已 gitignore, 不入 git
+- **Plan → Iteration strict one-to-many**: a task becomes one or more plans (globally incrementing index, never reused); each iteration belongs to exactly one plan
+- **Entry files are views, filesystem is source of truth**: `plan.md`/`iterations.md` maintain only Todo + latest 10 Done; full history in `plan/index.md`/`iterations/index.md`; all indexes written exclusively by `AGENTSPACE/scripts/`
+- **Content documents authored by agent**: plan docs, iteration readmes, notes use `templates/` scaffolds
+- **Experiment data saved locally, excluded from git**: `iteration_NNNN/data/` is gitignored regardless of size
 
-## 工作区结构
+## Workspace Structure
 
 ```
-<项目>/
-├── AGENTS.md                  # 根引导: 项目背景 + 实验环境 + 关键代码仓库 + 何时读取规则
-└── AGENTSPACE/                # 独立 git 仓库
-    ├── AGENTS.md              # 核心入口: 结构/模块 what-when-how/纪律
-    ├── plan.md                # 入口: Todo + Done(最近10条, 完成/失败/放弃)
+<project>/
+├── AGENTS.md                  # Root guide: project overview + env + key repos + when-to-read rules
+└── AGENTSPACE/                # Independent git repo
+    ├── AGENTS.md              # Core entry: structure / module what-when-how / discipline
+    ├── plan.md                # Entry: Todo + Done (latest 10)
     ├── plan/{index.md, todo/, done/}
-    ├── iterations.md          # 入口: 进行中 + 最近完成(10条)
+    ├── iterations.md          # Entry: in-progress + latest completed (10)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
-    ├── utils.md + utils/      # 复用工具(做图/机器状态/日志分析...)
-    ├── tests.md + tests/      # 实验环境(容器/conda/GPU) + 测试脚本
-    ├── notes.md + notes/      # 持久知识(带来源证据)
-    ├── register.md            # 按需扩展模块(如 examples)
+    ├── utils.md + utils/      # Reusable tools (plotting / machine status / log analysis...)
+    ├── tests.md + tests/      # Experiment env (container/conda/GPU) + test scripts
+    ├── notes.md + notes/      # Persistent knowledge (with source evidence)
+    ├── register.md            # On-demand module registry (e.g. examples)
+    ├── .agentspace-version.json       # Workspace version tracking
+    ├── .agentspace-architecture.json  # Current architecture snapshot
     ├── templates/  scripts/  .gitignore
 ```
 
-## 安装
+## Installation
 
-将本仓库作为 ZCode 插件安装(插件市场或本地插件目录), 启用后即可使用。
+Install this repository as a ZCode plugin (plugin marketplace or local plugin directory), then enable it.
 
-## 使用
+## Usage
 
 ```text
-/init-agentspace      # 显式初始化(唯一入口, 幂等; init 时先分析工作区, 再询问 goal/运行环境/关键代码仓库)
+/init-agentspace              # Explicit initialization (only entry, idempotent; analyzes workspace, asks goal/env/key repos)
+/update-agentspace [--force]  # Update workspace to match plugin version (conservative by default, --force for aggressive)
 ```
 
-之后日常对话中(agent 自动判断, 项目无关会话不介入):
+After initialization, the agent auto-manages the workspace in relevant sessions (project-unrelated chat does not interfere):
 
 ```bash
-AGENTSPACE/scripts/new-plan.sh "baseline 复现"
-AGENTSPACE/scripts/new-iteration.sh 1 "跑通训练 pipeline"
-AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, 达标"
-AGENTSPACE/scripts/complete-plan.sh 1 done "复现成功"
-AGENTSPACE/scripts/status.sh      # 状态摘要
-AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
+AGENTSPACE/scripts/new-plan.sh "baseline reproduction"
+AGENTSPACE/scripts/new-iteration.sh 1 "run training pipeline"
+AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, target met"
+AGENTSPACE/scripts/complete-plan.sh 1 done "reproduction successful"
+AGENTSPACE/scripts/status.sh          # Status summary
+AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 ```
 
-## 插件结构
+## Plugin Structure
 
 ```
-.zcode-plugin/plugin.json      # 清单
-commands/init-agentspace.md    # /init-agentspace 命令
-skills/agentspace-init/        # 初始化 skill(仅命令显式触发) + init 脚本 + 全部模板 assets
-skills/agentspace/             # 日常管理 skill(自动触发, 带守卫)
+.zcode-plugin/plugin.json        # Manifest
+commands/init-agentspace.md      # /init-agentspace command
+commands/update-agentspace.md    # /update-agentspace command
+skills/agentspace-init/          # Init skill (explicit command only) + init script + all template assets
+skills/agentspace-update/        # Update skill + version archives + update scripts
+skills/agentspace/               # Daily management skill (auto-triggered, with guards)
 ```
+
+## Version Management
+
+Each plugin version maintains a version archive (`CHANGELOG.md` + `architecture.json`) under `skills/agentspace-update/versions/`. The `/update-agentspace` command uses these archives to intelligently migrate workspaces with agent analysis, supporting conservative (confirm destructive changes) and aggressive modes.
+
+See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on adding new versions.
 
 ## License
 
