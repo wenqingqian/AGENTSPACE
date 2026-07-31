@@ -16,18 +16,18 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 ### 2. 读取当前状态
 
 读取 `AGENTSPACE/.agentspace-version.json`：
-- 文件存在 → 提取 `workspaceVersion`
+- 文件存在 → 提取 `version`
 - 不存在 → 视为 `"0.1.0"`（旧版工作区），通知用户这是首次更新
 
 读取 `AGENTSPACE/.agentspace-architecture.json`：
 - 存在 → 用作当前架构参考
 - 不存在 → 从工作区实际文件推断架构（读取节标题、表格列头）
 
-读取插件版本：`.zcode-plugin/plugin.json` → `pluginVersion`
+读取插件版本：`.zcode-plugin/plugin.json` → `targetVersion`
 
 ### 3. 版本检查
 
-比较 `workspaceVersion` 与 `pluginVersion`。相同：
+比较 `currentVersion` 与 `targetVersion`。相同：
 - 运行 `AGENTSPACE/scripts/status.sh`
 - 报告"已是最新 (vX.Y.Z)"后结束
 
@@ -41,7 +41,7 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 
 ### 5. 加载目标版本档案
 
-从 `workspaceVersion + 1` 到 `pluginVersion`，逐版本读取：
+从 `currentVersion + 1` 到 `targetVersion`（时间顺序），逐版本读取：
 - `skills/agentspace-update/versions/vX.Y.Z/CHANGELOG.md` — 变更详情
 - `skills/agentspace-update/versions/vX.Y.Z/architecture.json` — 目标架构快照
 
@@ -103,7 +103,7 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 - **"取消"/"不更新"** → 终止，不改动任何文件
 - **"切换激进模式"** → 无需确认直接执行
 
-**关键**：保守模式下，用户拒绝的破坏性变更被**跳过**而非强制执行。版本文件记录实际应用的版本（可能低于 pluginVersion）。
+**关键**：保守模式下，用户拒绝的破坏性变更被**跳过**而非强制执行。版本文件记录实际应用的版本（可能低于 targetVersion）。
 
 ### 8. 执行更新
 
@@ -119,7 +119,7 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 
 **c. 更新版本标记**：
 ```bash
-bash skills/agentspace-update/scripts/update-version.sh <目标版本> <插件版本>
+bash skills/agentspace-update/scripts/update-version.sh <目标版本>
 cp skills/agentspace-update/versions/v<目标>/architecture.json AGENTSPACE/.agentspace-architecture.json
 ```
 
@@ -143,6 +143,6 @@ git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "update: AGENTSPACE v旧
 
 ## 备注
 
-- **部分更新**：用户在保守模式下拒绝部分变更时，工作区处于混合状态。`.agentspace-version.json` 记录实际应用的版本（可能低于 pluginVersion）。下次更新会重新尝试被跳过的变更。
+- **部分更新**：用户在保守模式下拒绝部分变更时，工作区处于混合状态。`.agentspace-version.json` 记录实际应用的版本（可能低于 targetVersion）。下次更新会重新尝试被跳过的变更。
 - **无回滚**：无内置回滚机制。AGENTSPACE git 历史即回滚点——用户可 `git -C AGENTSPACE reset --hard <更新前commit>`。
 - **工作区模板语言**：assets/ 中的模板保持中文（工作区语言约定）。更新 skill 和开发文档使用英文（插件基础设施层面）。

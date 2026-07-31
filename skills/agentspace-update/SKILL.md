@@ -15,19 +15,19 @@ Check if `AGENTSPACE/` exists in the project root. If not, report error and sugg
 
 ### 2. Read Current State
 
-Read `AGENTSPACE/.agentspace-version.json`:
-- If file exists: extract `workspaceVersion`
+Read `AGENTSPACE/.agentspace-version.json` → `currentVersion`:
+- If file exists: extract `version`
 - If missing: treat as `"0.1.0"` (legacy workspace) and inform user this is the first update
 
 Read `AGENTSPACE/.agentspace-architecture.json`:
 - If file exists: use as current architecture reference
 - If missing: infer architecture by scanning actual workspace files (read section headings, column headers from markdown tables)
 
-Read plugin version from `.zcode-plugin/plugin.json` → `pluginVersion`
+Read plugin version from `.zcode-plugin/plugin.json` → `targetVersion`
 
 ### 3. Version Check
 
-Compare `workspaceVersion` vs `pluginVersion`. If equal:
+Compare `currentVersion` vs `targetVersion`. If equal:
 - Run `AGENTSPACE/scripts/status.sh`
 - Report "Already up to date (vX.Y.Z)" and exit
 
@@ -39,13 +39,15 @@ Switch to **aggressive** if:
 - User passed `--force` argument
 - User explicitly says "aggressive update" / "激进更新" in conversation
 
-### 5. Load Target Version Archive
+### 5. Load Version Archives
 
-For each version from `workspaceVersion + 1` to `pluginVersion`:
-- Read `skills/agentspace-update/versions/vX.Y.Z/CHANGELOG.md` — detailed change descriptions
+For each version from `currentVersion + 1` to `targetVersion` (chronological order):
+- Read `skills/agentspace-update/versions/vX.Y.Z/CHANGELOG.md` — what changed from the previous version
 - Read `skills/agentspace-update/versions/vX.Y.Z/architecture.json` — target architecture snapshot
 
-If multiple version jumps are needed, read ALL intermediate changelogs in order.
+Each CHANGELOG is a diff from its predecessor. Example: updating from v0.2.0 to v0.2.2 reads v0.2.1/CHANGELOG.md (0.2.0→0.2.1) then v0.2.2/CHANGELOG.md (0.2.1→0.2.2). The agent applies changes in this chronological order.
+
+If a changelog entry does not affect the current workspace (e.g., a change to a module the user hasn't registered), the agent may skip it.
 
 ### 6. Agent Analysis (Core — NOT a Script)
 
@@ -141,7 +143,7 @@ Note: the source is `skills/agentspace-init/assets/agentspace/` (the canonical a
 
 **c. Update version markers**:
 ```bash
-bash skills/agentspace-update/scripts/update-version.sh <target-version> <plugin-version>
+bash skills/agentspace-update/scripts/update-version.sh <target-version>
 ```
 Also copy the target architecture.json:
 ```bash
@@ -175,6 +177,6 @@ Summarize what was done:
 
 ## Notes
 
-- **Partial updates**: if the user refuses some changes in conservative mode, the workspace is in a mixed state. Record the ACTUAL applied version in `.agentspace-version.json` (may be lower than pluginVersion). The next update will re-attempt skipped changes.
+- **Partial updates**: if the user refuses some changes in conservative mode, the workspace is in a mixed state. Record the ACTUAL applied version in `.agentspace-version.json` (may be lower than targetVersion). The next update will re-attempt skipped changes.
 - **No rollback**: there is no built-in rollback mechanism. The AGENTSPACE git history serves as the rollback point — user can `git -C AGENTSPACE reset --hard <pre-update-commit>` if needed.
 - **Workspace templates (assets/) stay Chinese**: the workspace language convention is Chinese. The update skill and developer docs are English because they are plugin-infrastructure concerns.

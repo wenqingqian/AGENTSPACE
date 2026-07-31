@@ -41,3 +41,8 @@ Upgrade from v0.1.0. Date: 2026-07-31
 - **What**: changed `AGENTSPACE/` to `/AGENTSPACE/` in plugin repo .gitignore
 - **Why**: on macOS case-insensitive filesystem, `AGENTSPACE/` was matching `assets/agentspace/` directory, preventing version files from being tracked
 - **Migration**: applies to plugin repo only; workspace .gitignore unaffected
+
+### [Schema] Single version field
+- **What**: `.agentspace-version.json` simplified from `workspaceVersion`+`pluginVersion` to a single `version` field
+- **Why**: changelog-driven model means one version suffices — the changelog itself determines what needs to change, regardless of whether it's a "workspace" or "plugin" change
+- **Migration**: update reads old format (two fields) and writes new format (one field) automatically
