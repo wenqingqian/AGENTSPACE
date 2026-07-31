@@ -3,77 +3,78 @@ name: agentspace
 description: Work with the AGENTSPACE workspace (plans, iterations, utils, tests, notes) in projects that have one. Activate ONLY when BOTH hold — (1) an AGENTSPACE/ directory exists in the project root, AND (2) the conversation involves this project's experiments, code changes, project iteration, or state tracking. Do NOT activate for project-unrelated chat or Q&A with no state change. Never create or initialize AGENTSPACE — init happens only via the explicit /init-agentspace command.
 ---
 
-# AGENTSPACE 日常管理
+# AGENTSPACE Daily Management
 
-## 0. 启动守卫
+## 0. Activation Guard
 
-按顺序判断, 任一不满足则静默退出(不提及本 skill, 按普通请求处理):
-1. 项目根存在 `AGENTSPACE/` 目录
-2. 当前会话涉及**本项目**的实验 / 代码改动 / 项目迭代 / 状态变更 —— 项目无关的会话(问答、闲聊、无状态变化的纯查询)不启动
+Check in order; if any condition fails, exit silently (do not mention this skill, handle as a normal request):
+1. `AGENTSPACE/` directory exists in project root
+2. Current session involves this project's **experiments / code changes / project iteration / state changes** — project-unrelated sessions (Q&A, casual chat, pure queries with no state change) do not activate
 
-绝不允许: 自动初始化 AGENTSPACE(只有显式 `/init-agentspace` 可以)。
+Never: auto-initialize AGENTSPACE (only explicit `/init-agentspace` can do that).
 
-## 1. 上下文自保(模型判断, 无 hook)
+## 1. Context Self-Preservation (Model Judgment, No Hook)
 
-工作时确保以下三个文件的内容在当前上下文中; 不确定(如 compact 之后)或**做任何状态变更前**, 先重新读取:
-1. `AGENTSPACE/AGENTS.md` — 结构、模块规则与纪律
-2. `AGENTSPACE/tests.md` — 实验环境
-3. `AGENTSPACE/iterations.md` — 迭代状态
+While working, ensure the following three files' content is in the current context; if unsure (e.g., after compact) or **before any state change**, re-read them first:
+1. `AGENTSPACE/AGENTS.md` — structure, module rules, and discipline
+2. `AGENTSPACE/tests.md` — experiment environment
+3. `AGENTSPACE/iterations.md` — iteration status
 
-恢复序列(会话开始/状态不确定时): `AGENTS.md` → `tests.md` → `iterations.md` → `plan.md`(任务相关时) → `iterations/latest/readme.md` 的"当前状态 · 下一步"。
+Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` → `iterations.md` → `plan.md` (when task-related) → `iterations/latest/readme.md` "当前状态 · 下一步".
 
-## 2. 工作流
+## 2. Workflows
 
-### 新任务 → 建 plan(一个任务可拆成多个 plan)
+### New Task → Create Plan (one task may span multiple plans)
 ```bash
-AGENTSPACE/scripts/new-plan.sh "计划标题"        # 输出 plan:NNNN
+AGENTSPACE/scripts/new-plan.sh "Plan title"        # Outputs plan:NNNN
 ```
-然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
+Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. Milestone commit (see §4).
 
-### 开始一轮迭代 → 建 iteration(plan-id 必填: 一个 iteration 必属且仅属一个 plan)
+### Start an Iteration → Create Iteration (plan-id required: each iteration belongs to exactly one plan)
 ```bash
-AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteration_NNNN
+AGENTSPACE/scripts/new-iteration.sh <plan-id> "This iteration's content"   # Outputs iteration_NNNN
 ```
-- 更新 readme: 目标 / 改动摘要 / 环境(宿主 commit sha)
-- **data 收集三策略**(产物全量进 `iteration_NNNN/data/`, 该目录已 gitignore):
-  1. 程序支持设置 output 位置 → 直接指向 `iteration_NNNN/data/`
-  2. 支持重定向 → `cmd > iteration_NNNN/data/xxx.log`
-  3. fallback → 在工作区找到本轮产出文件, `mv` 进 `iteration_NNNN/data/`
-- 工作过程中及时更新 readme 的"当前状态 · 下一步"和"日志"(append-only)
+- Update readme: goal / change summary / environment (host commit sha)
+- **Data collection — three strategies** (all output goes to `iteration_NNNN/data/`, gitignored):
+  1. Program supports setting output location → point directly to `iteration_NNNN/data/`
+  2. Supports redirection → `cmd > iteration_NNNN/data/xxx.log`
+  3. Fallback → find output files in workspace, `mv` into `iteration_NNNN/data/`
+- During work, keep readme's "当前状态 · 下一步" and "日志" (append-only) updated
 
-### 关闭迭代
-结果写入 readme 的"结果"节后:
+### Close Iteration
+After writing results in the readme's "结果" section:
 ```bash
-AGENTSPACE/scripts/close-iteration.sh <id> "结果一句话"
+AGENTSPACE/scripts/close-iteration.sh <id> "One-line result"
 ```
-里程碑提交。
+Milestone commit.
 
-### 完成计划
+### Complete Plan
 ```bash
-AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句话"
+AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line result"
 ```
-补充 plan 文档"结果"节; 有可迁移教训 → 记录 notes; 里程碑提交。
+Fill the plan document's "结果" section; if there are transferable lessons → record in notes; milestone commit.
 
-### 工具 / 环境 / 知识 / 扩展模块
-- 需要辅助工具(做图 / 机器状态 / 运行状态 / 日志分析)先查 `utils.md`, 复用而非重写; 新工具写入 `utils/` 并在 `utils.md` 登记
-- 环境变化(容器 / conda / 机器 / 依赖)当天更新 `tests.md`; 测试脚本放 `tests/` 并登记
-- 踩坑 / 可迁移结论 → `notes/`(模板 `templates/note.md`), **必须带来源**(plan:NNNN / iteration_NNNN)
-- 新模块(如 examples 存固定测试配置): **先与用户确认** → `AGENTSPACE/scripts/register-module.sh <name> "用途"`
+### Tools / Environment / Knowledge / Extensions
+- Need a utility tool (plotting / machine status / runtime status / log analysis)? Check `utils.md` first — reuse, don't rewrite. New tools go into `utils/` and are registered in `utils.md`
+- Environment change (container / conda / machine / dependency)? Update `tests.md` the same day. Test scripts go in `tests/` and are registered
+- Pitfalls / transferable conclusions → `notes/` (template `templates/note.md`), **must include source** (plan:NNNN / iteration_NNNN)
+- New module (e.g., examples for fixed test configs): **confirm with user first** → `AGENTSPACE/scripts/register-module.sh <name> "purpose"`
 
-## 3. 纪律
+## 3. Discipline
 
-- `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` **只能由 scripts/ 改写** — 一律调脚本, 不手工编辑表格
-- 内容文档(plan 文档 / iteration readme / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
-- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN`; 不用路径, 不用 latest
-- `data/` 不入 git(已 gitignore), 产物全量本地保存
-- 结束一轮工作前: 更新进行中 iteration readme 的"当前状态 · 下一步" — 这是下次会话的续接入口
-- 状态自检 `AGENTSPACE/scripts/status.sh`; 怀疑状态损坏 `AGENTSPACE/scripts/doctor.sh`
+- `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` **may only be modified by scripts** — always call scripts, never hand-edit tables
+- Content documents (plan docs / iteration readmes / notes / utils / tests) are written directly by you, using `templates/` templates
+- Cross-references always use ids: `plan:NNNN` / `iteration_NNNN`; never paths, never latest (latest flips)
+- `data/` not in git (gitignored); all output saved locally
+- Before ending a work session: update the in-progress iteration readme's "当前状态 · 下一步" — this is the re-entry point for the next session
+- Status self-check: `AGENTSPACE/scripts/status.sh`; suspected corruption: `AGENTSPACE/scripts/doctor.sh`
+- **Do not read plugin development data**: `skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc. are plugin infrastructure, unrelated to the project — never read or reference during project work
 
-## 4. 里程碑 git 提交
+## 4. Milestone Git Commits
 
-触发点: plan 创建/完成、iteration 创建/关闭、模块注册、重要文档更新。
+Triggers: plan creation/completion, iteration creation/closure, module registration, important document updates.
 ```bash
-git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <摘要>"
+git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <summary>"
 ```
-type 示例: `plan` / `iteration` / `notes` / `utils` / `tests` / `register` / `docs`。
-提交后告知用户(commit 摘要)。**只操作 AGENTSPACE 仓库**, 绝不 add/commit 宿主仓库; 宿主代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/。
+Type examples: `plan` / `iteration` / `notes` / `utils` / `tests` / `register` / `docs`.
+Report to user after commit (commit summary). **Only operate on the AGENTSPACE repo**; never add/commit the host repo. Host code state recorded via commit sha; diff (against host HEAD) saved to data/ when needed.

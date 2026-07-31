@@ -124,9 +124,8 @@ Key fields:
 |---|---|
 | Workspace templates (assets/) | Chinese |
 | Workspace AGENTS.md | Chinese |
-| Plugin SKILL.md (update) | English (primary) + Chinese (.zh-CN.md) |
-| Plugin SKILL.md (init, daily) | Chinese (workspace convention) |
+| Plugin SKILL.md (all skills) | English (primary) + Chinese (.zh-CN.md) |
 | DEVELOPMENT.md | English |
 | README.md | English (primary) + Chinese (.zh-CN.md) |
 | CHANGELOG.md | English |
-| architecture.json | English keys, Chinese section headings |
+| architecture.json | English keys, Chinese section headings (as deployed) |
