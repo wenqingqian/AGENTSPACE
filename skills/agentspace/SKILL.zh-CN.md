@@ -55,7 +55,7 @@ AGENTSPACE/scripts/new-plan.sh "English plan title"   # 输出 plan:NNNN
 ```bash
 AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteration_NNNN
 ```
-- 更新 readme: 目标 / 代码变更摘要 / 环境(宿主起始+结束 commit sha)
+- 更新 readme: 目标 / 代码变更摘要 / 环境(宿主起始/结束 commit sha 由脚本自动记录)
 - **涉及文件**: 在"代码变更 (diff)"节列出本轮涉及的文件路径(`- 文件: path/to/file.py`, 每行一个)——日后可用 grep 定位"哪个 plan 动过哪个文件" 
 - **代码 diff**: 变更涉及代码时, 保存宿主仓库 diff 到 data/: `git -C <宿主> diff <起始>..<结束> > data/diff-<起始>..<结束>.patch`; 在 readme"代码变更 (diff)"节登记
 - **data 收集三策略**(产物全量进 `iteration_NNNN/data/`, 该目录已 gitignore):

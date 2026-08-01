@@ -51,7 +51,7 @@ Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. 
 ```bash
 AGENTSPACE/scripts/new-iteration.sh <plan-id> "This iteration's content"   # Outputs iteration_NNNN
 ```
-- Update readme: goal / code-change summary / environment (host start + end commit sha)
+- Update readme: goal / code-change summary / environment (host start/end commit sha are auto-recorded by the script)
 - **Files touched**: list changed file paths in the "代码变更 (diff)" section as `- 文件: path/to/file.py` (one per line) — makes "which plan touched file Y" greppable later
 - **Code diff**: when the change involves code, save the host repo diff to data/: `git -C <host> diff <start>..<end> > data/diff-<start>..<end>.patch`; register it in the "代码变更 (diff)" section
 - **Data collection — three strategies** (all output goes to `iteration_NNNN/data/`, gitignored):

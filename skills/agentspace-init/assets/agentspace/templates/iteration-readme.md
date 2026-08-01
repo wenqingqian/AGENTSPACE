@@ -25,8 +25,9 @@
 
 ## 环境
 
-<!-- 引用 tests.md 的环境条目; 记录宿主仓库状态: 起始 commit / 结束 commit
-     (git rev-parse HEAD); 宿主有未提交改动时, 把 diff 存到 data/ -->
+<!-- 引用 tests.md 的环境条目。
+     宿主起始/结束 commit 由脚本自动记录(创建时/关闭时各一行)。
+     宿主有未提交改动时, 把 diff 存到 data/: git -C <宿主> diff > data/code.diff -->
 
 ## 结果
 

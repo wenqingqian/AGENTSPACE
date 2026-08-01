@@ -59,4 +59,12 @@ awk -v status_old="$STATUS_PROGRESS" -v status_new="> 状态: 已完成 ($DATE)"
 ' "$README" > "$tmp2" || { rm -f "$tmp2"; as_die "readme status line $STATUS_PROGRESS not found"; }
 cat "$tmp2" > "$README" && rm -f "$tmp2"
 
+# Record host end commit in the 环境 section.
+# Guarded: host must be a git repo, section must exist, line must not already be present.
+HOST_HEAD="$(as_host_head)"
+if [ -n "$HOST_HEAD" ] && grep -q '^## 环境$' "$README" \
+   && ! grep -q '^> 宿主结束 commit: ' "$README"; then
+  as_insert_after "$README" "## 环境" "> 宿主结束 commit: $HOST_HEAD"
+fi
+
 echo "iteration_$ID closed → $DIR/readme.md (frozen)"

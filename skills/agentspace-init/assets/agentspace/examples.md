@@ -6,5 +6,6 @@
 
 ## 配置清单
 
+<!-- 登记示例: | resnet50-train.yaml | 训练超参(bs=256, lr=0.1) | train.py | [examples/resnet50-train.yaml](examples/resnet50-train.yaml) | -->
 | 配置 | 说明 | 关联测试 | 链接 |
 | --- | --- | --- | --- |

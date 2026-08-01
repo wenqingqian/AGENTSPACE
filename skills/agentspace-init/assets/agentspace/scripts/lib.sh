@@ -26,6 +26,13 @@ readonly RESUME_PH_ITER="<!-- 会话续接块:"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+# Host repo HEAD short sha (project root = AS_ROOT/..). Empty if host is not a git repo.
+as_host_head() {
+  if git -C "$AS_ROOT/.." rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$AS_ROOT/.." rev-parse --short HEAD 2>/dev/null || true
+  fi
+}
+
 as_today() { date +%F; }
 
 # Table cell sanitization: | and newlines break markdown tables.

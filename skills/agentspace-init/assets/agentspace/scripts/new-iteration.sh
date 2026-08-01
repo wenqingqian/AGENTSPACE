@@ -33,6 +33,14 @@ PH_ID="$ID" PH_PLAN_ID="$PLAN_ID" PH_TITLE="$TITLE" PH_DATE="$DATE" \
 # latest symlink points to the newest iteration
 ln -sfn "iteration_$ID" "$AS_ROOT/iterations/latest"
 
+# Record host start commit in the readme 环境 section.
+# Guarded: host must be a git repo, section must exist, line must not already be present.
+HOST_HEAD="$(as_host_head)"
+if [ -n "$HOST_HEAD" ] && grep -q '^## 环境$' "$AS_ROOT/$DIR/readme.md" \
+   && ! grep -q '^> 宿主起始 commit: ' "$AS_ROOT/$DIR/readme.md"; then
+  as_insert_after "$AS_ROOT/$DIR/readme.md" "## 环境" "> 宿主起始 commit: $HOST_HEAD"
+fi
+
 as_insert_row "$AS_ROOT/iterations.md" "$SEC_PROGRESS" \
   "| $ID | plan:$PLAN_ID | $CELL | $DATE | [$DIR/readme.md]($DIR/readme.md) |"
 
