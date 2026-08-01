@@ -16,10 +16,13 @@ readonly SEC_RELATED="相关迭代"
 readonly SEC_REGISTERED="已注册模块"
 readonly STATUS_TODO="> 状态: todo"
 readonly STATUS_PROGRESS="> 状态: 进行中"
-# Result-section placeholder markers (must match template comments exactly).
-# Gate: close/complete refuses while the placeholder is still present.
+# ---- Placeholder constants (must match template comments exactly; doctor [5] checks drift) ----
+# Gate: close-iteration refuses while present. Template: iteration-readme.md "结果"
 readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
+# Gate: complete-plan refuses while present. Template: plan.md "结果" (first line of 2-line comment)
 readonly RESULT_PH_PLAN="<!-- 完成时填写: 一句话结论"
+# Warning: doctor flags in-progress readmes while present. Template: iteration-readme.md "当前状态 · 下一步"
+readonly RESUME_PH_ITER="<!-- 会话续接块:"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 

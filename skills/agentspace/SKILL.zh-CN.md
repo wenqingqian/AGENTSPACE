@@ -96,7 +96,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 - 内容文档(plan 文档 / iteration readme / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
 - 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN`; 不用路径, 不用 latest
 - `data/` 不入 git(已 gitignore), 产物全量本地保存
-- **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
+- **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口 — 用实际内容替换模板引导注释) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
 - **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / plan/index.md / iterations/index.md / register.md 及内容文档
 - **[MUST] scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` 只能由 scripts 改写, 禁止手工编辑(用户确认例外除外)
 - 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`

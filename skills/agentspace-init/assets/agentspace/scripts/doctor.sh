@@ -78,6 +78,9 @@ for d in "$AS_ROOT"/iterations/iteration_[0-9]*; do
   if grep -q "^$STATUS_PROGRESS$" "$d/readme.md" 2>/dev/null; then
     grep -q "^| *$id *|" "$AS_ROOT/iterations.md" \
       || warn "iterations.md missing in-progress $id"
+    # Resume-block freshness — wrap-up protocol step ①
+    grep -Fq "$RESUME_PH_ITER" "$d/readme.md" \
+      && warn "iteration_$id: 当前状态 · 下一步 not updated (resume placeholder still present)"
   fi
 done
 
@@ -106,6 +109,14 @@ for t in plan.md plan/index.md iterations.md iterations/index.md register.md; do
     esac
     [ -e "$AS_ROOT/$target" ] || warn "$t: broken link → $target"
   done < <(grep '^| ' "$tfile" | grep -o ']([^)]*)' | sed 's/^](//; s/)$//')
+done
+
+# ---- 5. contract: placeholder constants must still match templates ----
+echo "[5] placeholder contract"
+for pair in "RESUME_PH_ITER:templates/iteration-readme.md" "RESULT_PH_ITER:templates/iteration-readme.md" "RESULT_PH_PLAN:templates/plan.md"; do
+  const="${pair%%:*}"; tpl="${pair##*:}"
+  val="$(eval "printf '%s' \"\${$const}\"")"
+  grep -Fq "$val" "$AS_ROOT/$tpl" || warn "constant $const no longer matches $tpl (contract drift — update the constant or the template)"
 done
 
 echo
