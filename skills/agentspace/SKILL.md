@@ -54,10 +54,7 @@ AGENTSPACE/scripts/new-iteration.sh <plan-id> "This iteration's content"   # Out
 - Update readme: goal / code-change summary / environment (host start/end commit sha are auto-recorded by the script)
 - **Files touched**: list changed file paths in the "代码变更 (diff)" section as `- 文件: path/to/file.py` (one per line) — makes "which plan touched file Y" greppable later
 - **Code diff**: when the change involves code, save the host repo diff to data/: `git -C <host> diff <start>..<end> > data/diff-<start>..<end>.patch`; register it in the "代码变更 (diff)" section
-- **Data collection — three strategies** (all output goes to `iteration_NNNN/data/`, gitignored):
-  1. Program supports setting output location → point directly to `iteration_NNNN/data/`
-  2. Supports redirection → `cmd > iteration_NNNN/data/xxx.log`
-  3. Fallback → find output files in workspace, `mv` into `iteration_NNNN/data/`
+- **Data placement**: ALL experiment output goes to `iteration_NNNN/data/` (gitignored) — three collection strategies in AGENTS.md (iterations module)
 - During work, keep readme's "当前状态 · 下一步" and "日志" (append-only) updated
 
 ### Close Iteration

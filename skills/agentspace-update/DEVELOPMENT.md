@@ -126,6 +126,24 @@ Key fields:
 2. Update `DEVELOPMENT.md` if the development process changes
 3. Update `README.md` / `README.zh-CN.md` for user-facing changes
 
+**SKILL size budget (MUST)**: `skills/agentspace/SKILL.md` stays ≤ 120 lines. New guidance goes into `assets/agentspace/AGENTS.md` (which the skill keeps in context via §1) unless it is an ACTION (what to do), not background. If the budget is exceeded, move detail down to AGENTS.md.
+
+**Bilingual sync check (MUST, every release)**: `SKILL.md` and `SKILL.zh-CN.md` must have the same section structure and order. Compare heading LEVEL sequences (text differs by language, so compare `#`/`##`/`###` markers only):
+```bash
+grep -o '^#\{1,3\}' skills/agentspace/SKILL.md > /tmp/skill-en
+grep -o '^#\{1,3\}' skills/agentspace/SKILL.zh-CN.md > /tmp/skill-zh
+diff /tmp/skill-en /tmp/skill-zh && echo "bilingual structure OK"
+```
+Also check rule-level token parity (a rule tagged [MUST] in one language must exist in the other):
+```bash
+for t in MUST SHOULD MAY; do
+  en=$(grep -o "$t" skills/agentspace/SKILL.md | wc -l | tr -d ' ')
+  zh=$(grep -o "$t" skills/agentspace/SKILL.zh-CN.md | wc -l | tr -d ' ')
+  [ "$en" = "$zh" ] || echo "MISMATCH: $t en=$en zh=$zh"
+done
+```
+Any mismatch means a rule exists in one language only — fix before release.
+
 ### Step 7: Test
 
 1. `bash -n` on all `.sh` files
@@ -133,6 +151,8 @@ Key fields:
 3. `/tmp` update from old version → verify migration works in both modes
 4. `doctor.sh` green after update
 5. `python3 -m json.tool` on all `.json` files
+6. Bilingual sync check (see Step 6)
+7. SKILL size budget: `[ "$(wc -l < skills/agentspace/SKILL.md)" -le 120 ]` and same for SKILL.zh-CN.md — fail if either exceeds 120 lines
 
 ## File Ownership Matrix
 

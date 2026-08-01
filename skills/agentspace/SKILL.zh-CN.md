@@ -27,8 +27,6 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 **规则分级**: `[MUST]` = 违反会造成损坏或不可逆, 必须执行; `[SHOULD]` = 最佳实践; `[MAY]` = 可选。
 
 ### 新任务 → 建 plan(一个任务可拆成多个 plan)
-```bash
-### 新任务 → 建 plan(一个任务可拆成多个 plan)
 
 **Plan 创建规则 (MUST)**:
 - **文件名必须英文** — plan 标题会成为文件名, CJK 字符会导致编码问题。plan 文档内容不限语言。
@@ -37,8 +35,6 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 
 ```bash
 AGENTSPACE/scripts/new-plan.sh "English plan title"   # 输出 plan:NNNN
-```
-然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
 ```
 然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
 
@@ -58,10 +54,7 @@ AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteratio
 - 更新 readme: 目标 / 代码变更摘要 / 环境(宿主起始/结束 commit sha 由脚本自动记录)
 - **涉及文件**: 在"代码变更 (diff)"节列出本轮涉及的文件路径(`- 文件: path/to/file.py`, 每行一个)——日后可用 grep 定位"哪个 plan 动过哪个文件" 
 - **代码 diff**: 变更涉及代码时, 保存宿主仓库 diff 到 data/: `git -C <宿主> diff <起始>..<结束> > data/diff-<起始>..<结束>.patch`; 在 readme"代码变更 (diff)"节登记
-- **data 收集三策略**(产物全量进 `iteration_NNNN/data/`, 该目录已 gitignore):
-  1. 程序支持设置 output 位置 → 直接指向 `iteration_NNNN/data/`
-  2. 支持重定向 → `cmd > iteration_NNNN/data/xxx.log`
-  3. fallback → 在工作区找到本轮产出文件, `mv` 进 `iteration_NNNN/data/`
+- **产物放置**: 全部实验产物进 `iteration_NNNN/data/`(已 gitignore) — 三种收集策略见 AGENTS.md(iterations 模块)
 - 工作过程中及时更新 readme 的"当前状态 · 下一步"和"日志"(append-only)
 
 ### 关闭迭代
