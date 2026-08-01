@@ -72,10 +72,15 @@ AGENTSPACE/scripts/close-iteration.sh <id> "结果一句话"
 里程碑提交。
 
 ### 完成计划
+**运行前(脚本闸门要求)**: 先填写 plan 文档"结果"节(一句话结论 + 关键证据) — 占位符未替换时脚本会拒绝。
+
 ```bash
 AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句话"
 ```
-补充 plan 文档"结果"节; 有可迁移教训 → 记录 notes; 里程碑提交。
+**完成后 (SHOULD — 知识提炼)**:
+1. 回顾本 plan 的 iterations — 读它们的"结果"节和"代码变更 (diff)"产物
+2. 把可迁移教训沉淀进 notes(模板 `templates/note.md`, 来源 `plan:NNNN`); 打主题标签为建议(可选)
+3. 里程碑提交
 
 ### 历史检索(结果定位 / 哪个 plan 动过文件 Y)
 - 小范围: `grep -rn <关键词> plan iterations notes`(排除 `data/`)

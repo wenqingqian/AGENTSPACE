@@ -68,7 +68,7 @@ AGENTSPACE/
 
 ### notes —— 持久知识 (notes.md + notes/)
 - **what**: 跨 plan/iteration 可迁移的结论与踩坑记录
-- **when/how**: plan 完成产出可迁移教训、或发现坑时立即记录; 每条笔记必须带"来源"(plan:NNNN / iteration_NNNN); 模板 templates/note.md
+- **when/how**: plan 完成时回顾 iterations 提炼教训、或发现坑时立即记录; 每条笔记必须带"来源"(plan:NNNN / iteration_NNNN); 建议打主题"标签"便于检索聚合; 模板 templates/note.md
 
 ### register —— 按需扩展模块 (register.md)
 - **what**: 按需注册的模块登记处(按项目需要扩展, 如 visualization.md + visualization/)

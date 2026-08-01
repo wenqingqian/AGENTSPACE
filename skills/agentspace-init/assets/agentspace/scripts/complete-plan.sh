@@ -62,4 +62,4 @@ mv "${SRC[0]}" "$AS_ROOT/$DEST"
 as_replace_line "$AS_ROOT/$DEST" "$STATUS_TODO" "> 状态: $STATUS_CN ($DATE)"
 
 echo "plan:$ID → $STATUS_CN ($DEST)"
-echo "Reminder: fill the '结果' section in the plan doc; record transferable lessons in notes"
+echo "Next [SHOULD]: review this plan's iterations (结果/code-diff) and distill transferable lessons into notes with source plan:$ID"

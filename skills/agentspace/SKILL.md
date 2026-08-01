@@ -68,10 +68,15 @@ AGENTSPACE/scripts/close-iteration.sh <id> "One-line result"
 Milestone commit.
 
 ### Complete Plan
+**Before running (required by script gate)**: fill the plan document's "结果" section (one-line conclusion + key evidence) — the script refuses while the template placeholder remains.
+
 ```bash
 AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line result"
 ```
-Fill the plan document's "结果" section; if there are transferable lessons → record in notes; milestone commit.
+**After completing (SHOULD — knowledge distillation)**:
+1. Review this plan's iterations — read their "结果" sections and "代码变更 (diff)" files
+2. Distill transferable lessons into notes (template `templates/note.md`, source `plan:NNNN`); tagging notes with topic keywords is recommended (optional)
+3. Milestone commit
 
 ### Historical Search (results / which plan touched file Y)
 - Small scope: `grep -rn <keyword> plan iterations notes` (exclude `data/`)

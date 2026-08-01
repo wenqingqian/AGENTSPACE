@@ -14,7 +14,7 @@
         "en": "Git-managed agent workspace for experiment-driven projects: explicit /init-agentspace setup, globally indexed plans and iterations, reusable utils, test environment tracking, and persistent notes.",
         "zh-CN": "面向实验/迭代型项目的 git 管理 agent 工作区: 显式 /init-agentspace 初始化, 全局索引的 plan 与 iteration 双主线, 工具复用 / 实验环境 / 持久知识管理。"
       },
-      "version": "0.2.6",
+      "version": "0.2.7",
       "author": {
         "name": "wenqingqian",
         "url": "https://github.com/wenqingqian"
