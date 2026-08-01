@@ -16,6 +16,10 @@ readonly SEC_RELATED="相关迭代"
 readonly SEC_REGISTERED="已注册模块"
 readonly STATUS_TODO="> 状态: todo"
 readonly STATUS_PROGRESS="> 状态: 进行中"
+# Result-section placeholder markers (must match template comments exactly).
+# Gate: close/complete refuses while the placeholder is still present.
+readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
+readonly RESULT_PH_PLAN="<!-- 完成时填写: 一句话结论"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 

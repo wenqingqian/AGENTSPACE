@@ -15,6 +15,13 @@ ok()   { printf '  [fixed] %s\n' "$*"; fixed=$((fixed + 1)); }
 echo "== AGENTSPACE doctor: $AS_ROOT =="
 echo
 
+# ---- 0. git worktree: uncommitted changes (milestone commit may have been skipped) ----
+echo "[0] git worktree"
+if git -C "$AS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  dirty="$(git -C "$AS_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+  [ "$dirty" -eq 0 ] || warn "uncommitted changes ($dirty file(s)); run a milestone commit"
+fi
+
 # ---- 1. latest symlink ----
 echo "[1] iterations/latest"
 L="$AS_ROOT/iterations/latest"
@@ -85,11 +92,28 @@ for id in $prog_ids; do
     || warn "iterations.md in-progress row $id has no corresponding dir (orphan row)"
 done
 
+# ---- 4. link validity: script-managed tables only (links are script contract output) ----
+echo "[4] link validity"
+# shellcheck disable=SC2016
+for t in plan.md plan/index.md iterations.md iterations/index.md register.md; do
+  tfile="$AS_ROOT/$t"
+  [ -f "$tfile" ] || continue
+  # Only table data rows (| ...) — header pointers like the latest symlink are out of scope
+  while IFS= read -r target; do
+    [ -n "$target" ] || continue
+    case "$target" in
+      http://*|https://*|mailto:*|\#*) continue ;;
+    esac
+    [ -e "$AS_ROOT/$target" ] || warn "$t: broken link → $target"
+  done < <(grep '^| ' "$tfile" | grep -o ']([^)]*)' | sed 's/^](//; s/)$//')
+done
+
 echo
 echo "== Done: $issues issues, $fixed auto-repaired =="
 if [ "$issues" -eq 0 ]; then
   echo "Workspace consistent ✓"
 else
-  echo "Tip: index/table issues from script anomalies can be fixed by editing the corresponding rows"
+  echo "Tip: do NOT hand-edit tables on your own. Discuss a repair plan with the user first;"
+  echo "     a one-time manual fix explicitly confirmed by the user is the only allowed exception."
   exit 1
 fi

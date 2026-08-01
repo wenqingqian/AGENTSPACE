@@ -30,6 +30,10 @@ DEST="plan/done/$(basename "${SRC[0]}")"
 
 # Validate all preconditions before first mutation
 grep -qx "$STATUS_TODO" "${SRC[0]}" || as_die "plan:$ID status line is not $STATUS_TODO"
+# Gate: results section must be filled (template placeholder gone)
+if grep -Fq "$RESULT_PH_PLAN" "${SRC[0]}"; then
+  as_die "Results section not filled (template placeholder still present): ${SRC[0]}"
+fi
 
 as_lock
 

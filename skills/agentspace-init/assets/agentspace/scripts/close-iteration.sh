@@ -14,6 +14,10 @@ README="$AS_ROOT/$DIR/readme.md"
 [ -f "$README" ] || as_die "iteration_$ID does not exist"
 # Gate: exact match on status line
 grep -qx "$STATUS_PROGRESS" "$README" || as_die "iteration_$ID is not in progress (already closed or status anomaly)"
+# Gate: results section must be filled (template placeholder gone)
+if grep -Fq "$RESULT_PH_ITER" "$README"; then
+  as_die "Results section not filled (template placeholder still present): $README"
+fi
 
 PLANREF="$(as_row_cell "$AS_ROOT/iterations.md" "$ID" 3)"
 TITLE="$(as_row_cell "$AS_ROOT/iterations.md" "$ID" 4)"

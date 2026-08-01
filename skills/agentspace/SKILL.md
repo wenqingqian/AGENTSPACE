@@ -24,6 +24,8 @@ Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` 
 
 ## 2. Workflows
 
+**Rule levels**: `[MUST]` = violation causes damage or is irreversible — always follow; `[SHOULD]` = best practice; `[MAY]` = optional.
+
 ### New Task → Create Plan (one task may span multiple plans)
 
 **Plan creation rules (MUST)**:
@@ -50,6 +52,7 @@ Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. 
 AGENTSPACE/scripts/new-iteration.sh <plan-id> "This iteration's content"   # Outputs iteration_NNNN
 ```
 - Update readme: goal / code-change summary / environment (host start + end commit sha)
+- **Files touched**: list changed file paths in the "代码变更 (diff)" section as `- 文件: path/to/file.py` (one per line) — makes "which plan touched file Y" greppable later
 - **Code diff**: when the change involves code, save the host repo diff to data/: `git -C <host> diff <start>..<end> > data/diff-<start>..<end>.patch`; register it in the "代码变更 (diff)" section
 - **Data collection — three strategies** (all output goes to `iteration_NNNN/data/`, gitignored):
   1. Program supports setting output location → point directly to `iteration_NNNN/data/`
@@ -70,6 +73,11 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 ```
 Fill the plan document's "结果" section; if there are transferable lessons → record in notes; milestone commit.
 
+### Historical Search (results / which plan touched file Y)
+- Small scope: `grep -rn <keyword> plan iterations notes` (exclude `data/`)
+- Keywords may not match (synonyms, descriptive wording) or scope may be large: delegate to a subagent (Explore) to read the "代码变更 (diff)" / "结果" sections of readmes and summarize
+- If the finding is reusable knowledge → record in notes (with source)
+
 ### Tools / Environment / Knowledge / Extensions
 - Need a utility tool (plotting / machine status / runtime status / log analysis)? Check `utils.md` first — reuse, don't rewrite. New tools go into `utils/` and are registered in `utils.md`
 - Shared data (training sets, model weights, symlinks)? Put in `data/` and register in `data.md`; entire data/ is gitignored
@@ -84,13 +92,15 @@ Fill the plan document's "结果" section; if there are transferable lessons →
 - Content documents (plan docs / iteration readmes / notes / utils / tests) are written directly by you, using `templates/` templates
 - Cross-references always use ids: `plan:NNNN` / `iteration_NNNN`; never paths, never latest (latest flips)
 - `data/` not in git (gitignored); all output saved locally
-- Before ending a work session: update the in-progress iteration readme's "当前状态 · 下一步" — this is the re-entry point for the next session
-- Status self-check: `AGENTSPACE/scripts/status.sh`; suspected corruption: `AGENTSPACE/scripts/doctor.sh`
+- **[MUST] Wrap-up protocol** — before ending any project work session, in order: ① update the in-progress iteration readme's "当前状态 · 下一步" (the re-entry point for the next session) ② run `AGENTSPACE/scripts/doctor.sh` (hard errors must be resolved; warnings must be reported to the user) ③ milestone commit (§4)
+- **[MUST] On script errors** (e.g., "Section not found"): do NOT hand-edit tables. Run `doctor.sh` to locate the issue, then discuss a repair plan with the user. **A one-time manual fix explicitly confirmed by the user is the only allowed exception** to the scripts-only rule. This applies to plan.md / iterations.md / plan/index.md / iterations/index.md / register.md and any content documents
+- **[MUST] Scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` may only be modified by scripts; never hand-edit tables (except the user-confirmed exception above)
+- Status self-check: `AGENTSPACE/scripts/status.sh`; run `AGENTSPACE/scripts/doctor.sh` after wrap-up and whenever you suspect corruption
 - **Do not read plugin development data**: `skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc. are plugin infrastructure, unrelated to the project — never read or reference during project work
 
 ## 4. Milestone Git Commits
 
-Triggers: plan creation/completion, iteration creation/closure, module registration, important document updates.
+Triggers (specific): plan created/completed · iteration created/closed · module registered · notes written · tests.md environment changed · examples/data entries registered · update applied · scripts/templates updated.
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <summary>"
 ```

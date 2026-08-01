@@ -24,6 +24,8 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 
 ## 2. 工作流
 
+**规则分级**: `[MUST]` = 违反会造成损坏或不可逆, 必须执行; `[SHOULD]` = 最佳实践; `[MAY]` = 可选。
+
 ### 新任务 → 建 plan(一个任务可拆成多个 plan)
 ```bash
 ### 新任务 → 建 plan(一个任务可拆成多个 plan)
@@ -54,6 +56,7 @@ AGENTSPACE/scripts/new-plan.sh "English plan title"   # 输出 plan:NNNN
 AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteration_NNNN
 ```
 - 更新 readme: 目标 / 代码变更摘要 / 环境(宿主起始+结束 commit sha)
+- **涉及文件**: 在"代码变更 (diff)"节列出本轮涉及的文件路径(`- 文件: path/to/file.py`, 每行一个)——日后可用 grep 定位"哪个 plan 动过哪个文件" 
 - **代码 diff**: 变更涉及代码时, 保存宿主仓库 diff 到 data/: `git -C <宿主> diff <起始>..<结束> > data/diff-<起始>..<结束>.patch`; 在 readme"代码变更 (diff)"节登记
 - **data 收集三策略**(产物全量进 `iteration_NNNN/data/`, 该目录已 gitignore):
   1. 程序支持设置 output 位置 → 直接指向 `iteration_NNNN/data/`
@@ -74,6 +77,11 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 ```
 补充 plan 文档"结果"节; 有可迁移教训 → 记录 notes; 里程碑提交。
 
+### 历史检索(结果定位 / 哪个 plan 动过文件 Y)
+- 小范围: `grep -rn <关键词> plan iterations notes`(排除 `data/`)
+- 关键词可能对不上(同义词/描述差异)或范围大: 派 subagent(Explore)读 readme 的"代码变更 (diff)"/"结果"节归纳
+- 检索结论若可复用 → 记入 notes(带来源)
+
 ### 工具 / 环境 / 知识 / 扩展模块
 - 需要辅助工具(做图 / 机器状态 / 运行状态 / 日志分析)先查 `utils.md`, 复用而非重写; 新工具写入 `utils/` 并在 `utils.md` 登记
 - 公用数据(训练集/模型权重/软连接)放 `data/` 并在 `data.md` 登记; data/ 全部 gitignore
@@ -88,13 +96,15 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 - 内容文档(plan 文档 / iteration readme / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
 - 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN`; 不用路径, 不用 latest
 - `data/` 不入 git(已 gitignore), 产物全量本地保存
-- 结束一轮工作前: 更新进行中 iteration readme 的"当前状态 · 下一步" — 这是下次会话的续接入口
-- 状态自检 `AGENTSPACE/scripts/status.sh`; 怀疑状态损坏 `AGENTSPACE/scripts/doctor.sh`
+- **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
+- **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / plan/index.md / iterations/index.md / register.md 及内容文档
+- **[MUST] scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` 只能由 scripts 改写, 禁止手工编辑(用户确认例外除外)
+- 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`
 - **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用
 
 ## 4. 里程碑 git 提交
 
-触发点: plan 创建/完成、iteration 创建/关闭、模块注册、重要文档更新。
+触发点(具体清单): plan 创建/完成 · iteration 创建/关闭 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · update 应用 · 脚本/模板更新。
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <摘要>"
 ```

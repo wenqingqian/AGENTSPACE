@@ -18,7 +18,10 @@
 <!-- 本轮相对上一轮改了什么(代码 / 配置 / 数据 / 环境)。
      有关键代码变更时, 保存宿主仓库 diff 到 data/:
      git -C <宿主> diff <起始commit>..<结束commit> > data/diff-<起始>..<结束>.patch
-     并在下方登记 diff 文件 -->
+     并在下方登记 diff 文件。
+     同时列出本轮涉及的文件路径(每行一个), 便于日后检索:
+     - 文件: path/to/file.py
+     - 文件: path/to/other.cfg -->
 
 ## 环境
 
