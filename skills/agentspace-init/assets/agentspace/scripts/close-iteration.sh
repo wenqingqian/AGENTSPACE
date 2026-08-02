@@ -27,6 +27,18 @@ RESULT_CELL="$(as_cell "$RESULT")"
 
 as_lock
 
+# F3+F4 (audit): record host end commit BEFORE mutations (best-effort metadata;
+# guards make failure impossible under lock). Inserted BELOW the start line when present.
+HOST_HEAD="$(as_host_head)"
+if [ -n "$HOST_HEAD" ] && grep -q '^## 环境$' "$README" \
+   && ! grep -q '^> 宿主结束 commit: ' "$README"; then
+  if grep -q '^> 宿主起始 commit: ' "$README"; then
+    as_insert_after_prefix "$README" "> 宿主起始 commit: " "> 宿主结束 commit: $HOST_HEAD"
+  else
+    as_insert_after "$README" "## 环境" "> 宿主结束 commit: $HOST_HEAD"
+  fi
+fi
+
 # iterations.md: remove 进行中 row, insert into 最近完成, truncate to 10
 as_remove_row "$AS_ROOT/iterations.md" "$ID"
 as_insert_row "$AS_ROOT/iterations.md" "$SEC_RECENT" \
@@ -58,13 +70,5 @@ awk -v status_old="$STATUS_PROGRESS" -v status_new="> 状态: 已完成 ($DATE)"
   }
 ' "$README" > "$tmp2" || { rm -f "$tmp2"; as_die "readme status line $STATUS_PROGRESS not found"; }
 cat "$tmp2" > "$README" && rm -f "$tmp2"
-
-# Record host end commit in the 环境 section.
-# Guarded: host must be a git repo, section must exist, line must not already be present.
-HOST_HEAD="$(as_host_head)"
-if [ -n "$HOST_HEAD" ] && grep -q '^## 环境$' "$README" \
-   && ! grep -q '^> 宿主结束 commit: ' "$README"; then
-  as_insert_after "$README" "## 环境" "> 宿主结束 commit: $HOST_HEAD"
-fi
 
 echo "iteration_$ID closed → $DIR/readme.md (frozen)"

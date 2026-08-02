@@ -169,6 +169,19 @@ as_insert_after() {
   cat "$tmp" > "$file" && rm -f "$tmp"
 }
 
+# Insert a line after the first line that STARTS WITH prefix (dynamic content safe).
+# Usage: as_insert_after_prefix <file> <prefix> <line>
+as_insert_after_prefix() {
+  local file="$1" tmp
+  tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+  awk -v pre="$2" -v line="$3" '
+    index($0, pre) == 1 && !done { print; print line; done=1; next }
+    { print }
+    END { if (!done) exit 3 }
+  ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Prefix line not found: $2 ($file)"; }
+  cat "$tmp" > "$file" && rm -f "$tmp"
+}
+
 # Append a line at the end of a section (before next ## or EOF).
 # Usage: as_append_to_section <file> <section> <line>
 as_append_to_section() {

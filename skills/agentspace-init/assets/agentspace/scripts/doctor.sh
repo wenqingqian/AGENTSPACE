@@ -16,10 +16,12 @@ echo "== AGENTSPACE doctor: $AS_ROOT =="
 echo
 
 # ---- 0. git worktree: uncommitted changes (milestone commit may have been skipped) ----
+# F2 (audit): require the workspace's OWN .git dir — rev-parse alone walks up and
+# would report the HOST repo's dirty state when the workspace has no own repo.
 echo "[0] git worktree"
-if git -C "$AS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  dirty="$(git -C "$AS_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
-  [ "$dirty" -eq 0 ] || warn "uncommitted changes ($dirty file(s)); run a milestone commit"
+if [ -e "$AS_ROOT/.git" ]; then  # -e covers git worktrees (.git as file), matches init contract
+  dirty="$(git -C "$AS_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)"
+  [ "${dirty:-0}" -eq 0 ] || warn "uncommitted changes ($dirty file(s)); run a milestone commit"
 fi
 
 # ---- 1. latest symlink ----
@@ -81,6 +83,10 @@ for d in "$AS_ROOT"/iterations/iteration_[0-9]*; do
     # Resume-block freshness — wrap-up protocol step ①
     grep -Fq "$RESUME_PH_ITER" "$d/readme.md" \
       && warn "iteration_$id: 当前状态 · 下一步 not updated (resume placeholder still present)"
+    # F1 backstop (audit): v0.2.3-era readmes may carry duplicated sections —
+    # a duplicated 结果 section with a leftover placeholder would block close.
+    dup="$(grep -c '^## 结果$' "$d/readme.md" 2>/dev/null || true)"
+    [ "${dup:-0}" -le 1 ] || warn "iteration_$id: duplicated '## 结果' section (${dup}×, v0.2.3-era template) — a leftover placeholder in the duplicate blocks closing; ask the user before cleaning"
   fi
 done
 
@@ -107,7 +113,8 @@ for t in plan.md plan/index.md iterations.md iterations/index.md register.md; do
     case "$target" in
       http://*|https://*|mailto:*|\#*) continue ;;
     esac
-    [ -e "$AS_ROOT/$target" ] || warn "$t: broken link → $target"
+    # F5 (audit): strip #anchor suffixes — target must be a real file path
+    [ -e "$AS_ROOT/${target%%#*}" ] || warn "$t: broken link → $target"
   done < <(grep '^| ' "$tfile" | grep -o ']([^)]*)' | sed 's/^](//; s/)$//')
 done
 
