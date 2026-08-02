@@ -27,7 +27,12 @@
         "experiments",
         "workspace",
         "git"
-      ]
+      ],
+      "icon": "https://raw.githubusercontent.com/wenqingqian/AGENTSPACE/main/icons/icon.png",
+      "displayName": "AGENTSPACE",
+      "displayName_i18n": {
+        "zh-CN": "AGENTSPACE 工作区"
+      }
     }
   ],
   "version": 1
