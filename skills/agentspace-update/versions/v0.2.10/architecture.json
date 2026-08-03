@@ -137,7 +137,7 @@
       "type": "content",
       "managedBy": "agent",
       "sections": {
-        "条目": {
+        "_default": {
           "columns": [
             "工具",
             "用途",
@@ -172,7 +172,7 @@
       "type": "content",
       "managedBy": "agent",
       "sections": {
-        "条目": {
+        "_default": {
           "columns": [
             "主题",
             "标签",

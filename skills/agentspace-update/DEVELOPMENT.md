@@ -29,6 +29,14 @@ When the workspace structure changes (new files, schema changes, removed modules
 
 ### Step 1: Create Version Directory
 
+Run the scaffolding tool (repo root, dev-only — NOT part of the deployed plugin):
+
+```bash
+bash new-version.sh 0.2.11
+```
+
+It creates `skills/agentspace-update/versions/v{NEW}/` with a CHANGELOG skeleton and an architecture.json copied from the latest version (version field bumped), and updates the version fields in `.zcode-plugin/plugin.json`, `marketplace.json` (`plugins[0].version`), and the init assets' `.agentspace-version.json` / `.agentspace-architecture.json`.
+
 ```
 skills/agentspace-update/versions/v{NEW}/
 ├── CHANGELOG.md
@@ -108,7 +116,7 @@ Key fields:
 ### Step 4: Update Plugin Assets
 
 1. Update `skills/agentspace-init/assets/agentspace/.agentspace-architecture.json` with the new snapshot
-2. Bump `workspaceVersion` in `skills/agentspace-init/assets/agentspace/.agentspace-version.json`
+2. Bump `version` in `skills/agentspace-init/assets/agentspace/.agentspace-version.json` (single field since v0.2.0)
 3. If new files added: include them in `skills/agentspace-init/assets/agentspace/`
 4. If files removed: remove from `skills/agentspace-init/assets/agentspace/`
 5. If table schemas changed: update the corresponding template files in `assets/agentspace/templates/`
@@ -146,13 +154,15 @@ Any mismatch means a rule exists in one language only — fix before release.
 
 ### Step 7: Test
 
-1. `bash -n` on all `.sh` files
+0. Run the release gate (repo root dev tool, read-only): `bash verify-release.sh` — checks JSON validity, version consistency, archive chain continuity, CHANGELOG quality, the assets↔architecture contract, `bash -n` on all scripts, bilingual sync, and SKILL size budgets. Fix any issue it reports.
+1. `bash -n` on all `.sh` files (covered by the gate)
 2. `/tmp` init → verify new workspace has correct structure
 3. `/tmp` update from old version → verify migration works in both modes
 4. `doctor.sh` green after update
-5. `python3 -m json.tool` on all `.json` files
-6. Bilingual sync check (see Step 6)
-7. SKILL size budget: `[ "$(wc -l < skills/agentspace/SKILL.md)" -le 120 ]` and same for SKILL.zh-CN.md — fail if either exceeds 120 lines
+5. `python3 -m json.tool` on all `.json` files (covered by the gate)
+6. Bilingual sync check (see Step 6) (covered by the gate)
+7. SKILL size budget (covered by the gate)
+8. Run the regression suite (repo root dev tool): `bash self-test.sh` — plan/iteration lifecycle, close/complete gates, doctor red states (broken link, placeholder drift, duplicate-section backstop), version-marker mechanics. Each scenario runs the real init script in an isolated /tmp sandbox.
 
 ## File Ownership Matrix
 
