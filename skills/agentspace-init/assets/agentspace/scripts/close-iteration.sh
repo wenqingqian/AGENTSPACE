@@ -72,3 +72,4 @@ awk -v status_old="$STATUS_PROGRESS" -v status_new="> 状态: 已完成 ($DATE)"
 cat "$tmp2" > "$README" && rm -f "$tmp2"
 
 echo "iteration_$ID closed → $DIR/readme.md (frozen)"
+echo "Next [SHOULD]: if the result holds transferable lessons, write a note (templates/note.md) with source iteration_$ID, back-linking this readme in 详情"

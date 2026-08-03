@@ -43,7 +43,10 @@ s = re.sub(r"<!-- 会话续接块:.*?-->", "当前状态: 已关闭; 下一步: 
 open(p, "w").write(s)
 EOF
 
-assert_ok bash "$WS/scripts/close-iteration.sh" "$IID" "step 1 works"
+CLOSE_OUT="$(bash "$WS/scripts/close-iteration.sh" "$IID" "step 1 works")" || fail "close failed"
+# v0.2.12: the close script reminds the agent about note distillation
+assert_output_contains "$CLOSE_OUT" "Next [SHOULD]:"
+assert_output_contains "$CLOSE_OUT" "iteration_$IID"
 assert_contains "$WS/iterations.md" "$IID"          # now in 最近完成
 assert_contains "$README" "> 状态: 已完成"
 assert_contains "$README" "> 宿主结束 commit: "

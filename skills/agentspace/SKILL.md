@@ -63,6 +63,7 @@ After writing results in the readme's "结果" section:
 AGENTSPACE/scripts/close-iteration.sh <id> "One-line result"
 ```
 Milestone commit.
+If the result holds transferable lessons (SHOULD — knowledge distillation), write a note (templates/note.md) with source `iteration_NNNN`, back-linking this iteration's readme in 详情.
 
 ### Complete Plan
 **Before running (required by script gate)**: fill the plan document's "结果" section (one-line conclusion + key evidence) — the script refuses while the template placeholder remains.

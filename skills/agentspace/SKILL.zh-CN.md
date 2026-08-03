@@ -63,6 +63,7 @@ AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteratio
 AGENTSPACE/scripts/close-iteration.sh <id> "结果一句话"
 ```
 里程碑提交。
+结果含可迁移教训时 (SHOULD — 知识提炼), 写一条笔记(templates/note.md, 来源 `iteration_NNNN`), 在"详情"中回链本迭代的 readme。
 
 ### 完成计划
 **运行前(脚本闸门要求)**: 先填写 plan 文档"结果"节(一句话结论 + 关键证据) — 占位符未替换时脚本会拒绝。
