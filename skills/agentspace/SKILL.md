@@ -98,7 +98,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 - **[MUST] Wrap-up protocol** — before ending any project work session, in order: ① update the in-progress iteration readme's "当前状态 · 下一步" (the re-entry point for the next session — replace the template guidance comment with real content) ② run `AGENTSPACE/scripts/doctor.sh` (hard errors must be resolved; warnings must be reported to the user) ③ milestone commit (§4)
 - **[MUST] On script errors** (e.g., "Section not found"): do NOT hand-edit tables. Run `doctor.sh` to locate the issue, then discuss a repair plan with the user. **A one-time manual fix explicitly confirmed by the user is the only allowed exception** to the scripts-only rule. This applies to plan.md / iterations.md / plan/index.md / iterations/index.md / register.md and any content documents
 - **[MUST] Scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` may only be modified by scripts; never hand-edit tables (except the user-confirmed exception above)
-- Status self-check: `AGENTSPACE/scripts/status.sh`; run `AGENTSPACE/scripts/doctor.sh` after wrap-up and whenever you suspect corruption
+- Status self-check: `AGENTSPACE/scripts/status.sh`; run `AGENTSPACE/scripts/doctor.sh` after wrap-up and whenever you suspect corruption; for deeper audits (per-file content, cross-cutting history, repairs) run the explicit `/doctor-agentspace` command (--minor | --major [--fix]) — it is never triggered automatically
 - **Do not read plugin development data**: `skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc. are plugin infrastructure, unrelated to the project — never read or reference during project work
 
 ## 4. Milestone Git Commits

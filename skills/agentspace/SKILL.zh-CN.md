@@ -98,7 +98,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 - **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口 — 用实际内容替换模板引导注释) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
 - **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / plan/index.md / iterations/index.md / register.md 及内容文档
 - **[MUST] scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` 只能由 scripts 改写, 禁止手工编辑(用户确认例外除外)
-- 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`
+- 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`; 需要深度审计(逐文件内容、跨历史交叉、修复)时显式运行 `/doctor-agentspace` 命令(--minor | --major [--fix])— 该命令绝不自动触发
 - **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用
 
 ## 4. 里程碑 git 提交

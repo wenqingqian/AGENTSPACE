@@ -208,6 +208,7 @@ bilingual() {
 }
 bilingual "$ROOT/skills/agentspace"
 bilingual "$ROOT/skills/agentspace-update"
+bilingual "$ROOT/skills/agentspace-doctor"
 # rule-level token parity (daily skill only, per DEVELOPMENT.md Step 6)
 for t in MUST SHOULD MAY; do
   en=$(grep -o "$t" "$ROOT/skills/agentspace/SKILL.md" | wc -l | tr -d ' ')

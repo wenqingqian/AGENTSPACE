@@ -99,6 +99,23 @@ as_remove_row() {
   ' "$file" > "$tmp" && cat "$tmp" > "$file" && rm -f "$tmp"
 }
 
+# Delete table rows whose first column equals id, bounded to one "## SECTION".
+# Rows outside the section are never touched — the same id may legitimately
+# appear in several sections (e.g. a plan id in Todo and in Done).
+# Usage: as_remove_row_section <file> <section> <id>
+as_remove_row_section() {
+  local file="$1" tmp
+  [[ "$3" =~ ^[0-9]+$ ]] || as_die "as_remove_row_section: id must be numeric: $3"
+  tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+  awk -v sec="## $2" -v id="$3" '
+    BEGIN { pat="^ *\\| *" id " *\\|" }
+    $0 == sec { in_sec=1; print; next }
+    /^## / { in_sec=0 }
+    in_sec && $0 ~ pat { next }
+    { print }
+  ' "$file" > "$tmp" && cat "$tmp" > "$file" && rm -f "$tmp"
+}
+
 # Keep only the first <keep> data rows in a section table.
 # Note: data rows matched by "| digit" prefix — designed for numeric-ID tables.
 # Usage: as_truncate_section <file> <section> <keep>

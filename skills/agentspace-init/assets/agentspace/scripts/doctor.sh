@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
 # Consistency check: entry tables / full indexes ↔ filesystem.
 # Broken latest symlink auto-repaired; other issues reported.
-# Usage: doctor.sh
+# --fix: additionally auto-repair safe deterministic items (orphan table rows,
+# missing notes.md rows); semantic issues are always reported, never auto-fixed.
+# Usage: doctor.sh [--fix]
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
+
+FIX=0
+for a in "$@"; do
+  case "$a" in
+    --fix) FIX=1 ;;
+    *) printf 'error: unknown argument: %s\n' "$a" >&2; exit 2 ;;
+  esac
+done
 
 issues=0
 fixed=0
@@ -11,6 +21,46 @@ fixed=0
 # warn/ok only valid in main shell (pipe subshell changes don't propagate)
 warn() { printf '  [issue] %s\n' "$*"; issues=$((issues + 1)); }
 ok()   { printf '  [fixed] %s\n' "$*"; fixed=$((fixed + 1)); }
+
+# Insert a row into notes.md after the first table separator line.
+# notes.md has no "## " section heading, so as_insert_row cannot be used here.
+notes_insert_row() {
+  local row="$1" tmp
+  tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+  awk -v row="$row" '
+    /^\|[ :|-]+\|$/ && !inserted { print; print row; inserted=1; next }
+    { print }
+    END { if (!inserted) exit 3 }
+  ' "$AS_ROOT/notes.md" > "$tmp" || { rm -f "$tmp"; warn "notes.md: table separator not found, row not inserted"; return 1; }
+  cat "$tmp" > "$AS_ROOT/notes.md" && rm -f "$tmp"
+}
+
+# Primary source ref (plan:NNNN / iteration_NNNN) of a note file, from its
+# "> 来源:" header line — first matching token wins, trailing context ignored.
+# The numeric part is zero-pad-normalized (as_norm_id) so hand-written refs
+# like plan:1 match the padded index rows / iteration dir names in [7]/[8].
+note_primary_ref() {
+  local ref
+  ref="$(grep -E '^> 来源:' "$1" 2>/dev/null | head -1 | grep -oE 'plan:[0-9]+|iteration_[0-9]+' | head -1 || true)"
+  if [ -n "$ref" ]; then
+    case "$ref" in
+      plan:*)
+        if [[ "${ref#plan:}" =~ ^[0-9]+$ ]]; then
+          ref="plan:$(as_norm_id "${ref#plan:}")"
+        fi ;;
+      iteration_*)
+        if [[ "${ref#iteration_}" =~ ^[0-9]+$ ]]; then
+          ref="iteration_$(as_norm_id "${ref#iteration_}")"
+        fi ;;
+    esac
+  fi
+  printf '%s' "$ref"
+}
+
+# --fix writes tables → take the same lock the write scripts use
+if [ "$FIX" -eq 1 ]; then
+  as_lock
+fi
 
 echo "== AGENTSPACE doctor: $AS_ROOT =="
 echo
@@ -64,8 +114,19 @@ todo_ids="$(awk -F'|' -v sec="$SEC_TODO" '
   f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
 ' "$AS_ROOT/plan.md")"
 for id in $todo_ids; do
-  ls "$AS_ROOT"/plan/todo/"$id"-*.md >/dev/null 2>&1 \
-    || warn "plan.md Todo row $id has no corresponding file (orphan row)"
+  # compgen -G: nullglob is on for the forward loops, which would turn a bare
+  # unmatched glob into an empty arg and make `ls` succeed on cwd (silent no-op)
+  if compgen -G "$AS_ROOT/plan/todo/$id-*.md" >/dev/null; then
+    :
+  elif [ "$FIX" -eq 1 ]; then
+    before="$(wc -l < "$AS_ROOT/plan.md")"
+    as_remove_row_section "$AS_ROOT/plan.md" "$SEC_TODO" "$id"
+    if [ "$(wc -l < "$AS_ROOT/plan.md")" -lt "$before" ]; then
+      ok "removed orphan Todo row $id (no file)"
+    fi
+  else
+    warn "plan.md Todo row $id has no corresponding file (orphan row)"
+  fi
 done
 
 # ---- 3. iterations: dirs ↔ entry table ↔ full index ----
@@ -97,8 +158,17 @@ prog_ids="$(awk -F'|' -v sec="$SEC_PROGRESS" '
   f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
 ' "$AS_ROOT/iterations.md")"
 for id in $prog_ids; do
-  [ -d "$AS_ROOT/iterations/iteration_$id" ] \
-    || warn "iterations.md in-progress row $id has no corresponding dir (orphan row)"
+  if [ -d "$AS_ROOT/iterations/iteration_$id" ]; then
+    :
+  elif [ "$FIX" -eq 1 ]; then
+    before="$(wc -l < "$AS_ROOT/iterations.md")"
+    as_remove_row_section "$AS_ROOT/iterations.md" "$SEC_PROGRESS" "$id"
+    if [ "$(wc -l < "$AS_ROOT/iterations.md")" -lt "$before" ]; then
+      ok "removed orphan in-progress row $id (no dir)"
+    fi
+  else
+    warn "iterations.md in-progress row $id has no corresponding dir (orphan row)"
+  fi
 done
 
 # ---- 4. link validity: script-managed tables only (links are script contract output) ----
@@ -124,6 +194,85 @@ for pair in "RESUME_PH_ITER:templates/iteration-readme.md" "RESULT_PH_ITER:templ
   const="${pair%%:*}"; tpl="${pair##*:}"
   val="$(eval "printf '%s' \"\${$const}\"")"
   grep -Fq "$val" "$AS_ROOT/$tpl" || warn "constant $const no longer matches $tpl (contract drift — update the constant or the template)"
+done
+
+# ---- 6. cross-reference: iteration → plan ownership ----
+echo "[6] iteration→plan ownership"
+for d in "$AS_ROOT"/iterations/iteration_[0-9]*; do
+  [ -d "$d" ] || continue
+  id="$(basename "$d" | sed 's/iteration_//')"
+  [ -f "$d/readme.md" ] || continue  # missing readme already reported by [3]
+  # readme declares the parent plan: "> plan: NNNN"
+  rd_plan="$(grep -E '^> plan: [0-9]+' "$d/readme.md" 2>/dev/null | head -1 | grep -o '[0-9][0-9]*' | head -1 || true)"
+  if [ -z "$rd_plan" ]; then
+    warn "iteration_$id: readme missing '> plan:' header (iteration must belong to a plan)"
+    continue
+  fi
+  # zero-pad-normalize hand-written refs (plan:1 → 0001) before table/index lookups
+  if [[ "$rd_plan" =~ ^[0-9]+$ ]]; then
+    rd_plan="$(as_norm_id "$rd_plan")"
+  fi
+  # entry table row (进行中 / 最近完成) declares the plan: "| ID | plan:NNNN | ..."
+  tb_plan="$(as_row_cell "$AS_ROOT/iterations.md" "$id" 3 | grep -o 'plan:[0-9][0-9]*' | cut -d: -f2 | head -1 || true)"
+  if [ -n "$tb_plan" ] && [ "$tb_plan" != "$rd_plan" ]; then
+    warn "iteration_$id: readme says plan:$rd_plan but iterations.md row says plan:$tb_plan (mismatch)"
+  fi
+  # parent plan must exist in the full index
+  grep -q "^| *$rd_plan *|" "$AS_ROOT/plan/index.md" \
+    || warn "iteration_$id: parent plan $rd_plan not found in plan/index.md"
+done
+
+# ---- 7. notes: files ↔ entry table + source contract ----
+echo "[7] notes integrity"
+for f in "$AS_ROOT"/notes/*.md; do
+  [ -f "$f" ] || continue
+  slug="$(basename "$f")"
+  ref="$(note_primary_ref "$f")"
+  if grep -qF "notes/$slug" "$AS_ROOT/notes.md"; then
+    :
+  elif [ "$FIX" -eq 1 ]; then
+    topic="$(grep -E '^# ' "$f" | head -1 | sed 's/^# *//' || true)"
+    date="$(grep -E '^> 创建:' "$f" | head -1 | sed 's/^> 创建:[[:space:]]*//' || true)"
+    if notes_insert_row "| $(as_cell "$topic") |  |  | $ref | $(as_cell "$date") | [notes/$slug](notes/$slug) |"; then
+      ok "notes.md: inserted row for $slug"
+    fi
+  else
+    warn "notes.md missing row for $slug (add a row with 来源/日期/链接)"
+  fi
+  if [ -z "$ref" ]; then
+    warn "notes/$slug: 来源 missing or malformed (need plan:NNNN / iteration_NNNN)"
+  else
+    case "$ref" in
+      plan:*)
+        pid="${ref#plan:}"
+        grep -q "^| *$pid *|" "$AS_ROOT/plan/index.md" \
+          || warn "notes/$slug: 来源 $ref not found in plan/index.md" ;;
+      iteration_*)
+        iid="${ref#iteration_}"
+        [ -d "$AS_ROOT/iterations/iteration_$iid" ] \
+          || warn "notes/$slug: 来源 $ref target dir not found" ;;
+    esac
+  fi
+done
+# entry rows must point at existing files (agent-maintained table → same link check as [4])
+while IFS= read -r target; do
+  [ -n "$target" ] || continue
+  case "$target" in
+    http://*|https://*|mailto:*|\#*) continue ;;
+  esac
+  [ -e "$AS_ROOT/${target%%#*}" ] || warn "notes.md broken link → $target"
+done < <(grep '^| ' "$AS_ROOT/notes.md" | grep -o ']([^)]*)' | sed 's/^](//; s/)$//')
+
+# ---- 8. back-link discipline: iteration-sourced notes must link their readme ----
+echo "[8] note back-links (iteration-sourced)"
+for f in "$AS_ROOT"/notes/*.md; do
+  [ -f "$f" ] || continue
+  ref="$(note_primary_ref "$f")"
+  case "$ref" in
+    iteration_*)
+      grep -qF "$ref/readme.md" "$f" \
+        || warn "notes/$(basename "$f"): 来源 $ref but no back-link to $ref/readme.md in 详情 (v0.2.12 discipline)" ;;
+  esac
 done
 
 echo
