@@ -108,11 +108,17 @@ User responses:
 - **"Cancel" / "不更新"** → abort, no files touched
 - **"Use aggressive mode"** → re-run without confirmation prompts
 
-**Critical**: in conservative mode, if a destructive change (deletion, schema loss) is refused by the user, that change is SKIPPED, not forced. The version file should reflect what was actually applied, not the full target version.
+**Critical**: in conservative mode, if a destructive change (deletion, schema loss) is refused by the user, that change is SKIPPED, not forced. The version file records the highest version V such that every changelog from `currentVersion + 1` through V was fully applied — i.e., if the earliest skipped change comes from vN, record N-1 (or keep the current version); never the target version. Otherwise the next update starts after the skipped version and the refused items are never re-attempted.
 
 ### 8. Execute Update
 
-After confirmation (or immediately in aggressive mode):
+After confirmation (or immediately in aggressive mode), first create the rollback tag in the workspace repo (git by the init contract). `<old>` is the currentVersion read in step 2 — the version being updated FROM. Use `-f` to overwrite: on a re-attempt from the same base version the tag is re-pointed at the current pre-update state, so rollback undoes only the current update. If the tag command fails, abort and report the error.
+
+```bash
+git -C AGENTSPACE tag -f pre-update-v<old>
+```
+
+Then:
 
 **a. Replace plugin-managed files**:
 ```bash
@@ -140,14 +146,15 @@ Note: the source is `skills/agentspace-init/assets/agentspace/` (the canonical a
   - Preserve user-filled sections (项目简介, 根仓库简介) verbatim
   - Update structural sections (结构 tree, module list) to reflect new architecture
   - Update 纪律 section if constants changed
+  - When re-applying a previously refused insertion, the anchor area may carry residual blank lines left by the earlier skip — after inserting, collapse consecutive blank lines to one (verify against the canonical asset `skills/agentspace-init/assets/agentspace/AGENTS.md`)
 
-**c. Update version markers**:
+**c. Update version markers** — pass the version determined in step 7 (targetVersion when every changelog item was applied; otherwise the highest fully-applied version):
 ```bash
-bash skills/agentspace-update/scripts/update-version.sh <target-version>
+bash skills/agentspace-update/scripts/update-version.sh <recorded-version>
 ```
-Also copy the target architecture.json:
+Copy the architecture.json of the RECORDED version (not the target — the snapshot must describe what the workspace actually is):
 ```bash
-cp skills/agentspace-update/versions/v<target>/architecture.json AGENTSPACE/.agentspace-architecture.json
+cp skills/agentspace-update/versions/v<recorded>/architecture.json AGENTSPACE/.agentspace-architecture.json
 ```
 
 ### 9. Verify
@@ -162,7 +169,7 @@ Run `AGENTSPACE/scripts/doctor.sh` and check for consistency issues. If issues f
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "update: AGENTSPACE v<old> → v<new>"
 ```
 
-Commit message type: `update`. Report the commit hash to the user.
+Commit message type: `update`. If the recorded version equals the old version (partial refusal), commit as `update: AGENTSPACE partial (v<old>, refused items pending)`. Report the commit hash to the user.
 
 ### 11. Report
 
@@ -173,10 +180,11 @@ Summarize what was done:
 - Content merges applied (which files)
 - Items skipped (if any, in conservative mode)
 - Doctor result
+- Rollback command: `git -C AGENTSPACE reset --hard pre-update-v<old>`
 - Next steps suggestion
 
 ## Notes
 
-- **Partial updates**: if the user refuses some changes in conservative mode, the workspace is in a mixed state. Record the ACTUAL applied version in `.agentspace-version.json` (may be lower than targetVersion). The next update will re-attempt skipped changes.
-- **No rollback**: there is no built-in rollback mechanism. The AGENTSPACE git history serves as the rollback point — user can `git -C AGENTSPACE reset --hard <pre-update-commit>` if needed.
+- **Partial updates**: if the user refuses some changes in conservative mode, the workspace is in a mixed state. Record the highest fully-applied version in `.agentspace-version.json` and copy that version's architecture.json (see step 7 Critical + step 8c) — lower than targetVersion. The next update re-reads the skipped version's changelog and re-attempts the skipped changes.
+- **Rollback**: every update creates/overwrites a `pre-update-v<old>` tag (`<old>` = currentVersion from step 2) before mutating (step 8). Roll back with `git -C AGENTSPACE reset --hard pre-update-v<old>`; delete a tag with `git -C AGENTSPACE tag -d pre-update-v<old>`. Tags are cheap — leave them in place. Before `reset --hard`, check `git status` — uncommitted changes are discarded (stash or commit them first).
 - **Workspace templates (assets/) stay Chinese**: the workspace language convention is Chinese. The update skill and developer docs are English because they are plugin-infrastructure concerns.

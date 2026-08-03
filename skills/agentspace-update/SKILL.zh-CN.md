@@ -103,11 +103,17 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 - **"取消"/"不更新"** → 终止，不改动任何文件
 - **"切换激进模式"** → 无需确认直接执行
 
-**关键**：保守模式下，用户拒绝的破坏性变更被**跳过**而非强制执行。版本文件记录实际应用的版本（可能低于 targetVersion）。
+**关键**：保守模式下，用户拒绝的破坏性变更被**跳过**而非强制执行。版本文件记录**最高完整应用版本 V**（从 `currentVersion + 1` 到 V 的每个 changelog 都被完整应用）：即最早被跳过的变更若来自 vN，记录 N-1（或保持当前版本），绝不记录目标版本——否则下次更新从被跳过的版本之后开始，被拒绝的项永远不会被重试。
 
 ### 8. 执行更新
 
-确认后（或激进模式下直接）执行：
+确认后（或激进模式下直接），先在工作区仓库创建回滚 tag（init 契约保证工作区是 git 仓库）。`<旧版本>` = step 2 读到的 currentVersion（本次更新从哪个版本出发）。用 `-f` 覆盖：同一基线版本重试时，tag 重新指向当前更新前的状态，此时回滚只撤销本次更新。tag 命令失败则中止并报告错误：
+
+```bash
+git -C AGENTSPACE tag -f pre-update-v<旧版本>
+```
+
+然后：
 
 **a. 替换插件管理文件**：scripts/*.sh、templates/*.md、.gitignore
 
@@ -115,12 +121,15 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 - 新增节/文件 → 在指定位置创建
 - 删除模块 → 删除该模块下所有文件和目录
 - Schema 变更 → 用当前数据重建 view 文件（新表头 + 旧数据行，新列默认空值）
-- AGENTS.md 变更 → 智能合并（新节插入、用户内容保留、结构树更新、常量漂移时更新纪律节）
+- AGENTS.md 变更 → 智能合并（新节插入、用户内容保留、结构树更新、常量漂移时更新纪律节；重试此前被拒绝的插入时，锚点处可能残留上次跳过留下的连续空行——插入后把连续空行折叠为一个，与规范资产 `skills/agentspace-init/assets/agentspace/AGENTS.md` 比对确认）
 
-**c. 更新版本标记**：
+**c. 更新版本标记**——传入 step 7 确定的版本（全部应用则为 targetVersion，否则为最高完整应用版本）：
 ```bash
-bash skills/agentspace-update/scripts/update-version.sh <目标版本>
-cp skills/agentspace-update/versions/v<目标>/architecture.json AGENTSPACE/.agentspace-architecture.json
+bash skills/agentspace-update/scripts/update-version.sh <已记录版本>
+```
+拷贝**已记录版本**的 architecture.json（快照必须描述工作区实际状态，而非目标版本）：
+```bash
+cp skills/agentspace-update/versions/v<已记录>/architecture.json AGENTSPACE/.agentspace-architecture.json
 ```
 
 ### 9. 验证
@@ -135,14 +144,14 @@ cp skills/agentspace-update/versions/v<目标>/architecture.json AGENTSPACE/.age
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "update: AGENTSPACE v旧 → v新"
 ```
 
-提交类型：`update`。告知用户 commit hash。
+提交类型：`update`。若已记录版本等于旧版本（部分拒绝），提交为 `update: AGENTSPACE partial (v<旧版本>, 被拒项待重试)`。告知用户 commit hash。
 
 ### 11. 汇报
 
-总结：版本跨度、替换文件数、schema 变更、内容合并、跳过项（保守模式）、doctor 结果、下一步建议。
+总结：版本跨度、替换文件数、schema 变更、内容合并、跳过项（保守模式）、doctor 结果、回滚命令（`git -C AGENTSPACE reset --hard pre-update-v<旧版本>`）、下一步建议。
 
 ## 备注
 
-- **部分更新**：用户在保守模式下拒绝部分变更时，工作区处于混合状态。`.agentspace-version.json` 记录实际应用的版本（可能低于 targetVersion）。下次更新会重新尝试被跳过的变更。
-- **无回滚**：无内置回滚机制。AGENTSPACE git 历史即回滚点——用户可 `git -C AGENTSPACE reset --hard <更新前commit>`。
+- **部分更新**：用户在保守模式下拒绝部分变更时，工作区处于混合状态。`.agentspace-version.json` 记录**最高完整应用版本**并拷贝该版本的 architecture.json（见 step 7 关键说明与 step 8c），低于 targetVersion。下次更新重读被跳过版本的 changelog，重试被跳过的变更。
+- **回滚**：每次更新在变更前创建/覆盖 `pre-update-v<旧版本>` tag（`<旧版本>` = step 2 的 currentVersion，见 step 8）。回滚：`git -C AGENTSPACE reset --hard pre-update-v<旧版本>`；删除 tag：`git -C AGENTSPACE tag -d pre-update-v<旧版本>`。tag 很便宜，保留即可。`reset --hard` 前先查 `git status`——未提交的改动会被丢弃（先 stash 或提交）。
 - **工作区模板语言**：assets/ 中的模板保持中文（工作区语言约定）。更新 skill 和开发文档使用英文（插件基础设施层面）。
