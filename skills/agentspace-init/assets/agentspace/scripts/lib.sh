@@ -32,7 +32,7 @@ as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 as_atomic_write() {
   local file="$1" tmp="$2"
   if [ -e "$file" ]; then
-    chmod "$(stat -f '%Lp' "$file" 2>/dev/null || printf '644')" "$tmp" 2>/dev/null || true
+    chmod "$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file" 2>/dev/null || printf '644')" "$tmp" 2>/dev/null || true
   fi
   mv -f "$tmp" "$file"
 }
@@ -241,25 +241,48 @@ as_append_to_section() {
 # Stale-lock recovery: a SIGKILLed writer leaves the lock behind and every
 # subsequent writer would spin forever. A lock whose owner PID is dead is
 # stale; a pid-less lock (crash mid-acquire) older than the grace window is
-# treated as stale too. kill -0 works for same-user processes only.
+# treated as stale too. A pid file that is empty / unreadable / non-numeric
+# (crash between mkdir and pid write, or a partial write) also falls back to
+# the mtime grace path — never spin forever on it (fail-open). Liveness is
+# checked with `ps -p PID -o pid=` (empty output = no such process), which
+# answers across users where `kill -0` would fail with EPERM.
 as_lock() {
+  local owner stale pidtmp
   while ! mkdir "$AS_ROOT/.scripts.lock" 2>/dev/null; do
-    if [ -f "$AS_ROOT/.scripts.lock/pid" ]; then
-      owner="$(cat "$AS_ROOT/.scripts.lock/pid" 2>/dev/null || true)"
-      if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
-        rm -rf "$AS_ROOT/.scripts.lock"
-        continue
-      fi
+    owner="$(cat "$AS_ROOT/.scripts.lock/pid" 2>/dev/null || true)"
+    stale=""
+    if [ -n "$owner" ] && [[ "$owner" =~ ^[0-9]+$ ]]; then
+      # parseable owner PID: stale iff the process no longer exists
+      [ -n "$(ps -p "$owner" -o pid= 2>/dev/null)" ] || stale=1
     elif [ -n "$(find "$AS_ROOT/.scripts.lock" -mmin +5 2>/dev/null | head -1)" ]; then
-      rm -rf "$AS_ROOT/.scripts.lock"
+      # pid file missing / empty / unreadable / non-numeric → mtime grace path
+      stale=1
+    fi
+    if [ -n "$stale" ]; then
+      # Atomic claim: mv IS the claim — exactly one waiter wins it; losers
+      # find the source gone, re-loop, and see the new holder's live lock.
+      # Never `rm -rf` the lock in place: a concurrent claimant could then
+      # delete a freshly re-acquired live lock.
+      if mv "$AS_ROOT/.scripts.lock" "$AS_ROOT/.scripts.lock.stale.$$" 2>/dev/null; then
+        rm -rf "$AS_ROOT/.scripts.lock.stale.$$"
+      fi
       continue
     fi
     sleep 0.2
   done
-  printf '%s' "$$" > "$AS_ROOT/.scripts.lock/pid"
+  # Write the owner PID atomically (tmp + mv): a crash mid-write can never
+  # leave an empty or half-written pid file behind.
+  pidtmp="$(mktemp "$AS_ROOT/.scripts.lock/pid.XXXXXXXX")"
+  printf '%s' "$$" > "$pidtmp"
+  mv -f "$pidtmp" "$AS_ROOT/.scripts.lock/pid"
   AS_TMPDIR="$(mktemp -d "$AS_ROOT/.scripts-tmp.XXXXXXXX")"
   trap '
     rm -rf "$AS_TMPDIR" 2>/dev/null || true
-    rm -rf "$AS_ROOT/.scripts.lock" 2>/dev/null || true
+    # Ownership guard: only the recorded owner PID may tear the lock down,
+    # so a process whose lock was legitimately taken over (stale-claim race)
+    # can never delete the new holder live lock on EXIT.
+    if [ "$(cat "$AS_ROOT/.scripts.lock/pid" 2>/dev/null || true)" = "$$" ]; then
+      rm -rf "$AS_ROOT/.scripts.lock" 2>/dev/null || true
+    fi
   ' EXIT
 }

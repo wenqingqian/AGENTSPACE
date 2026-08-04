@@ -192,4 +192,19 @@ git -C "$WS" commit -qm "test: t06h milestone" >/dev/null 2>&1
 assert_ok bash "$WS/scripts/doctor.sh"
 rm -rf "$SB"
 
+# --- [8] note WITHOUT a '> 创建:' header: not exempt, back-link still required ---
+SB="$(build_sandbox t06i)"
+WS="$SB/AGENTSPACE"
+read -r PID IID <<EOF
+$(make_plan_iteration "$WS" "NoDate Plan" "no-date test")
+EOF
+make_note "$WS" "no-date-note" "No date note" "iteration_$IID" ""
+sed -i '' '/^> 创建:/d' "$WS/notes/no-date-note.md"   # drop the creation-date header
+add_note_row "$WS" "no-date-note" "No date note" "iteration_$IID"
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t06i milestone" >/dev/null 2>&1
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "no back-link to iteration_$IID/readme.md"
+rm -rf "$SB"
+
 echo "PASS t06"

@@ -7,6 +7,7 @@ Upgrade from v0.2.12. Date: 2026-08-04
 - New `/doctor-agentspace` command: deep workspace health check — deterministic core + per-file content review (minor) + cross-cutting audit against the host repo (major); read-only by default, tiered `--fix` repairs
 - `doctor.sh` gains deterministic cross-reference checks: iteration→plan ownership [6], notes integrity (来源 + file↔table) [7], note back-links [8]
 - `doctor.sh --fix`: safe deterministic auto-repairs (orphan table rows, missing notes.md rows) on top of the existing broken-symlink repair
+- New marketplace icon (plugin-side, no workspace action)
 
 ## Changes
 
