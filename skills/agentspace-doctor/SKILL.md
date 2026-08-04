@@ -22,7 +22,7 @@ Proceed ONLY when the user explicitly executes `/doctor-agentspace`. Never trigg
 
 Run `AGENTSPACE/scripts/doctor.sh [--fix]` first. Its output is the baseline:
 - exit 0 → deterministic layer green; exit 1 → red items listed
-- Report every deterministic finding verbatim with the [script] source label — do not re-litigate or paraphrase script output
+- Report every deterministic finding verbatim with the [script] source label — do not re-litigate or paraphrase script output. doctor.sh issues are 红 (hard errors) — never downgrade them to 黄
 - Do not skip this phase in major mode; major layers build on top of it
 
 ## 3. Phase B — Minor: Per-File Content Review
@@ -47,7 +47,7 @@ Every finding carries a source label — `[script]` (from doctor.sh) or `[agent]
 
 ## 4. Phase C — Major: Cross-Cutting Audit
 
-Everything in Phase A + B, plus dispatch **parallel subagents** (one per block — the main agent does not do block work itself), then synthesize their reports. Subagent instructions MUST include: read-only (never modify the workspace), never read plugin dev data in user projects, report findings with file:line evidence, return a structured list.
+Everything in Phase A + B, plus dispatch **parallel subagents** (one per block — the main agent does not do block work itself), then synthesize their reports. If the session has no subagent tooling, run the blocks serially and note the deviation in the report. Subagent instructions MUST include: read-only (never modify the workspace), never read plugin dev data in user projects, report findings with file:line evidence, return a structured list.
 
 - **Block 1 — 宿主代码+git 成果核对**: verify outcome claims in iterations/notes ("implemented / fixed / landed") against the host code and git log
 - **Block 2 — 工作区 git 审计**: workspace repo commit hygiene (milestone-shaped, not fragmented), host start/end commits recorded at close-iteration exist and are on the right branch, pre-update tags sane, `.agentspace-version.json` lastUpdatedAt not stale

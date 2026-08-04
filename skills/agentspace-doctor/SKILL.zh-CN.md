@@ -22,7 +22,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 
 先运行 `AGENTSPACE/scripts/doctor.sh [--fix]`, 其输出是基线:
 - exit 0 → 确定性层全绿; exit 1 → 列出红色项
-- 逐字报告每条确定性发现, 标注 [script] 来源 — 不重新争辩、不改写脚本输出
+- 逐字报告每条确定性发现, 标注 [script] 来源 — 不重新争辩、不改写脚本输出。doctor.sh 的问题一律为红(硬错误)— 不得降级为黄
 - major 模式不跳过本阶段; major 的各层叠加在它之上
 
 ## 3. 阶段 B — Minor: 逐文件内容审查
@@ -47,7 +47,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 
 ## 4. 阶段 C — Major: 跨目录深度审计
 
-阶段 A + B 的全部, 再加**并行分发 subagent**(每块一个 — 主 agent 不做分块工作), 然后汇总各块报告。子代理指令必须包含: 只读(绝不修改工作区)、用户项目中绝不读插件开发数据、以 file:line 证据报告发现、返回结构化清单。
+阶段 A + B 的全部, 再加**并行分发 subagent**(每块一个 — 主 agent 不做分块工作), 然后汇总各块报告。若本会话没有 subagent 工具, 串行执行各块并在报告中注明偏离。子代理指令必须包含: 只读(绝不修改工作区)、用户项目中绝不读插件开发数据、以 file:line 证据报告发现、返回结构化清单。
 
 - **块 1 — 宿主代码+git 成果核对**: 核对 iterations/notes 中的成果断言("已实现 / 已修复 / 已上线")在宿主代码与 git log 中是否有迹可循
 - **块 2 — 工作区 git 审计**: 工作区仓库提交卫生(里程碑化, 非碎片提交)、close-iteration 记录的宿主起始/结束 commit 存在且分支正确、pre-update tag 合理、`.agentspace-version.json` 的 lastUpdatedAt 未久未刷新
