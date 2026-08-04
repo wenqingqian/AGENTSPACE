@@ -276,10 +276,27 @@ for f in "$AS_ROOT"/notes/*.md; do
       if [ -n "$created" ] && [ "$created" \< "2026-08-04" ]; then
         continue  # pre-discipline note — exempt
       fi
-      grep -qF "$ref/readme.md" "$f" \
-        || warn "notes/$(basename "$f"): 来源 $ref but no back-link to $ref/readme.md in 详情 (v0.2.12 discipline)" ;;
+      # link-level check: a real markdown link target must point at the source
+      # readme — exact "iteration_NNNN/readme.md" or a relative form ending in
+      # "/iteration_NNNN/readme.md" (e.g. ../iterations/iteration_NNNN/readme.md).
+      # Plain-text mentions are NOT a back-link; links to another iteration's
+      # readme are NOT a back-link either.
+      # Capture the match list instead of grep -q: an early-exit -q would SIGPIPE
+      # the upstream grep under pipefail on large notes (false "no back-link").
+      # || true absorbs the head-1 SIGPIPE case; no -q means grep never exits early.
+      link="$(grep -o ']([^)]*)' "$f" | sed 's/^](//; s/)$//; s/#.*$//' \
+               | grep -E "(^|/)$ref/readme\.md$" | head -1 || true)"
+      [ -z "$link" ] && warn "notes/$(basename "$f"): 来源 $ref but no back-link to $ref/readme.md in 详情 (v0.2.12 discipline)" ;;
   esac
 done
+
+# ---- 9. version metadata: version marker ↔ architecture snapshot must agree ----
+echo "[9] version metadata"
+ver="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$AS_ROOT/.agentspace-version.json" 2>/dev/null | head -1 | sed 's/.*: *"//; s/"$//' || true)"
+arch="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$AS_ROOT/.agentspace-architecture.json" 2>/dev/null | head -1 | sed 's/.*: *"//; s/"$//' || true)"
+if [ -n "$ver" ] && [ -n "$arch" ] && [ "$ver" != "$arch" ]; then
+  warn "version marker v$ver vs architecture snapshot v$arch (mismatch — run /update-agentspace, or fix once with user confirmation)"
+fi
 
 echo
 echo "== Done: $issues issues, $fixed auto-repaired =="

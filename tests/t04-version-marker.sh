@@ -29,5 +29,10 @@ rm "$VERSION_FILE"
 python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['version']=='0.9.10' and d['installedAt']=='$(date +%F)', d" "$VERSION_FILE" \
   || fail "missing-file creation path failed"
 
+# update-version.sh locates the project root by walking up from subdirs (v0.3.1)
+(cd "$SB/AGENTSPACE/plan" && assert_ok bash "$UPDATE_SH" 0.9.11)
+V="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['version'])" "$VERSION_FILE")"
+[ "$V" = "0.9.11" ] || fail "walk-up project-root resolution failed: $V"
+
 rm -rf "$SB"
 echo "PASS t04"

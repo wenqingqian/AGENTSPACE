@@ -67,6 +67,13 @@ echo "== AGENTSPACE initialized =="
 echo "Location: $TARGET"
 echo "First commit: $(git -C "$TARGET" log --oneline -1)"
 echo
+echo "== Self-check (doctor) =="
+if "$TARGET/scripts/doctor.sh"; then
+  echo "初始化一致性 ✓"
+else
+  echo "NOTICE: doctor 发现问题(见上方输出), 请修复后再开始使用"
+fi
+echo
 echo "Next steps:"
 echo "  1. Fill AGENTSPACE/AGENTS.md '项目简介' and '根仓库简介'"
 echo "  2. Fill AGENTSPACE/tests.md experiment environment table (container/conda/GPU)"

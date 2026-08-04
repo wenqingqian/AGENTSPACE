@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only status summary: next indexes / todo plans / in-progress iterations / latest / recent commits.
+# Read-only status summary: next indexes / 推进总览 / todo plans / in-progress iterations / recent closes / latest / next step / recent commits.
 # Usage: status.sh
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
@@ -7,6 +7,19 @@ source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 echo "# AGENTSPACE Status Summary"
 echo
 echo "Next index: plan $(as_next_plan_id) / iteration $(as_next_iteration_id)"
+echo
+
+echo "## 推进总览"
+# per-plan iteration counts from the full index (closed vs total)
+overview="$(awk -F'|' '
+  /^\| [0-9]/ {
+    plan=$3; gsub(/ /, "", plan)
+    cnt[plan]++; gsub(/^ +| +$/, "", $5)
+    if ($5 == "已完成") done[plan]++
+  }
+  END { for (p in cnt) printf "  %s: %d 迭代 (%d 已关)\n", p, cnt[p], done[p]+0 }
+' "$AS_ROOT/iterations/index.md" | sort)"
+[ -n "$overview" ] && echo "$overview" || echo "  (无迭代)"
 echo
 
 echo "## Todo plans"
@@ -31,11 +44,43 @@ rows="$(awk -F'|' -v sec="$SEC_PROGRESS" '
 [ -n "$rows" ] && echo "$rows" || echo "(empty)"
 echo
 
+echo "## 最近关闭"
+recent="$(awk -F'|' -v sec="$SEC_RECENT" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| [0-9]/ {
+    gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $4); gsub(/^ +| +$/, "", $5)
+    print "- " $2 " " $4 " (" $5 ")"
+  }
+' "$AS_ROOT/iterations.md" | head -3)"
+[ -n "$recent" ] && echo "$recent" || echo "  (无)"
+echo
+
 echo "## Latest"
 if [ -L "$AS_ROOT/iterations/latest" ]; then
   echo "latest -> $(readlink "$AS_ROOT/iterations/latest")"
 else
   echo "(not set)"
+fi
+echo
+
+echo "## 下一步"
+if [ -L "$AS_ROOT/iterations/latest" ]; then
+  latest_dir="$(readlink "$AS_ROOT/iterations/latest")"
+  # First non-empty, non-comment, non-heading line after the heading — covers
+  # the template's blank line and the multi-line `<!-- 会话续接块 -->` placeholder
+  # (skipped as a whole, so an unfilled block keeps the fallback clean), and
+  # tolerates a missing readme/heading (2>/dev/null + || true → fallback).
+  next="$(awk '
+    /^## 当前状态 · 下一步/ { f=1; next }
+    f && /^## / { exit }
+    f && /^<!--/ { if ($0 !~ /-->/) c=1; next }
+    f && c { if ($0 ~ /-->/) c=0; next }
+    f && NF { print; exit }
+  ' "$AS_ROOT/iterations/$latest_dir/readme.md" 2>/dev/null || true)"
+  [ -n "$next" ] && echo "  $latest_dir: $next" || echo "  (见 iterations/latest/readme.md)"
+else
+  echo "  (无进行中迭代)"
 fi
 echo
 

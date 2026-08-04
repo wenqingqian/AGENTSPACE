@@ -13,6 +13,8 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 
 检查项目根是否存在 `AGENTSPACE/`。不存在 → 报错并建议 `/init-agentspace`。不执行初始化（那是独立命令）。
 
+同时检查工作区 git 状态：`git -C AGENTSPACE status --porcelain` 有未提交改动时，先告知用户——建议先提交挂起里程碑，并警告回滚（`git -C AGENTSPACE reset --hard pre-update-v<旧版本>`）会丢弃未提交改动。
+
 ### 2. 读取当前状态
 
 读取 `AGENTSPACE/.agentspace-version.json`：

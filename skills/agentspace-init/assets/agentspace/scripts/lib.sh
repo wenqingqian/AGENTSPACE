@@ -56,7 +56,13 @@ as_norm_id() {
   printf "%04d" "$((10#$1))"
 }
 
-# Next plan index (scan plan/todo + plan/done, max+1, monotonically increasing, never reused).
+# Numeric ids from script-managed table rows (entry view + full index).
+# Union scan prevents reusing an id that only exists as an orphan table row.
+as_row_ids() {
+  grep -hoE '^\| *[0-9]+' "$@" 2>/dev/null | grep -oE '[0-9]+' || true
+}
+
+# Next plan index (scan plan/todo + plan/done + tables, max+1, monotonically increasing, never reused).
 as_next_plan_id() {
   local max=0 f base n
   while IFS= read -r -d '' f; do
@@ -66,10 +72,14 @@ as_next_plan_id() {
     (( 10#$n > max )) && max=$((10#$n))
   done < <(find "$AS_ROOT/plan/todo" "$AS_ROOT/plan/done" -maxdepth 1 \
     -name '[0-9][0-9][0-9][0-9]-*.md' -print0 2>/dev/null)
+  while IFS= read -r n; do
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    (( 10#$n > max )) && max=$((10#$n))
+  done < <(as_row_ids "$AS_ROOT/plan.md" "$AS_ROOT/plan/index.md")
   printf "%04d" $((max + 1))
 }
 
-# Next iteration index (scan iterations/iteration_NNNN).
+# Next iteration index (scan iterations/iteration_NNNN + tables).
 as_next_iteration_id() {
   local max=0 d base n
   while IFS= read -r -d '' d; do
@@ -79,6 +89,10 @@ as_next_iteration_id() {
     (( 10#$n > max )) && max=$((10#$n))
   done < <(find "$AS_ROOT/iterations" -maxdepth 1 -type d \
     -name 'iteration_[0-9][0-9][0-9][0-9]*' -print0 2>/dev/null)
+  while IFS= read -r n; do
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    (( 10#$n > max )) && max=$((10#$n))
+  done < <(as_row_ids "$AS_ROOT/iterations.md" "$AS_ROOT/iterations/index.md")
   printf "%04d" $((max + 1))
 }
 

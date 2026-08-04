@@ -13,6 +13,8 @@ Triggered ONLY by explicit `/update-agentspace` command. Never run automatically
 
 Check if `AGENTSPACE/` exists in the project root. If not, report error and suggest `/init-agentspace`. Do NOT initialize — that is a separate command.
 
+Also check the workspace git state: if `git -C AGENTSPACE status --porcelain` shows uncommitted changes, tell the user before proceeding — recommend committing the pending milestone first, and warn that rollback (`git -C AGENTSPACE reset --hard pre-update-v<old>`) will discard uncommitted changes.
+
 ### 2. Read Current State
 
 Read `AGENTSPACE/.agentspace-version.json` → `currentVersion`:

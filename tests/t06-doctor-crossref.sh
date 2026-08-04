@@ -207,4 +207,69 @@ OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
 assert_output_contains "$OUT" "no back-link to iteration_$IID/readme.md"
 rm -rf "$SB"
 
+# --- [8] plain-text mention of the readme path is NOT a back-link (v0.3.1) ---
+SB="$(build_sandbox t06j)"
+WS="$SB/AGENTSPACE"
+read -r PID IID <<EOF
+$(make_plan_iteration "$WS" "PlainText Plan" "plain-text test")
+EOF
+# 详情 mentions the path as plain text only — no markdown link
+make_note "$WS" "plain-note" "Plain text note" "iteration_$IID" "详见 iteration_$IID/readme.md"
+add_note_row "$WS" "plain-note" "Plain text note" "iteration_$IID"
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t06j milestone" >/dev/null 2>&1
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "no back-link to iteration_$IID/readme.md"
+rm -rf "$SB"
+
+# --- [8] a link to ANOTHER iteration's readme is not a back-link (v0.3.1) ---
+SB="$(build_sandbox t06k)"
+WS="$SB/AGENTSPACE"
+read -r PID IID <<EOF
+$(make_plan_iteration "$WS" "WrongLink Plan" "wrong-link test")
+EOF
+OTHER="$(printf '%04d' $((10#$IID + 1)))"   # an iteration that does not exist
+make_note "$WS" "wrong-link-note" "Wrong link note" "iteration_$IID" "回链: [iteration_$OTHER readme](../iterations/iteration_$OTHER/readme.md)"
+add_note_row "$WS" "wrong-link-note" "Wrong link note" "iteration_$IID"
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t06k milestone" >/dev/null 2>&1
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "no back-link to iteration_$IID/readme.md"
+rm -rf "$SB"
+
+# --- [9] version marker vs architecture snapshot mismatch (v0.3.1) ---
+SB="$(build_sandbox t06l)"
+WS="$SB/AGENTSPACE"
+python3 - "$WS/.agentspace-version.json" "$WS/.agentspace-architecture.json" <<'EOF'
+import json, sys
+vp, ap = sys.argv[1], sys.argv[2]
+json.dump({"version": "9.9.9", "installedAt": "2026-07-01", "lastUpdatedAt": "2026-08-05"},
+          open(vp, "w"), ensure_ascii=False)
+a = json.load(open(ap)); a["version"] = "8.8.8"
+json.dump(a, open(ap, "w"), ensure_ascii=False, indent=2)
+open(ap, "a").write("\n")
+EOF
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t06l milestone" >/dev/null 2>&1
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "version marker v9.9.9 vs architecture snapshot v8.8.8"
+rm -rf "$SB"
+
+# --- [9] marker and snapshot agree → green (v0.3.1) ---
+SB="$(build_sandbox t06m)"
+WS="$SB/AGENTSPACE"
+python3 - "$WS/.agentspace-version.json" "$WS/.agentspace-architecture.json" <<'EOF'
+import json, sys
+vp, ap = sys.argv[1], sys.argv[2]
+json.dump({"version": "9.9.9", "installedAt": "2026-07-01", "lastUpdatedAt": "2026-08-05"},
+          open(vp, "w"), ensure_ascii=False)
+a = json.load(open(ap)); a["version"] = "9.9.9"
+json.dump(a, open(ap, "w"), ensure_ascii=False, indent=2)
+open(ap, "a").write("\n")
+EOF
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t06m milestone" >/dev/null 2>&1
+assert_ok bash "$WS/scripts/doctor.sh"
+rm -rf "$SB"
+
 echo "PASS t06"

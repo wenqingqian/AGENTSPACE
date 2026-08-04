@@ -4,9 +4,18 @@ set -euo pipefail
 # update-version.sh — Update .agentspace-version.json after a successful update.
 # Usage: update-version.sh <new-version>
 #
-# Called from project root: bash skills/agentspace-update/scripts/update-version.sh 0.2.0
+# Locates the project root automatically (walks up from cwd until an AGENTSPACE/
+# workspace is found), so it can be invoked from the project root or any subdir.
 
 PROJECT_ROOT="$(pwd)"
+while [ ! -f "$PROJECT_ROOT/AGENTSPACE/scripts/doctor.sh" ]; do
+  parent="$(dirname "$PROJECT_ROOT")"
+  if [ "$parent" = "$PROJECT_ROOT" ]; then
+    echo "error: no AGENTSPACE/ workspace found from $(pwd) upward (looked for AGENTSPACE/scripts/doctor.sh)" >&2
+    exit 1
+  fi
+  PROJECT_ROOT="$parent"
+done
 VERSION_FILE="$PROJECT_ROOT/AGENTSPACE/.agentspace-version.json"
 
 if [ $# -lt 1 ]; then
