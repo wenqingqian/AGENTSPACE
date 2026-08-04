@@ -30,14 +30,15 @@ Run `AGENTSPACE/scripts/doctor.sh [--fix]` first. Its output is the baseline:
 **Review scope — read fully**:
 - Management tables: `plan.md`, `iterations.md`, `notes.md`, `data.md`, `register.md`
 - Entries: `plan/todo/*.md`, `plan/done/*.md`, `iterations/iteration_NNNN/readme.md`, `notes/*.md`, `examples/*.md`, `templates/*.md`
-- Host root `AGENTS.md` — the AGENTSPACE section (drift vs the init template: rules, hard rules, structure block)
-- `utils/`, `tests/`, `scripts/` — existence/structure correspondence with their entry tables only (e.g. `utils.md` ↔ `utils/`); do NOT prose-review scripts
+- If a scoped file is absent (e.g. `data.md`/`examples.md` in workspaces predating those modules): note the absence as a 蓝 observation — do not escalate to 红/黄
+- Host root `AGENTS.md` — the AGENTSPACE section: internal consistency only (rules and hard rules present and non-contradictory, structure block matches the workspace layout). Do NOT diff against plugin-side templates — plugin dev data is off-limits in user projects
+- `utils/`, `tests/` — existence/structure correspondence with their entry tables only (e.g. `utils.md` ↔ `utils/`); `scripts/` — correspondence with the architecture contract (`AGENTS.md` structure block + `.agentspace-architecture.json`), since `scripts/` has no entry table; do NOT prose-review scripts
 - `data/` payload: never read
 - Plugin dev data (`skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc.): never read (user projects)
 
 **Judgment criterion — 状态断言 vs 历史记录** (current-state assertions vs historical records):
 - 矛盾 (contradiction): two places in the same system claim conflicting current states → **红**
-- Current-state assertion contradicted by reality (version marker, index, script behavior, host code/git) → **红/黄** (红 when clearly provable, 黄 when judgment-based)
+- Current-state assertion contradicted by reality (version marker, index, script behavior) → **红/黄** (红 when clearly provable, 黄 when judgment-based). In minor, "reality" = workspace-internal state (tables, indexes, version markers, script outputs) plus directly observable host facts (file presence, git status); deep host code/git verification belongs to Phase C (major)
 - Historical records (closed iterations, completed features, reverted attempts, old-version behavior): **never an issue**; only flag when they mislead without context, and suggest adding context (**黄**)
 - Filler / no-information placeholders → **黄**
 - Optimization opportunities (dedup, distillation gaps, missing context) → **蓝** (suggestions only)

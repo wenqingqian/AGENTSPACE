@@ -30,14 +30,15 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 **审查范围 — 全量阅读**:
 - 管理表: `plan.md`、`iterations.md`、`notes.md`、`data.md`、`register.md`
 - 条目: `plan/todo/*.md`、`plan/done/*.md`、`iterations/iteration_NNNN/readme.md`、`notes/*.md`、`examples/*.md`、`templates/*.md`
-- 宿主根 `AGENTS.md` — 其中的 AGENTSPACE 区块(与 init 模板的漂移: 规则、硬规则、结构块)
-- `utils/`、`tests/`、`scripts/` — 只做与入口表的存在性/结构对应(如 `utils.md` ↔ `utils/`); 不对脚本做文字审查
+- 范围内的文件缺失时(如早于 data/examples 模块的工作区没有 `data.md`/`examples.md`): 记为蓝级观察 — 不升级为红/黄
+- 宿主根 `AGENTS.md` — 其中的 AGENTSPACE 区块: 只做内部一致性(规则与硬规则存在且不互相矛盾、结构块与实际布局一致)。**不要**与插件侧模板比对 — 用户项目中插件开发数据禁读
+- `utils/`、`tests/` — 只做与入口表的存在性/结构对应(如 `utils.md` ↔ `utils/`); `scripts/` — 与架构契约(`AGENTS.md` 结构块 + `.agentspace-architecture.json`)对应, 因为 `scripts/` 没有入口表; 不对脚本做文字审查
 - `data/` 载荷: 绝不读
 - 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等): 绝不读(用户项目)
 
 **判断判据 — 状态断言 vs 历史记录**:
 - 矛盾: 同一体系内两处对当前状态的声称冲突 → **红**
-- 当前状态断言与现实不符(版本标记、索引、脚本行为、宿主代码/git)→ **红/黄**(可明确证伪为红, 需判断的为黄)
+- 当前状态断言与现实不符(版本标记、索引、脚本行为)→ **红/黄**(可明确证伪为红, 需判断的为黄)。minor 中"现实" = 工作区内部状态(表、索引、版本标记、脚本输出)+ 可直接观测的宿主事实(文件存在性、git 状态); 宿主代码/git 的深度核对属于阶段 C(major)
 - 历史记录(已关闭迭代、已完成功能、已回滚尝试、旧版本行为): **一律不算问题**; 仅在缺乏上下文会误导时标记, 并建议补充上下文(**黄**)
 - 废话 / 无信息量占位 → **黄**
 - 优化机会(去重、蒸馏缺口、缺上下文)→ **蓝**(仅建议)
