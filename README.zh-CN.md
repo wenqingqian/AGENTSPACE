@@ -42,6 +42,7 @@
 ```text
 /init-agentspace              # 显式初始化(唯一入口, 幂等; 分析工作区后询问 goal/运行环境/关键代码仓库)
 /update-agentspace [--force]  # 更新工作区至插件版本(默认保守, --force 激进)
+/doctor-agentspace [--minor | --major] [--fix]  # 深度健康检查(仅显式命令触发, 绝不自动触发)
 ```
 
 之后日常对话中(agent 自动判断, 项目无关会话不介入):
@@ -55,15 +56,19 @@ AGENTSPACE/scripts/status.sh      # 状态摘要
 AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 ```
 
+需要更深的审计(逐文件内容审查 `--minor` / 跨历史对照宿主仓库 `--major` / 分级修复 `--fix`)时, 显式运行 `/doctor-agentspace` 命令; 该命令绝不自动触发。
+
 ## 插件结构
 
 ```
 .zcode-plugin/plugin.json        # 清单
 commands/init-agentspace.md      # /init-agentspace 命令
 commands/update-agentspace.md    # /update-agentspace 命令
+commands/doctor-agentspace.md    # /doctor-agentspace 命令(深度健康检查)
 skills/agentspace-init/          # 初始化 skill(仅命令显式触发) + init 脚本 + 全部模板 assets
 skills/agentspace-update/        # 更新 skill + 版本档案 + 更新脚本
 skills/agentspace/               # 日常管理 skill(自动触发, 带守卫)
+skills/agentspace-doctor/        # 深度审计 skill(仅显式命令触发, 绝不自动触发)
 ```
 
 ## 版本管理

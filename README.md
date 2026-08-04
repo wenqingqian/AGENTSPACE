@@ -42,6 +42,7 @@ Install this repository as a ZCode plugin (plugin marketplace or local plugin di
 ```text
 /init-agentspace              # Explicit initialization (only entry, idempotent; analyzes workspace, asks goal/env/key repos)
 /update-agentspace [--force]  # Update workspace to match plugin version (conservative by default, --force for aggressive)
+/doctor-agentspace [--minor | --major] [--fix]  # Deep health check (explicit command only, never auto-triggered)
 ```
 
 After initialization, the agent auto-manages the workspace in relevant sessions (project-unrelated chat does not interfere):
@@ -55,15 +56,19 @@ AGENTSPACE/scripts/status.sh          # Status summary
 AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 ```
 
+For deeper audits — per-file content review (`--minor`), cross-cutting history audit against the host repo (`--major`), and tiered repairs (`--fix`) — run the explicit `/doctor-agentspace` command; it is never triggered automatically.
+
 ## Plugin Structure
 
 ```
 .zcode-plugin/plugin.json        # Manifest
 commands/init-agentspace.md      # /init-agentspace command
 commands/update-agentspace.md    # /update-agentspace command
+commands/doctor-agentspace.md    # /doctor-agentspace command (deep health check)
 skills/agentspace-init/          # Init skill (explicit command only) + init script + all template assets
 skills/agentspace-update/        # Update skill + version archives + update scripts
 skills/agentspace/               # Daily management skill (auto-triggered, with guards)
+skills/agentspace-doctor/        # Deep audit skill (explicit command only, never auto-triggered)
 ```
 
 ## Version Management
