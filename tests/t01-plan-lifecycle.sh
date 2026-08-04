@@ -29,7 +29,9 @@ s = s.replace("<!-- 完成时填写: 一句话结论", "一句话结论: test do
 open(p, "w").write(s)
 EOF
 
-assert_ok bash "$WS/scripts/complete-plan.sh" "$ID" done "test done"
+OUT="$(bash "$WS/scripts/complete-plan.sh" "$ID" done "test done")"
+# v0.3.2: lesson distillation is a MUST, not a SHOULD — the prompt must say so
+assert_output_contains "$OUT" "Next [MUST]"
 assert_contains "$WS/plan.md" "| $ID |"       # now in Done table
 [ -f "$WS/plan/done/$(basename "$DOC")" ] || fail "plan doc not moved to plan/done/"
 [ ! -f "$DOC" ] || fail "plan doc still in plan/todo/"

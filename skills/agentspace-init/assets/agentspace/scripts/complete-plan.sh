@@ -62,4 +62,6 @@ mv "${SRC[0]}" "$AS_ROOT/$DEST"
 as_replace_line "$AS_ROOT/$DEST" "$STATUS_TODO" "> 状态: $STATUS_CN ($DATE)"
 
 echo "plan:$ID → $STATUS_CN ($DEST)"
-echo "Next [SHOULD]: review this plan's iterations (结果/code-diff) and distill transferable lessons into notes with source plan:$ID"
+# v0.3.2: lesson distillation upgraded from SHOULD to MUST — every completed
+# plan's transferable lessons must land in notes/ before the milestone commit
+echo "Next [MUST]: review this plan's iterations (结果/code-diff) and distill transferable lessons into notes with source plan:$ID"

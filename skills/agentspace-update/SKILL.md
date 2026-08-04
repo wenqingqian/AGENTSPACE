@@ -122,6 +122,8 @@ git -C AGENTSPACE tag -f pre-update-v<old>
 
 Then:
 
+**Maintain a migration ledger** as you apply the changelog: for every change block, record `applied` / `skipped` / `not-applicable` (with the reason for skipped items). The ledger is the audit trail for the Step 11 report — do not rely on session memory alone.
+
 **a. Replace plugin-managed files**:
 ```bash
 # Scripts
@@ -181,6 +183,7 @@ Summarize what was done:
 - Schema changes applied (which files)
 - Content merges applied (which files)
 - Items skipped (if any, in conservative mode)
+- Per-item migration ledger: one line per changelog change block with its status (applied / skipped / not-applicable)
 - Doctor result
 - Rollback command: `git -C AGENTSPACE reset --hard pre-update-v<old>`
 - Next steps suggestion

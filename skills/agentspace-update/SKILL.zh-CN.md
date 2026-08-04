@@ -117,6 +117,8 @@ git -C AGENTSPACE tag -f pre-update-v<旧版本>
 
 然后：
 
+**维护迁移台账**：逐项应用 changelog 时，为每个变更块记录 `已应用 / 跳过 / 不适用`（跳过注明原因）。台账是 Step 11 汇报的审计依据，不要只依赖会话记忆。
+
 **a. 替换插件管理文件**：scripts/*.sh、templates/*.md、.gitignore
 
 **b. 逐项应用 changelog 变更**（agent 执行，非刚性脚本）：
@@ -150,7 +152,7 @@ git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "update: AGENTSPACE v旧
 
 ### 11. 汇报
 
-总结：版本跨度、替换文件数、schema 变更、内容合并、跳过项（保守模式）、doctor 结果、回滚命令（`git -C AGENTSPACE reset --hard pre-update-v<旧版本>`）、下一步建议。
+总结：版本跨度、替换文件数、schema 变更、内容合并、跳过项（保守模式）、逐项迁移台账（每个 changelog 变更块一行，标注 已应用/跳过/不适用）、doctor 结果、回滚命令（`git -C AGENTSPACE reset --hard pre-update-v<旧版本>`）、下一步建议。
 
 ## 备注
 
