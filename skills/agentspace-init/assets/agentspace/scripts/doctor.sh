@@ -32,7 +32,7 @@ notes_insert_row() {
     { print }
     END { if (!inserted) exit 3 }
   ' "$AS_ROOT/notes.md" > "$tmp" || { rm -f "$tmp"; warn "notes.md: table separator not found, row not inserted"; return 1; }
-  cat "$tmp" > "$AS_ROOT/notes.md" && rm -f "$tmp"
+  as_atomic_write "$AS_ROOT/notes.md" "$tmp"
 }
 
 # Primary source ref (plan:NNNN / iteration_NNNN) of a note file, from its

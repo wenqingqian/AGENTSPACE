@@ -54,5 +54,19 @@ Semantic issues stay report-only; the agentspace-doctor skill (§5) governs tier
 1. **Script (handled by step 8a — no manual work)**: `AGENTSPACE/scripts/doctor.sh` is replaced from assets; `--fix` is available on the next invocation.
 2. **No data migration**: `--fix` only acts on items it reports; nothing changes unless the user runs `doctor.sh --fix` (or `/doctor-agentspace --fix`).
 
+### [Fix] Stale-lock recovery in as_lock
+**What**: `AGENTSPACE/scripts/lib.sh` `as_lock` now detects stale locks: a lock whose owner PID is dead is removed immediately; a pid-less lock older than 5 minutes (crash mid-acquire) is removed too. The owner PID is recorded in `.scripts.lock/pid` on acquire. `.gitignore` gained `.scripts.lock/` and `.scripts-tmp.*/` patterns so a killed writer no longer pollutes `git status`.
+**Why**: a SIGKILLed writer left `.scripts.lock` behind forever — every subsequent write (close-iteration, new-plan, doctor --fix, …) spun in `while ! mkdir` with no timeout, permanently deadlocking workspace operations.
+**Migration**:
+1. **Script (handled by step 8a — no manual work)**: `AGENTSPACE/scripts/lib.sh` and `.gitignore` are replaced from assets.
+2. **No data migration**: if a stale lock exists, the next write recovers it automatically.
+
+### [Fix] Atomic file writes (no truncate-then-write window)
+**What**: all lib.sh in-place write helpers (`as_insert_row`, `as_remove_row`, `as_remove_row_section`, `as_truncate_section`, `as_replace_line`, `as_insert_after`, `as_insert_after_prefix`, `as_append_to_section`) and `doctor.sh`'s notes backfill now replace files via `as_atomic_write` — same-filesystem `mv` with the target's permissions preserved. `as_fill_template` stays direct by design (its target is always a new file).
+**Why**: the previous `cat "$tmp" > "$file"` truncated the target before writing; a crash mid-write (OOM/SIGKILL/disk full) could leave core view files (plan.md, iterations.md, notes.md) truncated with no recovery short of git.
+**Migration**:
+1. **Script (handled by step 8a — no manual work)**: `AGENTSPACE/scripts/lib.sh` and `AGENTSPACE/scripts/doctor.sh` are replaced from assets.
+2. **No data migration**: behavior is transparent; permissions preserved.
+
 ### No structural changes
 - Workspace layout, schemas, templates, and architecture.json (constants/sections/files) unchanged — only `scripts/doctor.sh` content grew. architecture.json: version bump only. No workspace file changes during the update.

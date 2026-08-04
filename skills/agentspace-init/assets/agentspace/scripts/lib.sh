@@ -26,6 +26,17 @@ readonly RESUME_PH_ITER="<!-- 会话续接块:"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+# Atomic replace: mv is same-filesystem ($AS_TMPDIR lives in $AS_ROOT) and
+# atomic, so a crash cannot truncate the target mid-write. mktemp creates
+# 0600 — copy the target's mode onto the tmp first so permissions are kept.
+as_atomic_write() {
+  local file="$1" tmp="$2"
+  if [ -e "$file" ]; then
+    chmod "$(stat -f '%Lp' "$file" 2>/dev/null || printf '644')" "$tmp" 2>/dev/null || true
+  fi
+  mv -f "$tmp" "$file"
+}
+
 # Host repo HEAD short sha (project root = AS_ROOT/..). Empty if host is not a git repo.
 as_host_head() {
   if git -C "$AS_ROOT/.." rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -83,7 +94,7 @@ as_insert_row() {
     { print }
     END { if (!inserted) exit 3 }
   ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Table section not found: ## $2 ($file)"; }
-  cat "$tmp" > "$file" && rm -f "$tmp"
+  as_atomic_write "$file" "$tmp"
 }
 
 # Delete table rows whose first column equals id.
@@ -96,7 +107,7 @@ as_remove_row() {
     BEGIN { pat="^ *\\| *" id " *\\|" }
     $0 ~ pat { next }
     { print }
-  ' "$file" > "$tmp" && cat "$tmp" > "$file" && rm -f "$tmp"
+  ' "$file" > "$tmp" && as_atomic_write "$file" "$tmp"
 }
 
 # Delete table rows whose first column equals id, bounded to one "## SECTION".
@@ -113,7 +124,7 @@ as_remove_row_section() {
     /^## / { in_sec=0 }
     in_sec && $0 ~ pat { next }
     { print }
-  ' "$file" > "$tmp" && cat "$tmp" > "$file" && rm -f "$tmp"
+  ' "$file" > "$tmp" && as_atomic_write "$file" "$tmp"
 }
 
 # Keep only the first <keep> data rows in a section table.
@@ -127,7 +138,7 @@ as_truncate_section() {
     /^## / { in_sec=0 }
     in_sec && /^\| [0-9]/ { n++; if (n > keep) next }
     { print }
-  ' "$file" > "$tmp" && cat "$tmp" > "$file" && rm -f "$tmp"
+  ' "$file" > "$tmp" && as_atomic_write "$file" "$tmp"
 }
 
 # Read the Nth |-delimited field of the row whose first column equals id.
@@ -142,6 +153,8 @@ as_row_cell() {
 
 # Fill template placeholders {{ID}} {{TITLE}} {{DATE}} {{PLAN_ID}} {{NAME}} {{PURPOSE}}.
 # Usage: PH_ID=.. PH_TITLE=.. as_fill_template <src> <dst>
+# Intentionally direct (no tmp+mv): dst is always a NEW file — there is no
+# existing content that a crash could truncate.
 as_fill_template() {
   PH_ID="${PH_ID:-}" PH_TITLE="${PH_TITLE:-}" PH_DATE="${PH_DATE:-}" \
   PH_PLAN_ID="${PH_PLAN_ID:-}" PH_NAME="${PH_NAME:-}" PH_PURPOSE="${PH_PURPOSE:-}" \
@@ -170,7 +183,7 @@ as_replace_line() {
     { print }
     END { if (!done) exit 3 }
   ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Line not found: $2 ($file)"; }
-  cat "$tmp" > "$file" && rm -f "$tmp"
+  as_atomic_write "$file" "$tmp"
 }
 
 # Insert a line after the first occurrence of a heading.
@@ -183,7 +196,7 @@ as_insert_after() {
     { print }
     END { if (!done) exit 3 }
   ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Line not found: $2 ($file)"; }
-  cat "$tmp" > "$file" && rm -f "$tmp"
+  as_atomic_write "$file" "$tmp"
 }
 
 # Insert a line after the first line that STARTS WITH prefix (dynamic content safe).
@@ -196,7 +209,7 @@ as_insert_after_prefix() {
     { print }
     END { if (!done) exit 3 }
   ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Prefix line not found: $2 ($file)"; }
-  cat "$tmp" > "$file" && rm -f "$tmp"
+  as_atomic_write "$file" "$tmp"
 }
 
 # Append a line at the end of a section (before next ## or EOF).
@@ -219,17 +232,34 @@ as_append_to_section() {
       if (!inserted) exit 3
     }
   ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Section not found: ## $2 ($file)"; }
-  cat "$tmp" > "$file" && rm -f "$tmp"
+  as_atomic_write "$file" "$tmp"
 }
 
 # ---- Concurrency lock + temp cleanup ----
-# mkdir-based spinlock called by the four write scripts.
+# mkdir-based spinlock called by the write scripts.
 # Also creates $AS_TMPDIR and installs an EXIT trap to clean both.
+# Stale-lock recovery: a SIGKILLed writer leaves the lock behind and every
+# subsequent writer would spin forever. A lock whose owner PID is dead is
+# stale; a pid-less lock (crash mid-acquire) older than the grace window is
+# treated as stale too. kill -0 works for same-user processes only.
 as_lock() {
-  while ! mkdir "$AS_ROOT/.scripts.lock" 2>/dev/null; do sleep 0.2; done
+  while ! mkdir "$AS_ROOT/.scripts.lock" 2>/dev/null; do
+    if [ -f "$AS_ROOT/.scripts.lock/pid" ]; then
+      owner="$(cat "$AS_ROOT/.scripts.lock/pid" 2>/dev/null || true)"
+      if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+        rm -rf "$AS_ROOT/.scripts.lock"
+        continue
+      fi
+    elif [ -n "$(find "$AS_ROOT/.scripts.lock" -mmin +5 2>/dev/null | head -1)" ]; then
+      rm -rf "$AS_ROOT/.scripts.lock"
+      continue
+    fi
+    sleep 0.2
+  done
+  printf '%s' "$$" > "$AS_ROOT/.scripts.lock/pid"
   AS_TMPDIR="$(mktemp -d "$AS_ROOT/.scripts-tmp.XXXXXXXX")"
   trap '
     rm -rf "$AS_TMPDIR" 2>/dev/null || true
-    rmdir "$AS_ROOT/.scripts.lock" 2>/dev/null || true
+    rm -rf "$AS_ROOT/.scripts.lock" 2>/dev/null || true
   ' EXIT
 }
