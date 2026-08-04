@@ -60,7 +60,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 
 ## 5. 修复 (--fix)
 
-- **一级 — 脚本层(自动)**: 运行 `doctor.sh --fix` — 修复断链 latest 软链、清除 orphan 表行、回填缺失的 notes.md 行。结果为 [script] 修复, 如实报告
+- **一级 — 脚本层(自动)**: 运行 `doctor.sh --fix` — 修复断链 latest 软链、清除 orphan 表行(仅 orphan 行, 绝不碰已完成行 — 全量历史保留在 `plan/index.md`)、回填缺失的 notes.md 行。结果为 [script] 修复, 如实报告
 - **二级 — 语义层(agent, 需用户确认)**: 对每条红/黄 agent 发现, 提出具体修复方案(精确文件 + 精确改动), 获得用户确认(逐项或一次批量), 然后执行:
   - 内容文档(plan 文档、readme、notes、examples、templates): 直接编辑
   - 表格(`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): 只能走脚本, 或用户明确确认的一次性手工例外

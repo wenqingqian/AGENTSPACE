@@ -270,6 +270,12 @@ for f in "$AS_ROOT"/notes/*.md; do
   ref="$(note_primary_ref "$f")"
   case "$ref" in
     iteration_*)
+      # v0.2.12 promised existing notes are NOT retrofitted — only notes
+      # created on/after the discipline's adoption date must back-link
+      created="$(grep -E '^> 创建:' "$f" 2>/dev/null | head -1 | sed 's/^> 创建:[[:space:]]*//' || true)"
+      if [ -n "$created" ] && [ "$created" \< "2026-08-04" ]; then
+        continue  # pre-discipline note — exempt
+      fi
       grep -qF "$ref/readme.md" "$f" \
         || warn "notes/$(basename "$f"): 来源 $ref but no back-link to $ref/readme.md in 详情 (v0.2.12 discipline)" ;;
   esac

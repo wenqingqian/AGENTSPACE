@@ -60,7 +60,7 @@ Synthesize: dedupe findings, merge into the three-tier report, note per-block co
 
 ## 5. Repair (--fix)
 
-- **Tier 1 — script layer (automatic)**: run `doctor.sh --fix` — repairs the broken latest symlink, removes orphan table rows, backfills missing notes.md rows. Results are [script] fixes, reported as such
+- **Tier 1 — script layer (automatic)**: run `doctor.sh --fix` — repairs the broken latest symlink, removes orphan table rows (orphan rows only, never completed rows — full history stays in `plan/index.md`), backfills missing notes.md rows. Results are [script] fixes, reported as such
 - **Tier 2 — semantic layer (agent, user-confirmed)**: for each 红/黄 agent finding, propose a concrete repair (exact file + exact change), get the user's confirmation (per item or as one batch), then execute:
   - Content documents (plan docs, readmes, notes, examples, templates): edit directly
   - Tables (`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): scripts only, or the one-time user-confirmed manual exception

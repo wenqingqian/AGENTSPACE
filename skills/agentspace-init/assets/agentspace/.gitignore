@@ -13,4 +13,8 @@ data/
 # checkpoints/
 # runs/
 
+# ---- 脚本并发锁与临时目录(运行产物; 被强杀时可能残留, 不应入 git) ----
+.scripts.lock/
+.scripts-tmp.*/
+
 .DS_Store

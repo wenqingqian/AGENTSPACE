@@ -33,7 +33,7 @@ Upgrade from v0.2.12. Date: 2026-08-04
 **What**: `AGENTSPACE/scripts/doctor.sh` gains three check sections after [5]:
 - [6] iteration→plan ownership: each iteration readme's `> plan: NNNN` header must match the entry-table row's plan and the parent plan must exist in `plan/index.md`
 - [7] notes integrity: `notes/*.md` files ↔ `notes.md` entry rows (bidirectional), each note's `> 来源:` line must carry a primary `plan:NNNN` / `iteration_NNNN` ref whose target exists
-- [8] note back-links: iteration-sourced notes must contain `iteration_NNNN/readme.md` in 详情 (v0.2.12 discipline)
+- [8] note back-links: iteration-sourced notes must contain `iteration_NNNN/readme.md` in 详情 (v0.2.12 discipline); notes created before 2026-08-04 are exempt (v0.2.12 promised existing notes are NOT retrofitted)
 
 **Why**: these cross-reference contracts were previously enforced by discipline text only — no deterministic gate. Sinking them into the script layer makes them part of the wrap-up/update green gate and regression-testable (tests t06).
 

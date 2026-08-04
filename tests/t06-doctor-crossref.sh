@@ -177,4 +177,19 @@ assert_output_not_contains "$OUT" "mismatch"
 assert_output_not_contains "$OUT" "not found"
 rm -rf "$SB"
 
+# --- [8] pre-discipline notes are exempt (v0.2.12: existing notes NOT retrofitted) ---
+SB="$(build_sandbox t06h)"
+WS="$SB/AGENTSPACE"
+read -r PID IID <<EOF
+$(make_plan_iteration "$WS" "Exemption Plan" "exemption test")
+EOF
+make_note "$WS" "old-note" "Old note" "iteration_$IID" ""
+# created before the back-link discipline was adopted (2026-08-04)
+sed -i '' 's/> 创建: 2026-08-04/> 创建: 2026-07-01/' "$WS/notes/old-note.md"
+add_note_row "$WS" "old-note" "Old note" "iteration_$IID"
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t06h milestone" >/dev/null 2>&1
+assert_ok bash "$WS/scripts/doctor.sh"
+rm -rf "$SB"
+
 echo "PASS t06"
