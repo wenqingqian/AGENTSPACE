@@ -1,9 +1,9 @@
-# AGENTSPACE v0.4.4 (合并 v0.4.1-v0.4.3)
+# AGENTSPACE v0.4.1 (合并 v0.4.1-v0.4.4)
 
 Upgrade from v0.4.0. Date: 2026-08-05
 
-> **合并说明**: v0.4.1 / v0.4.2 / v0.4.3 为同日碎片 bug-fix 版, 已合并进本版(用户拍板, 档案压缩)。
-> 从 v0.4.0 升级时按本档案一次性应用以下全部变更; 若工作区版本标记落在 v0.4.1-v0.4.3, 内容与本版相同, 直接按本档案升级(update agent: 跳过缺失的中间档案)。
+> **合并说明**: v0.4.1-v0.4.4 四个同日碎片 bug-fix 版已合并为本版(用户拍板, 档案压缩)。
+> 从 v0.4.0 升级时按本档案一次性应用以下全部变更; 若工作区版本标记落在旧编号 v0.4.1-v0.4.4 任一版本, 内容与本版相同, 直接按本档案升级(update agent: 跳过缺失的中间档案)。
 
 ## Summary
 
@@ -165,4 +165,4 @@ Upgrade from v0.4.0. Date: 2026-08-05
 2. **Maintenance note**: when a new version adds workspace content changes (AGENTS.md text ops), extend the version-op table in the test.
 
 ### No structural changes
-- plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; new constant `STALE_DAYS` registered in architecture.json (lib.sh ↔ constants sync); AGENTS.md bullet wording is content, not schema. 本版为 v0.4.1-v0.4.4 四版合并, 无额外结构变化。
+- plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; new constant `STALE_DAYS` registered in architecture.json (lib.sh ↔ constants sync); AGENTS.md bullet wording is content, not schema. 本版为原 v0.4.1-v0.4.4 四版合并, 无额外结构变化。

@@ -8,7 +8,7 @@
 #
 # Maintenance: when a new version adds workspace content changes (AGENTS.md
 # text ops), extend the version-op table in the embedded python below.
-# Note: v0.4.1-v0.4.3 archives were merged into v0.4.4 (fragmented fix
+# Note: v0.4.1-v0.4.4 archives were merged into v0.4.1 (fragmented fix
 # versions); the replay table keeps their historical not-applicable rows —
 # the table replays semantics, the archive directory is irrelevant to it.
 set -euo pipefail
@@ -178,10 +178,10 @@ edit(A, "2. 任务相关时读 plan.md; 会话续接时读 `iterations/latest/re
         "2. 任务相关时读 plan.md; 会话续接时: 有 handoff 先读 `handoff/index.md` 选最新并 consume, 否则读 `iterations/latest/readme.md` 的\"当前状态 · 下一步\"",
         "v0.4.0", "AGENTS.md 读取规则 2")
 
-# --- v0.4.4: data bullet wording sync (GAP #3) ---
+# --- v0.4.1(合并版): data bullet wording sync (GAP #3) ---
 edit(A, "- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; 大文件/权重默认 gitignore, 小型共享文件可取消注释",
         "- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; data/ 全部 gitignore(与 .gitignore 行为一致, 无 opt-out)",
-        "v0.4.4", "AGENTS.md data bullet 措辞同步")
+        "v0.4.1", "AGENTS.md data bullet 措辞同步")
 
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
