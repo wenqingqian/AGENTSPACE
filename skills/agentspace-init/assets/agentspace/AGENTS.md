@@ -29,7 +29,8 @@ AGENTSPACE/
 ├── tests.md + tests/  ← 实验环境(容器/conda/GPU) + 测试脚本
 ├── notes.md + notes/  ← 持久知识(可迁移结论/踩坑)
 ├── register.md        ← 按需扩展模块注册表
-├── templates/         ← 文档模板(plan / iteration-readme / module-entry / note)
+├── handoff/           ← 一次性会话交接文件 + index.md(由 scripts/handoff.sh 维护, 文件不入 git)
+├── templates/         ← 文档模板(plan / iteration-readme / module-entry / note / handoff)
 └── scripts/           ← 状态流转脚本(索引与条目的唯一写入口)
 ```
 
@@ -74,10 +75,15 @@ AGENTSPACE/
 - **what**: 按需注册的模块登记处(按项目需要扩展, 如 visualization.md + visualization/)
 - **how**: 先与用户确认 → `scripts/register-module.sh <name> "用途"`
 
+### handoff —— 一次性会话交接 (handoff/)
+- **what**: 会话结束时生成的一次性上下文快照, 新会话读取后即销毁(consume); 支持多个 handoff 并存, index.md 登记 name/description/location/time
+- **when**: 关闭会话前收尾时(任何情况都可用, 不要求有进行中 plan); 新会话开始时消费
+- **how**: `/agentspace-handoff-produce [--name <名>] [--description <说明>]` → 填充内容 → 新会话 `/agentspace-handoff-consume --name <名> [--keep]`; 所有写操作经 `scripts/handoff.sh`(名字冲突会拒绝, 不会自动加后缀)
+
 ## 读取规则
 
 1. **上下文常驻**: 本文件 + tests.md + iterations.md。丢失(如 compact 后)或不确定 → 重新读取
-2. 任务相关时读 plan.md; 会话续接时读 `iterations/latest/readme.md` 的"当前状态 · 下一步"
+2. 任务相关时读 plan.md; 会话续接时: 有 handoff 先读 `handoff/index.md` 选最新并 consume, 否则读 `iterations/latest/readme.md` 的"当前状态 · 下一步"
 3. 文件夹内部(plan/ iterations/ utils/ 等)**按需读取**, 不预加载
 
 ## 纪律

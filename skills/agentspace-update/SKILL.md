@@ -1,17 +1,17 @@
 ---
 name: agentspace-update
-description: Update an existing AGENTSPACE workspace to match the current plugin version. Triggered ONLY by the explicit /update-agentspace command. Uses changelog-driven, agent-analyzed migration with conservative/aggressive modes. Never trigger automatically.
+description: Update an existing AGENTSPACE workspace to match the current plugin version. Triggered ONLY by the explicit /agentspace-update command. Uses changelog-driven, agent-analyzed migration with conservative/aggressive modes. Never trigger automatically.
 ---
 
 # AGENTSPACE Update Flow
 
-Triggered ONLY by explicit `/update-agentspace` command. Never run automatically.
+Triggered ONLY by explicit `/agentspace-update` command. Never run automatically.
 
 ## Steps
 
 ### 1. Guard
 
-Check if `AGENTSPACE/` exists in the project root. If not, report error and suggest `/init-agentspace`. Do NOT initialize — that is a separate command.
+Check if `AGENTSPACE/` exists in the project root. If not, report error and suggest `/agentspace-init`. Do NOT initialize — that is a separate command.
 
 Also check the workspace git state: if `git -C AGENTSPACE status --porcelain` shows uncommitted changes, tell the user before proceeding — recommend committing the pending milestone first, and warn that rollback (`git -C AGENTSPACE reset --hard pre-update-v<old>`) will discard uncommitted changes.
 

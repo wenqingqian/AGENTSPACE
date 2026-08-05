@@ -25,7 +25,7 @@ build_sandbox() {
   local tag="$1" sb
   sb="$(mktemp -d "/tmp/as-test-${tag}-XXXXXX")" || return 1
   mkdir -p "$sb/project"
-  # run the REAL init script — the sandbox is the mechanical output of /init-agentspace
+  # run the REAL init script — the sandbox is the mechanical output of /agentspace-init
   (cd "$sb/project" && bash "$REPO/skills/agentspace-init/scripts/init-agentspace.sh" >/dev/null 2>&1) || return 1
   # host repo (for host-commit recording): init AFTER the workspace so the
   # workspace keeps its own .git; gitignore the nested workspace like a real host

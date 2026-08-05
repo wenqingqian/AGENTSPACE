@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# t09: init self-check — /init-agentspace runs doctor.sh at the end and reports
+# t09: init self-check — /agentspace-init runs doctor.sh at the end and reports
 # "初始化一致性" on a fresh, green workspace (v0.3.1).
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"

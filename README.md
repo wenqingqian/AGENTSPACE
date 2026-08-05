@@ -2,7 +2,7 @@
 
 A ZCode plugin providing git-managed agent workspaces for experiment/iteration-driven projects.
 
-Initialize with explicit `/init-agentspace` to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
+Initialize with explicit `/agentspace-init` to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
 
 ## Core Concepts
 
@@ -40,9 +40,9 @@ Install this repository as a ZCode plugin (plugin marketplace or local plugin di
 ## Usage
 
 ```text
-/init-agentspace              # Explicit initialization (only entry, idempotent; analyzes workspace, asks goal/env/key repos)
-/update-agentspace [--force]  # Update workspace to match plugin version (conservative by default, --force for aggressive)
-/doctor-agentspace [--minor | --major] [--fix]  # Deep health check (explicit command only, never auto-triggered)
+/agentspace-init              # Explicit initialization (only entry, idempotent; analyzes workspace, asks goal/env/key repos)
+/agentspace-update [--force]  # Update workspace to match plugin version (conservative by default, --force for aggressive)
+/agentspace-doctor [--minor | --major] [--fix]  # Deep health check (explicit command only, never auto-triggered)
 ```
 
 After initialization, the agent auto-manages the workspace in relevant sessions (project-unrelated chat does not interfere):
@@ -56,15 +56,15 @@ AGENTSPACE/scripts/status.sh          # Status summary
 AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 ```
 
-For deeper audits — per-file content review (`--minor`), cross-cutting history audit against the host repo (`--major`), and tiered repairs (`--fix`) — run the explicit `/doctor-agentspace` command; it is never triggered automatically.
+For deeper audits — per-file content review (`--minor`), cross-cutting history audit against the host repo (`--major`), and tiered repairs (`--fix`) — run the explicit `/agentspace-doctor` command; it is never triggered automatically.
 
 ## Plugin Structure
 
 ```
 .zcode-plugin/plugin.json        # Manifest
-commands/init-agentspace.md      # /init-agentspace command
-commands/update-agentspace.md    # /update-agentspace command
-commands/doctor-agentspace.md    # /doctor-agentspace command (deep health check)
+commands/init-agentspace.md      # /agentspace-init command
+commands/update-agentspace.md    # /agentspace-update command
+commands/doctor-agentspace.md    # /agentspace-doctor command (deep health check)
 skills/agentspace-init/          # Init skill (explicit command only) + init script + all template assets
 skills/agentspace-update/        # Update skill + version archives + update scripts
 skills/agentspace/               # Daily management skill (auto-triggered, with guards)
@@ -73,7 +73,7 @@ skills/agentspace-doctor/        # Deep audit skill (explicit command only, neve
 
 ## Version Management
 
-Each plugin version maintains a version archive (`CHANGELOG.md` + `architecture.json`) under `skills/agentspace-update/versions/`. The `/update-agentspace` command uses these archives to intelligently migrate workspaces with agent analysis, supporting conservative (confirm destructive changes) and aggressive modes.
+Each plugin version maintains a version archive (`CHANGELOG.md` + `architecture.json`) under `skills/agentspace-update/versions/`. The `/agentspace-update` command uses these archives to intelligently migrate workspaces with agent analysis, supporting conservative (confirm destructive changes) and aggressive modes.
 
 See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on adding new versions.
 

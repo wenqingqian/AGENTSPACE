@@ -1,6 +1,6 @@
 ---
 name: agentspace-doctor
-description: Deep health check of an existing AGENTSPACE workspace — deterministic consistency, per-file content review, cross-cutting history audit, tiered repairs. Triggered ONLY by the explicit /doctor-agentspace command (--minor | --major [--fix]). Never trigger automatically, and never use it as a substitute for the cheap AGENTSPACE/scripts/doctor.sh gate in the wrap-up protocol.
+description: Deep health check of an existing AGENTSPACE workspace — deterministic consistency, per-file content review, cross-cutting history audit, tiered repairs. Triggered ONLY by the explicit /agentspace-doctor command (--minor | --major [--fix]). Never trigger automatically, and never use it as a substitute for the cheap AGENTSPACE/scripts/doctor.sh gate in the wrap-up protocol.
 ---
 
 # AGENTSPACE Doctor Command
@@ -9,7 +9,7 @@ Audit an existing AGENTSPACE workspace: deterministic consistency (doctor.sh), p
 
 ## 0. Trigger Guard
 
-Proceed ONLY when the user explicitly executes `/doctor-agentspace`. Never trigger automatically, never run as part of wrap-up (the cheap `AGENTSPACE/scripts/doctor.sh` gate stays there), and never run against a project that has no AGENTSPACE workspace (state that plainly and stop).
+Proceed ONLY when the user explicitly executes `/agentspace-doctor`. Never trigger automatically, never run as part of wrap-up (the cheap `AGENTSPACE/scripts/doctor.sh` gate stays there), and never run against a project that has no AGENTSPACE workspace (state that plainly and stop).
 
 ## 1. Flags and Modes
 
@@ -73,7 +73,7 @@ Synthesize: dedupe findings, merge into the three-tier report, note per-block co
 stdout only — never write report files into the workspace (the workspace repo must stay clean):
 
 ```
-## /doctor-agentspace <mode> report
+## /agentspace-doctor <mode> report
 ### 红 (must fix) — N
 - [script|agent] <path>: <finding>
 ### 黄 (warning) — M

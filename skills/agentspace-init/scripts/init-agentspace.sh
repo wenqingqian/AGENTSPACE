@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Initialization script for /init-agentspace: creates a git-managed AGENTSPACE
+# Initialization script for /agentspace-init: creates a git-managed AGENTSPACE
 # workspace in the current project root.
 # Idempotent: if AGENTSPACE/ already exists, reports status and exits.
 # Usage: run from the project root directory.
@@ -23,7 +23,7 @@ fi
 # ---- Create directory tree and copy workspace contents ----
 mkdir -p "$TARGET"
 cp -R "$ASSETS_DIR/agentspace/." "$TARGET/"
-mkdir -p "$TARGET/plan/todo" "$TARGET/plan/done" "$TARGET/iterations" \
+mkdir -p "$TARGET/plan/todo" "$TARGET/plan/done" "$TARGET/iterations" "$TARGET/handoff" \
          "$TARGET/data" "$TARGET/examples" "$TARGET/utils" "$TARGET/tests" "$TARGET/notes"
 # Git needs files to track empty directories (data/ is gitignored, no .gitkeep needed)
 touch "$TARGET/plan/todo/.gitkeep" "$TARGET/plan/done/.gitkeep" \

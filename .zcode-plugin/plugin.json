@@ -1,10 +1,10 @@
 {
   "name": "agentspace",
-  "version": "0.3.3",
-  "description": "Git-managed agent workspace for experiment-driven projects: explicit /init-agentspace setup, globally indexed plans and iterations, reusable utils, test environment tracking, and persistent notes.",
+  "version": "0.4.0",
+  "description": "Git-managed agent workspace for experiment-driven projects: explicit /agentspace-init setup, globally indexed plans and iterations, reusable utils, test environment tracking, and persistent notes.",
   "description_i18n": {
-    "en": "Git-managed agent workspace for experiment-driven projects: explicit /init-agentspace setup, globally indexed plans and iterations, reusable utils, test environment tracking, and persistent notes.",
-    "zh-CN": "面向实验/迭代型项目的 git 管理 agent 工作区: 显式 /init-agentspace 初始化, 全局索引的 plan 与 iteration 双主线, 工具复用 / 实验环境 / 持久知识管理。"
+    "en": "Git-managed agent workspace for experiment-driven projects: explicit /agentspace-init setup, globally indexed plans and iterations, reusable utils, test environment tracking, and persistent notes.",
+    "zh-CN": "面向实验/迭代型项目的 git 管理 agent 工作区: 显式 /agentspace-init 初始化, 全局索引的 plan 与 iteration 双主线, 工具复用 / 实验环境 / 持久知识管理。"
   },
   "author": {
     "name": "wenqingqian",

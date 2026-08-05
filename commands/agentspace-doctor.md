@@ -1,5 +1,5 @@
 ---
-description: Deep health check of an existing AGENTSPACE workspace — structure, per-file content, cross-cutting history, repairs. Use ONLY via the explicit /doctor-agentspace command (--minor | --major [--fix]).
+description: Deep health check of an existing AGENTSPACE workspace — structure, per-file content, cross-cutting history, repairs. Use ONLY via the explicit /agentspace-doctor command (--minor | --major [--fix]).
 argument-hint: "[--minor | --major] [--fix]"
 skills: agentspace-doctor
 ---

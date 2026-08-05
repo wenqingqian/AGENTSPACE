@@ -2,7 +2,7 @@
 
 面向实验/迭代型项目的 **git 管理 agent 工作区** ZCode 插件。
 
-通过显式 `/init-agentspace` 在项目根目录初始化 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
+通过显式 `/agentspace-init` 在项目根目录初始化 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
 
 ## 核心概念
 
@@ -40,9 +40,9 @@
 ## 使用
 
 ```text
-/init-agentspace              # 显式初始化(唯一入口, 幂等; 分析工作区后询问 goal/运行环境/关键代码仓库)
-/update-agentspace [--force]  # 更新工作区至插件版本(默认保守, --force 激进)
-/doctor-agentspace [--minor | --major] [--fix]  # 深度健康检查(仅显式命令触发, 绝不自动触发)
+/agentspace-init              # 显式初始化(唯一入口, 幂等; 分析工作区后询问 goal/运行环境/关键代码仓库)
+/agentspace-update [--force]  # 更新工作区至插件版本(默认保守, --force 激进)
+/agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查(仅显式命令触发, 绝不自动触发)
 ```
 
 之后日常对话中(agent 自动判断, 项目无关会话不介入):
@@ -56,15 +56,15 @@ AGENTSPACE/scripts/status.sh      # 状态摘要
 AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 ```
 
-需要更深的审计(逐文件内容审查 `--minor` / 跨历史对照宿主仓库 `--major` / 分级修复 `--fix`)时, 显式运行 `/doctor-agentspace` 命令; 该命令绝不自动触发。
+需要更深的审计(逐文件内容审查 `--minor` / 跨历史对照宿主仓库 `--major` / 分级修复 `--fix`)时, 显式运行 `/agentspace-doctor` 命令; 该命令绝不自动触发。
 
 ## 插件结构
 
 ```
 .zcode-plugin/plugin.json        # 清单
-commands/init-agentspace.md      # /init-agentspace 命令
-commands/update-agentspace.md    # /update-agentspace 命令
-commands/doctor-agentspace.md    # /doctor-agentspace 命令(深度健康检查)
+commands/init-agentspace.md      # /agentspace-init 命令
+commands/update-agentspace.md    # /agentspace-update 命令
+commands/doctor-agentspace.md    # /agentspace-doctor 命令(深度健康检查)
 skills/agentspace-init/          # 初始化 skill(仅命令显式触发) + init 脚本 + 全部模板 assets
 skills/agentspace-update/        # 更新 skill + 版本档案 + 更新脚本
 skills/agentspace/               # 日常管理 skill(自动触发, 带守卫)
@@ -73,7 +73,7 @@ skills/agentspace-doctor/        # 深度审计 skill(仅显式命令触发, 绝
 
 ## 版本管理
 
-每个插件版本在 `skills/agentspace-update/versions/` 下维护版本档案(`CHANGELOG.md` + `architecture.json`)。`/update-agentspace` 命令使用这些档案智能迁移工作区, 由 agent 分析变更, 支持保守模式(破坏性变更需确认)和激进模式。
+每个插件版本在 `skills/agentspace-update/versions/` 下维护版本档案(`CHANGELOG.md` + `architecture.json`)。`/agentspace-update` 命令使用这些档案智能迁移工作区, 由 agent 分析变更, 支持保守模式(破坏性变更需确认)和激进模式。
 
 详见 `skills/agentspace-update/DEVELOPMENT.md`(英文)获取添加新版本的贡献指南。
 

@@ -1,6 +1,6 @@
 ---
 name: agentspace
-description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations、utils、tests、notes)。仅在两个条件同时满足时激活: (1) 项目根存在 AGENTSPACE/ 目录, 且 (2) 当前会话涉及本项目的实验、代码改动、项目迭代或状态追踪。项目无关的闲聊或无状态变化的问答不激活。绝不创建或初始化 AGENTSPACE —— 初始化仅通过显式 /init-agentspace 命令。
+description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations、utils、tests、notes)。仅在两个条件同时满足时激活: (1) 项目根存在 AGENTSPACE/ 目录, 且 (2) 当前会话涉及本项目的实验、代码改动、项目迭代或状态追踪。项目无关的闲聊或无状态变化的问答不激活。绝不创建或初始化 AGENTSPACE —— 初始化仅通过显式 /agentspace-init 命令。
 ---
 
 # AGENTSPACE 日常管理
@@ -11,7 +11,7 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 1. 项目根存在 `AGENTSPACE/` 目录
 2. 当前会话涉及**本项目**的实验 / 代码改动 / 项目迭代 / 状态变更 —— 项目无关的会话(问答、闲聊、无状态变化的纯查询)不启动
 
-绝不允许: 自动初始化 AGENTSPACE(只有显式 `/init-agentspace` 可以)。
+绝不允许: 自动初始化 AGENTSPACE(只有显式 `/agentspace-init` 可以)。
 
 ## 1. 上下文自保(模型判断, 无 hook)
 
@@ -98,7 +98,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 - **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口 — 用实际内容替换模板引导注释) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
 - **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / plan/index.md / iterations/index.md / register.md 及内容文档
 - **[MUST] scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` 只能由 scripts 改写, 禁止手工编辑(用户确认例外除外)
-- 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`; 需要深度审计(逐文件内容、跨历史交叉、修复)时显式运行 `/doctor-agentspace` 命令(--minor | --major [--fix])— 该命令绝不自动触发
+- 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`; 需要深度审计(逐文件内容、跨历史交叉、修复)时显式运行 `/agentspace-doctor` 命令(--minor | --major [--fix])— 该命令绝不自动触发
 - **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用
 
 ## 4. 里程碑 git 提交

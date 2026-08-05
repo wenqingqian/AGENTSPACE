@@ -1,17 +1,17 @@
 ---
 name: agentspace-update
-description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由显式 /update-agentspace 命令触发，使用变更日志驱动的智能分析迁移，支持保守/激进模式。绝不自动触发。
+description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由显式 /agentspace-update 命令触发，使用变更日志驱动的智能分析迁移，支持保守/激进模式。绝不自动触发。
 ---
 
 # AGENTSPACE 更新流程
 
-仅在用户显式执行 `/update-agentspace` 时进行。绝不自动运行。
+仅在用户显式执行 `/agentspace-update` 时进行。绝不自动运行。
 
 ## 步骤
 
 ### 1. 守卫
 
-检查项目根是否存在 `AGENTSPACE/`。不存在 → 报错并建议 `/init-agentspace`。不执行初始化（那是独立命令）。
+检查项目根是否存在 `AGENTSPACE/`。不存在 → 报错并建议 `/agentspace-init`。不执行初始化（那是独立命令）。
 
 同时检查工作区 git 状态：`git -C AGENTSPACE status --porcelain` 有未提交改动时，先告知用户——建议先提交挂起里程碑，并警告回滚（`git -C AGENTSPACE reset --hard pre-update-v<旧版本>`）会丢弃未提交改动。
 

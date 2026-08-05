@@ -1,6 +1,6 @@
 ---
 name: agentspace
-description: Work with the AGENTSPACE workspace (plans, iterations, utils, tests, notes) in projects that have one. Activate ONLY when BOTH hold — (1) an AGENTSPACE/ directory exists in the project root, AND (2) the conversation involves this project's experiments, code changes, project iteration, or state tracking. Do NOT activate for project-unrelated chat or Q&A with no state change. Never create or initialize AGENTSPACE — init happens only via the explicit /init-agentspace command.
+description: Work with the AGENTSPACE workspace (plans, iterations, utils, tests, notes) in projects that have one. Activate ONLY when BOTH hold — (1) an AGENTSPACE/ directory exists in the project root, AND (2) the conversation involves this project's experiments, code changes, project iteration, or state tracking. Do NOT activate for project-unrelated chat or Q&A with no state change. Never create or initialize AGENTSPACE — init happens only via the explicit /agentspace-init command.
 ---
 
 # AGENTSPACE Daily Management
@@ -11,7 +11,7 @@ Check in order; if any condition fails, exit silently (do not mention this skill
 1. `AGENTSPACE/` directory exists in project root
 2. Current session involves this project's **experiments / code changes / project iteration / state changes** — project-unrelated sessions (Q&A, casual chat, pure queries with no state change) do not activate
 
-Never: auto-initialize AGENTSPACE (only explicit `/init-agentspace` can do that).
+Never: auto-initialize AGENTSPACE (only explicit `/agentspace-init` can do that).
 
 ## 1. Context Self-Preservation (Model Judgment, No Hook)
 
@@ -98,7 +98,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 - **[MUST] Wrap-up protocol** — before ending any project work session, in order: ① update the in-progress iteration readme's "当前状态 · 下一步" (the re-entry point for the next session — replace the template guidance comment with real content) ② run `AGENTSPACE/scripts/doctor.sh` (hard errors must be resolved; warnings must be reported to the user) ③ milestone commit (§4)
 - **[MUST] On script errors** (e.g., "Section not found"): do NOT hand-edit tables. Run `doctor.sh` to locate the issue, then discuss a repair plan with the user. **A one-time manual fix explicitly confirmed by the user is the only allowed exception** to the scripts-only rule. This applies to plan.md / iterations.md / plan/index.md / iterations/index.md / register.md and any content documents
 - **[MUST] Scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` may only be modified by scripts; never hand-edit tables (except the user-confirmed exception above)
-- Status self-check: `AGENTSPACE/scripts/status.sh`; run `AGENTSPACE/scripts/doctor.sh` after wrap-up and whenever you suspect corruption; for deeper audits (per-file content, cross-cutting history, repairs) run the explicit `/doctor-agentspace` command (--minor | --major [--fix]) — it is never triggered automatically
+- Status self-check: `AGENTSPACE/scripts/status.sh`; run `AGENTSPACE/scripts/doctor.sh` after wrap-up and whenever you suspect corruption; for deeper audits (per-file content, cross-cutting history, repairs) run the explicit `/agentspace-doctor` command (--minor | --major [--fix]) — it is never triggered automatically
 - **Do not read plugin development data**: `skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc. are plugin infrastructure, unrelated to the project — never read or reference during project work
 
 ## 4. Milestone Git Commits

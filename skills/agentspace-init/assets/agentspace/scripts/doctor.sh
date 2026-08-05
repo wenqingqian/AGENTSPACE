@@ -301,7 +301,7 @@ echo "[9] version metadata"
 ver="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$AS_ROOT/.agentspace-version.json" 2>/dev/null | head -1 | sed 's/.*: *"//; s/"$//' || true)"
 arch="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$AS_ROOT/.agentspace-architecture.json" 2>/dev/null | head -1 | sed 's/.*: *"//; s/"$//' || true)"
 if [ -n "$ver" ] && [ -n "$arch" ] && [ "$ver" != "$arch" ]; then
-  warn "version marker v$ver vs architecture snapshot v$arch (mismatch — run /update-agentspace, or fix once with user confirmation)"
+  warn "version marker v$ver vs architecture snapshot v$arch (mismatch — run /agentspace-update, or fix once with user confirmation)"
 fi
 
 echo

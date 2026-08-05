@@ -22,5 +22,5 @@
 
 ### 硬规则
 
-- AGENTSPACE 初始化只通过显式 `/init-agentspace` 命令, 绝不自动创建
+- AGENTSPACE 初始化只通过显式 `/agentspace-init` 命令, 绝不自动创建
 - AGENTSPACE 的索引/条目状态(plan.md、iterations.md、两个 index.md)只能由 `AGENTSPACE/scripts/` 下的脚本改写

@@ -1,11 +1,11 @@
 ---
 name: agentspace-init
-description: Internal initialization flow for the explicit /init-agentspace command — creates the git-managed AGENTSPACE workspace (plans, iterations, utils, tests, notes) in the current project. Use ONLY via the /init-agentspace command. Never trigger automatically for project work, and never initialize a workspace on your own.
+description: Internal initialization flow for the explicit /agentspace-init command — creates the git-managed AGENTSPACE workspace (plans, iterations, utils, tests, notes) in the current project. Use ONLY via the /agentspace-init command. Never trigger automatically for project work, and never initialize a workspace on your own.
 ---
 
 # AGENTSPACE Initialization Flow
 
-Only proceed when the user explicitly executes `/init-agentspace`. Under no other circumstances (including "this project looks like it needs management") should you initialize.
+Only proceed when the user explicitly executes `/agentspace-init`. Under no other circumstances (including "this project looks like it needs management") should you initialize.
 
 ## Steps
 
@@ -24,7 +24,7 @@ Only proceed when the user explicitly executes `/init-agentspace`. Under no othe
    本项目的实验与迭代状态由 AGENTSPACE/ 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、utils(复用工具)、tests(环境与测试)、notes(知识)。
    - 何时读取 AGENTSPACE/AGENTS.md: 对话涉及本项目的实验、代码改动、项目迭代或状态查询/变更时 → 先读 AGENTSPACE/AGENTS.md 并按其规则工作
    - 何时不必读取: 与本项目无关的问答、无状态变化的纯查询, 且用户未明确要求使用 AGENTSPACE 时
-   - 硬规则: 初始化只通过显式 /init-agentspace; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写
+   - 硬规则: 初始化只通过显式 /agentspace-init; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写
    <!-- /AGENTSPACE -->
    ```
 

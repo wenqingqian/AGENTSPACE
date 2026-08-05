@@ -1,11 +1,11 @@
 ---
 name: agentspace-init
-description: /init-agentspace 命令的内部初始化流程——在当前项目中创建 git 管理的 AGENTSPACE 工作区(plan、iterations、utils、tests、notes)。仅通过 /init-agentspace 命令使用。绝不为项目工作自动触发, 也绝不自行初始化工作区。
+description: /agentspace-init 命令的内部初始化流程——在当前项目中创建 git 管理的 AGENTSPACE 工作区(plan、iterations、utils、tests、notes)。仅通过 /agentspace-init 命令使用。绝不为项目工作自动触发, 也绝不自行初始化工作区。
 ---
 
 # AGENTSPACE 初始化流程
 
-只在用户显式执行 `/init-agentspace` 时进行。任何其他情况(包括"这个项目看起来需要管理")都不得初始化。
+只在用户显式执行 `/agentspace-init` 时进行。任何其他情况(包括"这个项目看起来需要管理")都不得初始化。
 
 ## 步骤
 
@@ -24,7 +24,7 @@ description: /init-agentspace 命令的内部初始化流程——在当前项�
    本项目的实验与迭代状态由 AGENTSPACE/ 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、utils(复用工具)、tests(环境与测试)、notes(知识)。
    - 何时读取 AGENTSPACE/AGENTS.md: 对话涉及本项目的实验、代码改动、项目迭代或状态查询/变更时 → 先读 AGENTSPACE/AGENTS.md 并按其规则工作
    - 何时不必读取: 与本项目无关的问答、无状态变化的纯查询, 且用户未明确要求使用 AGENTSPACE 时
-   - 硬规则: 初始化只通过显式 /init-agentspace; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写
+   - 硬规则: 初始化只通过显式 /agentspace-init; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写
    <!-- /AGENTSPACE -->
    ```
 

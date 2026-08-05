@@ -14,6 +14,7 @@ readonly SEC_PROGRESS="进行中"
 readonly SEC_RECENT="最近完成 (10 条)"
 readonly SEC_RELATED="相关迭代"
 readonly SEC_REGISTERED="已注册模块"
+readonly SEC_HANDOFF="Handoffs"
 readonly STATUS_TODO="> 状态: todo"
 readonly STATUS_PROGRESS="> 状态: 进行中"
 # ---- Placeholder constants (must match template comments exactly; doctor [5] checks drift) ----
@@ -98,13 +99,15 @@ as_next_iteration_id() {
 
 # Insert a row after the separator line of a "## SECTION" table (becomes first data row).
 # Usage: as_insert_row <file> <section> <row>
+# NOTE: the row travels via ENVIRON, not -v — awk -v would unescape the `\|`
+# cells produced by as_cell, silently corrupting escaped pipes.
 as_insert_row() {
   local file="$1" tmp
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-  awk -v sec="## $2" -v row="$3" '
+  ROW="$3" awk -v sec="## $2" '
     $0 == sec { in_sec=1; print; next }
     /^## / { in_sec=0 }
-    in_sec && /^\|[ :|-]+\|$/ && !inserted { print; print row; inserted=1; next }
+    in_sec && /^\|[ :|-]+\|$/ && !inserted { print; print ENVIRON["ROW"]; inserted=1; next }
     { print }
     END { if (!inserted) exit 3 }
   ' "$file" > "$tmp" || { rm -f "$tmp"; as_die "Table section not found: ## $2 ($file)"; }

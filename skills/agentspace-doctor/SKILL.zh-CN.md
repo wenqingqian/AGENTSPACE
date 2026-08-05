@@ -1,6 +1,6 @@
 ---
 name: agentspace-doctor
-description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性一致性、逐文件内容审查、跨历史审计、分级修复。仅在显式 /doctor-agentspace 命令(--minor | --major [--fix])时触发。绝不自动触发, 也绝不替代收尾协议中的低成本闸门 AGENTSPACE/scripts/doctor.sh。
+description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性一致性、逐文件内容审查、跨历史审计、分级修复。仅在显式 /agentspace-doctor 命令(--minor | --major [--fix])时触发。绝不自动触发, 也绝不替代收尾协议中的低成本闸门 AGENTSPACE/scripts/doctor.sh。
 ---
 
 # AGENTSPACE Doctor 命令
@@ -9,7 +9,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 
 ## 0. 触发守卫
 
-仅当用户显式执行 `/doctor-agentspace` 时继续。绝不自动触发, 绝不作为收尾协议的一部分运行(低成本闸门 `AGENTSPACE/scripts/doctor.sh` 仍留在收尾协议), 也绝不对没有 AGENTSPACE 工作区的项目运行(直说并停止)。
+仅当用户显式执行 `/agentspace-doctor` 时继续。绝不自动触发, 绝不作为收尾协议的一部分运行(低成本闸门 `AGENTSPACE/scripts/doctor.sh` 仍留在收尾协议), 也绝不对没有 AGENTSPACE 工作区的项目运行(直说并停止)。
 
 ## 1. 参数与模式
 
@@ -73,7 +73,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 仅 stdout — 绝不向工作区写报告文件(工作区仓库必须保持干净):
 
 ```
-## /doctor-agentspace <模式> 报告
+## /agentspace-doctor <模式> 报告
 ### 红 (必须修复) — N
 - [script|agent] <路径>: <发现>
 ### 黄 (告警) — M
