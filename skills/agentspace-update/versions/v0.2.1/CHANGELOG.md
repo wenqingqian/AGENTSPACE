@@ -38,7 +38,7 @@ Upgrade from v0.2.0. Date: 2026-07-31
    ```markdown
    ### data —— 公用数据 (data.md + data/)
    - **what**: 项目公用数据(训练集、模型权重、预处理数据等); 也可以是对其他位置的软连接
-   - **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; data/ 全部 gitignore
+   - **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; 大文件/权重默认 gitignore, 小型共享文件可取消注释
    ```
 
 5. Update the `### register` description: change `(例如 examples.md + examples/ 存放固定测试配置)` to `(按项目需要扩展, 如 visualization.md + visualization/)`

@@ -89,6 +89,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v0.4.4 | 2026-08-05 | upgrade-chain fixes: AGENTS.md data bullet sync (6c439e3 补记); historical changelog anchors v0.2.1/v0.2.7/v0.4.0 (GAP #1-3); t13 full-chain replay regression test |
 | v0.4.3 | 2026-08-05 | risk-audit fixes (--list missing-index die, produce recreates handoff/, short-SHA {4,40}, status date-shape parity); runtime env gate (bash ≥3.1 + core toolchain) + LC_ALL=C determinism; CJK read-path tests |
 | v0.4.2 | 2026-08-05 | handoff --list escaped-\| fix; close-iteration auto host-diff; doctor [12] register consistency (report-only); --keep marker (doctor [11] skips kept); STALE_DAYS single-source constant |
 | v0.4.1 | 2026-08-05 | doctor [10] handoff residue + [11] handoff staleness (report-only — never auto-deletes or consumes); status.sh handoff summary; update-flow verify gate; doctor --major content-level handoff review |

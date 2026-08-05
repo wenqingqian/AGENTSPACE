@@ -53,7 +53,7 @@ AGENTSPACE/
 
 ### data —— 公用数据 (data.md + data/)
 - **what**: 项目公用数据(训练集、模型权重、预处理数据等); 也可以是对其他位置的软连接
-- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; 大文件/权重默认 gitignore, 小型共享文件可取消注释
+- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; data/ 全部 gitignore(与 .gitignore 行为一致, 无 opt-out)
 
 ### examples —— 实验配置 (examples.md + examples/)
 - **what**: 可复用的实验配置文件(YAML/JSON 等); 与 tests/ 配合: tests/ 放入口脚本(如何跑), examples/ 放配置(用什么参数跑)

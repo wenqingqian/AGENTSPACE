@@ -25,6 +25,8 @@ Upgrade from v0.3.3. Date: 2026-08-05
 3. **AGENTS.md (step 8b — agent action, exact insertions)**:
    - In the 结构 tree block, insert this line BEFORE the `├── templates/` line:
      `├── handoff/           ← 一次性会话交接文件 + index.md(由 scripts/handoff.sh 维护, 文件不入 git)`
+   - Also update the existing `├── templates/` line — append `/ handoff` to its description (the templates dir gained `handoff.md`):
+     `├── templates/         ← 文档模板(plan / iteration-readme / module-entry / note / handoff)`
    - In the 模块 section, insert this block AFTER the `### register` bullet block:
      `### handoff —— 一次性会话交接 (handoff/)`
      `- **what**: 会话结束时生成的一次性上下文快照, 新会话读取后即销毁(consume); 支持多个 handoff 并存, index.md 登记 name/description/location/time`

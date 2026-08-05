@@ -27,3 +27,16 @@ Upgrade from v0.2.6. Date: 2026-08-02
 **Why**: previously notes were only written "when there are transferable lessons" — a passive reminder with no review step; distillation was easily skipped.
 
 **Migration**: behavior-only (SKILL.md ×2, AGENTS.md text, complete-plan.sh reminder message). Script replaced by step 8a.
+
+### [Addition] AGENTS.md: notes 模块 when/how bullet 更新(标签检索建议)
+**What**: `AGENTSPACE/AGENTS.md` 模块节的 notes when/how bullet 措辞更新为知识蒸馏工作流, 并加入「建议打主题"标签"便于检索聚合」。
+**Why**: the notes 标签 column (this version's [Schema] change) is only useful if the guidance tells agents to tag; the bullet is the guidance.
+**Migration (agent task — exact replace)**: in `AGENTSPACE/AGENTS.md`, 模块 section (`### notes —— 持久知识`), replace the notes "when/how" bullet:
+```
+- **when/how**: plan 完成产出可迁移教训、或发现坑时立即记录; 每条笔记必须带"来源"(plan:NNNN / iteration_NNNN); 模板 templates/note.md
+```
+with:
+```
+- **when/how**: plan 完成时回顾 iterations 提炼教训、或发现坑时立即记录; 每条笔记必须带"来源"(plan:NNNN / iteration_NNNN); 建议打主题"标签"便于检索聚合; 模板 templates/note.md
+```
+Idempotency: if the bullet already contains 建议打主题"标签", leave it as-is (a later version re-applied). If the anchor line is absent (user customized it), keep the user's version and ensure the 标签子句 is present.
