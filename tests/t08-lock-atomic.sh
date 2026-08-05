@@ -19,7 +19,9 @@ printf '%s' "$SPID" > "$WS/.scripts.lock/pid"
 OUT="$(bash "$WS/scripts/new-plan.sh" "Stale Lock Plan")"
 printf '%s' "$OUT" | grep -q 'plan:[0-9]*' || fail "write blocked by stale lock"
 [ ! -e "$WS/.scripts.lock" ] || fail "stale lock not cleaned up"
-[ ! -e "$WS/.scripts-tmp."* ] || fail "tmp dir left behind"
+for f in "$WS"/.scripts-tmp.*; do
+  [ -e "$f" ] && fail "tmp dir left behind"
+done
 rm -rf "$SB"
 
 # --- stale pid-less lock older than the grace window: recovered ---

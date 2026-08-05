@@ -140,9 +140,11 @@ SB="$(build_sandbox t06f)"
 WS="$SB/AGENTSPACE"
 OUT="$(bash "$WS/scripts/new-plan.sh" "Norm Note Plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
-# hand-write the ref WITHOUT zero padding: plan:1 instead of plan:0001
-make_note "$WS" "padded-note" "Padded note" "plan:${PID#0}" ""
-add_note_row "$WS" "padded-note" "Padded note" "plan:${PID#0}"
+# hand-write the ref WITHOUT zero padding: plan:1 instead of plan:0001.
+# ${PID#0} strips ONE leading zero → plan:001; strip ALL for plan:1.
+REF="plan:${PID#${PID%%[1-9]*}}"
+make_note "$WS" "padded-note" "Padded note" "$REF" ""
+add_note_row "$WS" "padded-note" "Padded note" "$REF"
 git -C "$WS" add -A >/dev/null 2>&1
 git -C "$WS" commit -qm "test: t06f milestone" >/dev/null 2>&1
 set +e

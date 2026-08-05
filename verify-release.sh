@@ -171,6 +171,10 @@ EOF
 fi
 
 LATEST="$(printf '%s\n' "$META_OUT" | sed -n 's/^latest: //p' | head -1)"
+if [ -z "$LATEST" ]; then
+  echo "  [issue] latest version unresolvable (meta-check failed?) — skipping [10]"
+  issues=$((issues+1))
+fi
 while IFS= read -r line; do
   case "$line" in latest:*) continue ;; esac
   echo "  $line"
@@ -245,12 +249,14 @@ done
 
 # --- [10] README release history coverage ----------------------------------
 echo "[10] README release history"
-for f in README.md README.zh-CN.md; do
-  if ! grep -Fq "| v${LATEST#v} |" "$ROOT/$f"; then
-    echo "  [issue] $f Release History 缺 v${LATEST#v} 行(手动维护, 需随发版同步)"
-    issues=$((issues+1))
-  fi
-done
+if [ -n "$LATEST" ]; then
+  for f in README.md README.zh-CN.md; do
+    if ! grep -Fq "| v${LATEST#v} |" "$ROOT/$f"; then
+      echo "  [issue] $f Release History 缺 v${LATEST#v} 行(手动维护, 需随发版同步)"
+      issues=$((issues+1))
+    fi
+  done
+fi
 
 # --- summary ----------------------------------------------------------------
 dirty=$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)
