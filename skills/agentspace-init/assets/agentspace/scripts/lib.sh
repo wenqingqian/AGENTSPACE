@@ -6,6 +6,28 @@ AS_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Resolve symlinks to physical path (cd -P + pwd -P)
 AS_ROOT="$(cd -P "$AS_LIB_DIR/.." && pwd -P)"
 
+# ---- Runtime environment gate (fail fast, one clear message) ----
+# The scripts need bash >= 3.1 (scalar +=) and the core POSIX toolchain; the
+# macOS system bash is 3.2, Linux ships 4.x+. A cryptic mid-script error on an
+# old bash / missing tool is worse than this upfront gate.
+if [ "${BASH_VERSINFO[0]:-0}" -lt 3 ] || { [ "${BASH_VERSINFO[0]:-0}" -eq 3 ] && [ "${BASH_VERSINFO[1]:-0}" -lt 1 ]; }; then
+  printf 'error: AGENTSPACE scripts need bash >= 3.1 (found %s) — upgrade bash and re-run.\n' "${BASH_VERSION:-unknown}" >&2
+  exit 1
+fi
+for _as_cmd in grep awk sed find date tr mkdir mktemp git; do
+  if ! command -v "$_as_cmd" >/dev/null 2>&1; then
+    printf 'error: required command not found: %s (AGENTSPACE scripts need the core POSIX toolchain)\n' "$_as_cmd" >&2
+    exit 1
+  fi
+done
+unset _as_cmd
+
+# Deterministic byte behavior for mixed CJK/ASCII content: under the ambient
+# locale, regex character classes ([a-z]) and sort collation vary by system.
+# LC_ALL=C fixes byte-exact semantics; CJK bytes pass through untouched, so
+# display and content are unaffected.
+export LC_ALL=C
+
 # ---- Table section headings / status marker constants ----
 # These MUST match the actual markdown headings in deployed workspace files.
 readonly SEC_TODO="Todo"

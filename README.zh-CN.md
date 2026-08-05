@@ -89,6 +89,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.4.3 | 2026-08-05 | 风险审计修复(--list 缺失索引报错、produce 重建 handoff/、短 sha {4,40}、status 日期校验对齐); 运行时环境闸门(bash ≥3.1 + 核心工具链)+ LC_ALL=C 确定性; CJK 读路径测试 |
 | v0.4.2 | 2026-08-05 | handoff --list 转义 \| 修复; close-iteration 自动宿主 diff; doctor [12] register 一致性(只报告); --keep 标记(doctor [11] 跳过保留项); STALE_DAYS 单源常量 |
 | v0.4.1 | 2026-08-05 | doctor [10] handoff 残留 + [11] handoff 过时审核(只报告 — 绝不自动删除或 consume); status.sh handoff 摘要; update 流程 verify 闸门; doctor --major 内容级 handoff 审查 |
 | v0.4.0 | 2026-08-05 | handoff 模块(一次性会话交接: produce/consume)+ 命令统一为 `/agentspace-*` 前缀(破坏性) |

@@ -133,6 +133,20 @@ assert_ok bash "$DOC"                                  # marked: skipped → gre
 bash "$HS" --consume --name "kept" >/dev/null 2>&1
 mc
 
+# --- CJK handoff name: full read-path compatibility (doctor/list/status) ---
+bash "$HS" --produce --name "中文交接" --description "CJK 名称" >/dev/null 2>&1
+touch -t 202001010000 "$WS/handoff/handoff_中文交接.md"
+OUT="$(bash "$DOC" 2>&1 || true)"
+assert_output_contains "$OUT" "stale handoff 中文交接"
+OUT="$(bash "$HS" --list 2>&1)"
+assert_output_contains "$OUT" "中文交接"
+assert_output_not_contains "$OUT" "行格式异常"   # parsed path, not the raw-row fallback
+OUT="$(bash "$ST" 2>&1)"
+assert_output_contains "$OUT" "中文交接"
+assert_output_not_contains "$OUT" "行格式异常"
+bash "$HS" --consume --name "中文交接" >/dev/null 2>&1
+mc
+
 # --- cleanup: consume the remaining handoffs ---
 bash "$HS" --consume --name "gamma" >/dev/null 2>&1
 bash "$HS" --consume --name "esc" >/dev/null 2>&1

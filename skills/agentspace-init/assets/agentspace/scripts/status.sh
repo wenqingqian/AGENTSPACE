@@ -37,7 +37,7 @@ if [ -d "$AS_ROOT/handoff" ] && [ -f "$AS_ROOT/handoff/index.md" ]; then
     tmp="${line#| }"; name="${tmp%% | *}"; rest="${tmp#* | }"
     date="${rest##* | }"; date="${date% |}"
     nodate="${rest% | *}"; loc="${nodate##* | }"; desc="${nodate%% | *}"
-    if [ -z "$name" ] || [ -z "$loc" ] || [[ "$name" == *'|'* ]] || [[ "$loc" != handoff_*.md ]] || [[ "$loc" == */* ]]; then
+    if [ -z "$name" ] || [ -z "$loc" ] || [[ "$name" == *'|'* ]] || [[ "$loc" != handoff_*.md ]] || [[ "$loc" == */* ]] || [[ "$date" != [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] ]]; then
       echo "  (行格式异常: $line)"
       found=1
       continue

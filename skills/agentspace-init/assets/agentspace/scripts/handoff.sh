@@ -61,6 +61,7 @@ case "$ACTION" in
     # only sees data rows. A naive -F'|' split would break on escaped \| in
     # descriptions (as_cell) and drop the trailing date column — same lesson
     # as doctor [10]/[11] and the v0.4.0 as_insert_row ENVIRON fix.
+    [ -f "$INDEX" ] || as_die "handoff index missing: $INDEX"
     rows="$(awk -v sec="## $SEC_HANDOFF" '
       $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; next }
       /^## / { in_sec=0 }
@@ -85,6 +86,9 @@ case "$ACTION" in
     as_handoff_check_name "$NAME"
     LOC="handoff_$(as_handoff_slug "$NAME").md"
     as_lock
+    # handoff/ may have been removed manually — recreate it (the index itself
+    # self-initializes below); without this, produce dies on a raw cat error
+    mkdir -p "$HANDOFF_DIR"
     # index.md may be absent in workspaces upgraded before v0.4.0 — init it
     if [ ! -f "$INDEX" ]; then
       cat > "$INDEX" <<EOF

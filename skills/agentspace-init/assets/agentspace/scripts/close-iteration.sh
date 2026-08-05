@@ -43,8 +43,10 @@ fi
 # recorded at creation/close delimit this iteration's window; save `git diff
 # start..end` to data/ when non-empty. No git host / missing commits / empty
 # diff → silently skip (guards keep failure impossible under lock).
-START="$(grep -E '^> 宿主起始 commit: [0-9a-f]+' "$README" | head -1 | grep -oE '[0-9a-f]{7,40}' || true)"
-END="$(grep -E '^> 宿主结束 commit: [0-9a-f]+' "$README" | head -1 | grep -oE '[0-9a-f]{7,40}' || true)"
+# {4,40}: as_host_head writes `git rev-parse --short HEAD`, whose abbrev honors
+# core.abbrev (floor 4) — a {7,40} reader would silently skip short SHAs.
+START="$(grep -E '^> 宿主起始 commit: [0-9a-f]+' "$README" | head -1 | grep -oE '[0-9a-f]{4,40}' || true)"
+END="$(grep -E '^> 宿主结束 commit: [0-9a-f]+' "$README" | head -1 | grep -oE '[0-9a-f]{4,40}' || true)"
 if [ -n "$START" ] && [ -n "$END" ] && [ "$START" != "$END" ] \
    && git -C "$AS_ROOT/.." rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   [ -d "$AS_ROOT/$DIR/data" ] || mkdir -p "$AS_ROOT/$DIR/data"
