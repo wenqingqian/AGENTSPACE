@@ -8,6 +8,9 @@
 #
 # Maintenance: when a new version adds workspace content changes (AGENTS.md
 # text ops), extend the version-op table in the embedded python below.
+# Note: v0.4.1-v0.4.3 archives were merged into v0.4.4 (fragmented fix
+# versions); the replay table keeps their historical not-applicable rows —
+# the table replays semantics, the archive directory is irrelevant to it.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 

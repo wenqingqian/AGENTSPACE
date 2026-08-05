@@ -49,6 +49,8 @@ For each version from `currentVersion + 1` to `targetVersion` (chronological ord
 
 Each CHANGELOG is a diff from its predecessor. Example: updating from v0.2.0 to v0.2.2 reads v0.2.1/CHANGELOG.md (0.2.0→0.2.1) then v0.2.2/CHANGELOG.md (0.2.1→0.2.2). The agent applies changes in this chronological order.
 
+If an intermediate version's archive is missing (fragmented fix versions were merged — e.g. v0.4.1-v0.4.3 folded into v0.4.4, whose CHANGELOG declares "Upgrade from v0.4.0"), skip to the next existing archive: the merged CHANGELOG covers the gap and a workspace marked at a merged-away version upgrades by the merged archive's instructions.
+
 If a changelog entry does not affect the current workspace (e.g., a change to a module the user hasn't registered), the agent may skip it.
 
 ### 6. Agent Analysis (Core — NOT a Script)
