@@ -49,5 +49,11 @@ Upgrade from v0.4.0. Date: 2026-08-05
 **Migration**:
 1. **Plugin-side (no workspace action)**: ships with the plugin.
 
+### [Fix] handoff.sh: name `name` reserved; staleness check/message exactness
+**What**: `AGENTSPACE/scripts/handoff.sh` refuses `name` as a handoff name — a handoff named `name` collides with the index table-header filter (`| name |`) used by `--list`, doctor [10]/[11] and the status summary, making the row invisible to all read paths. `AGENTSPACE/scripts/doctor.sh` [11] and `AGENTSPACE/scripts/status.sh` now use `find -mtime +6` so the check and the ">7 天" messages agree exactly (`find -mtime +N` = strictly more than N whole days; `+6` ⇒ 7 天以上, previously `+7` flagged only ≥8 days).
+**Migration**:
+1. **Scripts (handled by step 8a — no manual work)**: `AGENTSPACE/scripts/handoff.sh`, `AGENTSPACE/scripts/doctor.sh`, `AGENTSPACE/scripts/status.sh` are replaced from assets.
+2. **No data migration**.
+
 ### No structural changes
 - plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; no new constants in lib.sh (staleness threshold is a doctor.sh literal); architecture.json unchanged apart from the version field.

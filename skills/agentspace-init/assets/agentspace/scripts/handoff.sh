@@ -44,10 +44,13 @@ as_handoff_slug() { printf '%s' "$1" | tr ' ' '_' | tr -d '/\\:*?"<>|[]'; }
 
 # Names live in a | delimited table — | and control chars are rejected up
 # front so stored rows, conflict checks and consume all agree on one form.
+# "name" is reserved: a handoff named "name" collides with the index table
+# header filter used by --list, doctor [10]/[11] and status.sh (invisible row).
 as_handoff_check_name() {
   case "$1" in
     *'|'*) as_die "handoff name must not contain '|': $1" ;;
     *$'\n'*|*$'\r'*|*$'\t'*) as_die "handoff name must not contain control characters: $1" ;;
+    name) as_die "handoff name 'name' is reserved (index header collision): $1" ;;
   esac
 }
 

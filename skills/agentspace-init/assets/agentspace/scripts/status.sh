@@ -23,7 +23,7 @@ overview="$(awk -F'|' '
 echo
 
 echo "## Handoffs (待消费)"
-# 会话续接入口; 过时判龄与 doctor [11] 一致(STALE_DAYS=7, find -mtime, 无日期算术)
+# 会话续接入口; 过时判龄与 doctor [11] 一致(STALE_DAYS=7 → find -mtime +6 = 7 天以上, 无日期算术)
 if [ -d "$AS_ROOT/handoff" ] && [ -f "$AS_ROOT/handoff/index.md" ]; then
   rows="$(awk -v sec="## $SEC_HANDOFF" '
     $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; next }
@@ -45,7 +45,7 @@ if [ -d "$AS_ROOT/handoff" ] && [ -f "$AS_ROOT/handoff/index.md" ]; then
     [ -n "$desc" ] || desc="—"
     if [ ! -e "$AS_ROOT/handoff/$loc" ]; then
       echo "  - $name | $desc | $date (文件缺失 — 见 doctor [10])"
-    elif [ -n "$(find "$AS_ROOT/handoff/$loc" -mtime +7 2>/dev/null)" ]; then
+    elif [ -n "$(find "$AS_ROOT/handoff/$loc" -mtime +6 2>/dev/null)" ]; then
       echo "  - $name | $desc | $date ⚠ 过时(>7 天未消费 — 见 doctor [11])"
     else
       echo "  - $name | $desc | $date"

@@ -37,6 +37,11 @@ OUT="$(bash "$HS" --produce --name "bad|name" 2>&1 || true)"
 assert_output_contains "$OUT" "must not contain"
 [ ! -f "$WS/handoff/handoff_bad_name.md" ] || fail "| name must not produce a file"
 
+# --- name "name" is reserved (would collide with the index table header) ---
+OUT="$(bash "$HS" --produce --name "name" 2>&1 || true)"
+assert_output_contains "$OUT" "reserved"
+[ ! -f "$WS/handoff/handoff_name.md" ] || fail "reserved name must not produce a file"
+
 # --- description with | is sanitized into one intact row ---
 OUT="$(bash "$HS" --produce --name "piped-desc" --description "a | b" 2>&1)"
 assert_output_contains "$OUT" "handoff produced"

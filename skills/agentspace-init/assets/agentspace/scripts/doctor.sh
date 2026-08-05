@@ -394,7 +394,9 @@ echo "[11] handoff staleness"
 STALE_DAYS=7
 if [ -d "$HO_DIR" ]; then
   # line-wise iteration — find output must not be word-split (a space anywhere
-  # in the workspace path would fragment it) or glob-expanded
+  # in the workspace path would fragment it) or glob-expanded.
+  # find -mtime +N = strictly more than N whole days; +6 ⇒ 7 天以上, so the
+  # check and the messages' ">7 天" claim agree exactly.
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     loc="$(basename "$f")"
@@ -416,7 +418,7 @@ if [ -d "$HO_DIR" ]; then
              | sed '/^[[:space:]]*$/d; /^[[:space:]]*<!--/d' | head -1 || true)"
     [ -n "$todo" ] || todo="—"
     warn "stale handoff $name ($date, $loc): $desc — 下一步: $todo (consume it, or decide to keep/delete — doctor only reports)"
-  done <<< "$(find "$HO_DIR" -maxdepth 1 -type f -name 'handoff_*.md' -mtime "+${STALE_DAYS}" 2>/dev/null || true)"
+  done <<< "$(find "$HO_DIR" -maxdepth 1 -type f -name 'handoff_*.md' -mtime "+$((STALE_DAYS - 1))" 2>/dev/null || true)"
 fi
 
 echo
