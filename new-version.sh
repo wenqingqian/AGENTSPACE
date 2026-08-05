@@ -87,7 +87,10 @@ import json, sys
 ver, root = sys.argv[1], sys.argv[2]
 targets = [
     (f"{root}/.zcode-plugin/plugin.json", lambda d: d.__setitem__("version", ver)),
-    (f"{root}/marketplace.json", lambda d: d["plugins"][0].__setitem__("version", ver)),
+    # marketplace carries BOTH a top-level version and plugins[0].version —
+    # one lambda per field would reload the unmodified file and the last write
+    # wins, dropping the other field (drift caught by verify-release [1])
+    (f"{root}/marketplace.json", lambda d: [d.__setitem__("version", ver), d["plugins"][0].__setitem__("version", ver)]),
     (f"{root}/skills/agentspace-init/assets/agentspace/.agentspace-version.json", lambda d: d.__setitem__("version", ver)),
     (f"{root}/skills/agentspace-init/assets/agentspace/.agentspace-architecture.json", lambda d: d.__setitem__("version", ver)),
 ]

@@ -46,6 +46,7 @@
 /agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查(仅显式命令触发, 绝不自动触发)
 /agentspace-handoff-produce [--name <名>] [--description <说明>]  # 会话收尾: 写入一次性上下文快照
 /agentspace-handoff-consume [--name <名>] [--keep]  # 会话开始: 读取 handoff, 读后删除
+/agentspace-status          # 状态工作台: 项目总览 + 现状 + 软告警(现状快照, 无"下一步"叙述)
 ```
 
 之后日常对话中(agent 自动判断, 项目无关会话不介入):
@@ -89,6 +90,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.5.0 | 2026-08-06 | status 工作台: `/agentspace-status` 命令 + skill(硬脚本聚合、严格模板、子代理项目段落)+ status.sh 重写(总览/版本环境/推进总览转义感知/近期动态 10 条/软告警形状校验/handoff)+ `\|` 转义感知修复(close-iteration index 改写、as_row_cell)+ zh-CN 文档同步(示例数字、两段式验证闸门)+ 架构 subsections 补全 + t15 回归 |
 | v0.4.1 | 2026-08-05 | handoff doctor 审计 [10]/[11] + status 摘要 + cleanup 批量(--list \| 修复、close 自动 diff、doctor [12]、--keep 标记)+ 风险审计修复 + bash 生态硬化(环境闸门、LC_ALL=C)+ 升级链 GAP 修复 + t13 重放测试 |
 | v0.4.0 | 2026-08-05 | handoff 模块(一次性会话交接: produce/consume)+ 命令统一为 `/agentspace-*` 前缀(破坏性) |
 | v0.3.3 | 2026-08-05 | 24h review 加固: 原子写补全、update-version 锚点 legacy 化、`--fix` 标题容错 + 失败可见 |

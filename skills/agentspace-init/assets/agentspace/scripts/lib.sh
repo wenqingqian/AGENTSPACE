@@ -186,13 +186,22 @@ as_truncate_section() {
 }
 
 # Read the Nth |-delimited field of the row whose first column equals id.
+# Escape-aware: \| cells are shielded before splitting and restored verbatim,
+# so a title/desc containing an escaped pipe cannot shift the column positions.
 # Usage: as_row_cell <file> <id> <colnum>
 as_row_cell() {
   [[ "$2" =~ ^[0-9]+$ ]] || as_die "as_row_cell: id must be numeric: $2"
-  awk -F'|' -v id="$2" -v c="$3" '
+  local esc
+  esc="$(printf '\037')"
+  sed "s/\\\\|/$esc/g" "$1" | awk -F'|' -v id="$2" -v c="$3" -v esc="$esc" '
     BEGIN { pat="^\\| *" id " *\\|" }
-    $0 ~ pat { gsub(/^ +| +$/, "", $c); print $c; exit }
-  ' "$1"
+    $0 ~ pat {
+      gsub(/^ +| +$/, "", $c)
+      gsub(esc, "\\|", $c)
+      print $c
+      exit
+    }
+  '
 }
 
 # Fill template placeholders {{ID}} {{TITLE}} {{DATE}} {{PLAN_ID}} {{NAME}} {{PURPOSE}}.

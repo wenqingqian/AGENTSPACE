@@ -91,26 +91,23 @@ EOF
 OUT="$(bash "$WS/scripts/new-plan.sh" "After Orphan 2")"
 assert_output_contains "$OUT" "plan:10001"
 
-# status.sh progress overview + next-step blocks (v0.3.1)
+# status workbench: strict template sections (v0.5.0; the old ## 下一步
+# section is gone by design — the workbench is a current-state snapshot)
 OUT="$(bash "$WS/scripts/status.sh")"
+assert_output_contains "$OUT" "## 项目总览"
 assert_output_contains "$OUT" "## 推进总览"
-assert_output_contains "$OUT" "## 下一步"
+assert_output_contains "$OUT" "## 进行中"
+assert_output_contains "$OUT" "## 近期动态 (最近 10 条)"
+assert_output_contains "$OUT" "## 软告警 ("
+assert_output_contains "$OUT" "## 会话入口"
 
-# content-level assertion: the 下一步 block must render the actual resume-block
-# text, not the fallback (heading-only checks passed even with the extraction bug)
+# content-level assertion: 进行中 renders the open iteration
 OUT="$(bash "$WS/scripts/new-plan.sh" "Status Probe Plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 OUT="$(bash "$WS/scripts/new-iteration.sh" "$PID" "status probe")"
 IID="$(printf '%s' "$OUT" | grep -o 'iteration_[0-9]*' | head -1 | cut -d_ -f2)"
-python3 - "$WS/iterations/iteration_$IID/readme.md" <<'EOF'
-import re, sys
-p = sys.argv[1]
-s = open(p).read()
-s = re.sub(r"<!-- 会话续接块:.*?-->", "当前状态: 测试中; 下一步: STATUS-PROBE-42", s, flags=re.S)
-open(p, "w").write(s)
-EOF
 OUT="$(bash "$WS/scripts/status.sh")"
-assert_output_contains "$OUT" "STATUS-PROBE-42"
+assert_output_contains "$OUT" "status probe (iteration_$IID)"
 
 rm -rf "$SB"
 echo "PASS t01"

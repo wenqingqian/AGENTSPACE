@@ -55,7 +55,8 @@ dirs.sort(key=lambda d: vkey(d[1:]))
 latest = dirs[-1][1:] if dirs else None
 marks = {
     "plugin.json": jget(f"{root}/.zcode-plugin/plugin.json", lambda d: d["version"]),
-    "marketplace.json": jget(f"{root}/marketplace.json", lambda d: d["plugins"][0]["version"]),
+    "marketplace.json": jget(f"{root}/marketplace.json", lambda d: d["version"]),
+    "marketplace.json plugins[0]": jget(f"{root}/marketplace.json", lambda d: d["plugins"][0]["version"]),
     "assets/.agentspace-version.json": jget(f"{assets}/.agentspace-version.json", lambda d: d["version"]),
     "assets/.agentspace-architecture.json": jget(f"{assets}/.agentspace-architecture.json", lambda d: d["version"]),
 }
@@ -213,6 +214,7 @@ bilingual() {
 bilingual "$ROOT/skills/agentspace"
 bilingual "$ROOT/skills/agentspace-update"
 bilingual "$ROOT/skills/agentspace-doctor"
+bilingual "$ROOT/skills/agentspace-status"
 # mechanism-parity spot checks: load-bearing upgrade rules must exist in BOTH
 # languages — heading/token parity cannot catch a missing rule paragraph
 # (e.g. the skip-missing-archive rule once existed only in SKILL.md)

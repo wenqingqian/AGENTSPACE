@@ -64,18 +64,25 @@ as_insert_row "$AS_ROOT/iterations.md" "$SEC_RECENT" \
   "| $ID | $PLANREF | $TITLE | $RESULT_CELL | $DATE | [$DIR/readme.md]($DIR/readme.md) |"
 as_truncate_section "$AS_ROOT/iterations.md" "$SEC_RECENT" 10
 
-# iterations/index.md: update status/completed-date/result
+# iterations/index.md: update status/completed-date/result.
+# Escape-aware: \| cells (title/result) are shielded before the -F'|' split and
+# restored after, so an escaped pipe cannot shift the fixed column positions.
 tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-awk -F'|' -v id="$ID" -v d="$DATE" -v r="$RESULT_CELL" '
-  BEGIN { pat="^\\| *" id " *\\|"; found=0 }
-  $0 ~ pat {
-    $5=" 已完成 "; $7=" " d " "; $8=" " r " "
-    out=$1; for (i=2; i<=NF; i++) out=out "|" $i
-    print out; found=1; next
-  }
-  { print }
-  END { if (!found) exit 3 }
-' "$AS_ROOT/iterations/index.md" > "$tmp" || { rm -f "$tmp"; as_die "iterations/index.md missing iteration_$ID"; }
+ESC="$(printf '\037')"
+# RESULT_CELL travels via ENVIRON, not -v — awk -v would unescape the `\|`
+# cells produced by as_cell, silently corrupting escaped pipes (same hazard
+# documented at lib.sh::as_insert_row).
+sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations/index.md" \
+  | RESULT_CELL="$RESULT_CELL" awk -F'|' -v id="$ID" -v d="$DATE" -v esc="$ESC" '
+    BEGIN { pat="^\\| *" id " *\\|"; found=0; r=ENVIRON["RESULT_CELL"] }
+    $0 ~ pat {
+      $5=" 已完成 "; $7=" " d " "; $8=" " r " "
+      out=$1; for (i=2; i<=NF; i++) out=out "|" $i
+      print out; found=1; next
+    }
+    { print }
+    END { if (!found) exit 3 }
+  ' | sed "s/$ESC/\\\\|/g" > "$tmp" || { rm -f "$tmp"; as_die "iterations/index.md missing iteration_$ID"; }
 as_atomic_write "$AS_ROOT/iterations/index.md" "$tmp"
 
 # Atomic: replace status line + append close log in single awk pass

@@ -84,8 +84,8 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 ## 更新方案: v0.1.0 → v0.2.0
 
 ### 安全操作（自动执行）
-- scripts/*.sh — 8 个文件替换为最新版本
-- templates/*.md — 4 个文件替换
+- scripts/*.sh — 全部脚本替换为最新版本（v0.4.x 起 9 个）
+- templates/*.md — 全部模板替换（v0.4.x 起 5 个）
 - .gitignore — 替换
 
 ### Schema 变更
@@ -138,11 +138,11 @@ bash skills/agentspace-update/scripts/update-version.sh <已记录版本>
 cp skills/agentspace-update/versions/v<已记录>/architecture.json AGENTSPACE/.agentspace-architecture.json
 ```
 
-### 9. 验证
+### 9. 验证（闸门）
 
-运行 `AGENTSPACE/scripts/doctor.sh`。问题分类：
-- 可自动修复（断链）→ doctor 处理
-- 数据不一致 → 报告给用户，建议手动修复
+先运行 `AGENTSPACE/scripts/doctor.sh --fix`（一级修复：latest 软链、孤儿表行、notes.md 缺失行、handoff 索引死行），再运行 `AGENTSPACE/scripts/doctor.sh`：
+- **[0]**（未提交改动——更新中途的正常状态，step 10 提交）以外的红项必须先解决再继续：按 doctor 的 Tip 与用户讨论修复方案，绝不手工改表。只允许 [0] 遗留。
+- 进入 step 10，然后**再跑一次** `AGENTSPACE/scripts/doctor.sh` —— 必须 exit 0（全绿）。若仍红：修复（doctor.sh --fix 或用户确认的修复）并提交修复。**post-commit doctor 全绿之前更新不算完成** —— 绝不在红项挂起时宣布成功。
 
 ### 10. Git 提交
 
