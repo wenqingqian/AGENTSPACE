@@ -28,6 +28,7 @@ Initialize with explicit `/agentspace-init` to create `AGENTSPACE/` (independent
     ├── tests.md + tests/      # Experiment env (container/conda/GPU) + test scripts
     ├── notes.md + notes/      # Persistent knowledge (with source evidence)
     ├── register.md            # On-demand module registry (project-specific extensions)
+    ├── handoff/               # One-shot session handoffs (index.md committed; handoff_*.md disposable, gitignored)
     ├── .agentspace-version.json       # Workspace version tracking
     ├── .agentspace-architecture.json  # Current architecture snapshot
     ├── templates/  scripts/  .gitignore
@@ -43,6 +44,8 @@ Install this repository as a ZCode plugin (plugin marketplace or local plugin di
 /agentspace-init              # Explicit initialization (only entry, idempotent; analyzes workspace, asks goal/env/key repos)
 /agentspace-update [--force]  # Update workspace to match plugin version (conservative by default, --force for aggressive)
 /agentspace-doctor [--minor | --major] [--fix]  # Deep health check (explicit command only, never auto-triggered)
+/agentspace-handoff-produce [--name <name>] [--description <text>]  # Session close: write a one-shot context snapshot
+/agentspace-handoff-consume [--name <name>] [--keep]  # Session start: read a handoff, then delete it
 ```
 
 After initialization, the agent auto-manages the workspace in relevant sessions (project-unrelated chat does not interfere):
@@ -58,17 +61,22 @@ AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 
 For deeper audits — per-file content review (`--minor`), cross-cutting history audit against the host repo (`--major`), and tiered repairs (`--fix`) — run the explicit `/agentspace-doctor` command; it is never triggered automatically.
 
+One-shot session handoffs (`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): at session close, produce writes a disposable context snapshot into `AGENTSPACE/handoff/` (semantic name required — conflicts are refused, never auto-renamed); the next session consumes it (reads, then deletes). Any session can produce one, with or without in-progress plans.
+
 ## Plugin Structure
 
 ```
 .zcode-plugin/plugin.json        # Manifest
-commands/init-agentspace.md      # /agentspace-init command
-commands/update-agentspace.md    # /agentspace-update command
-commands/doctor-agentspace.md    # /agentspace-doctor command (deep health check)
+commands/agentspace-init.md        # /agentspace-init command
+commands/agentspace-update.md      # /agentspace-update command
+commands/agentspace-doctor.md      # /agentspace-doctor command (deep health check)
+commands/agentspace-handoff-produce.md  # /agentspace-handoff-produce command (session close)
+commands/agentspace-handoff-consume.md  # /agentspace-handoff-consume command (session start)
 skills/agentspace-init/          # Init skill (explicit command only) + init script + all template assets
 skills/agentspace-update/        # Update skill + version archives + update scripts
 skills/agentspace/               # Daily management skill (auto-triggered, with guards)
 skills/agentspace-doctor/        # Deep audit skill (explicit command only, never auto-triggered)
+skills/agentspace-handoff/       # Handoff skill (explicit commands only, never auto-triggered)
 ```
 
 ## Version Management

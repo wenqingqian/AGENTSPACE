@@ -28,6 +28,7 @@
     ├── tests.md + tests/      # 实验环境(容器/conda/GPU) + 测试脚本
     ├── notes.md + notes/      # 持久知识(带来源证据)
     ├── register.md            # 按需扩展模块(项目特定扩展)
+    ├── handoff/               # 一次性会话交接(index.md 入 git; handoff_*.md 一次性, gitignore)
     ├── .agentspace-version.json       # 工作区版本追踪
     ├── .agentspace-architecture.json  # 当前架构快照
     ├── templates/  scripts/  .gitignore
@@ -43,6 +44,8 @@
 /agentspace-init              # 显式初始化(唯一入口, 幂等; 分析工作区后询问 goal/运行环境/关键代码仓库)
 /agentspace-update [--force]  # 更新工作区至插件版本(默认保守, --force 激进)
 /agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查(仅显式命令触发, 绝不自动触发)
+/agentspace-handoff-produce [--name <名>] [--description <说明>]  # 会话收尾: 写入一次性上下文快照
+/agentspace-handoff-consume [--name <名>] [--keep]  # 会话开始: 读取 handoff, 读后删除
 ```
 
 之后日常对话中(agent 自动判断, 项目无关会话不介入):
@@ -58,17 +61,22 @@ AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 
 需要更深的审计(逐文件内容审查 `--minor` / 跨历史对照宿主仓库 `--major` / 分级修复 `--fix`)时, 显式运行 `/agentspace-doctor` 命令; 该命令绝不自动触发。
 
+一次性会话交接(`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): 会话收尾时 produce 把上下文快照写入 `AGENTSPACE/handoff/`(语义命名必需——冲突会拒绝, 绝不自动改名); 下个会话 consume 读取后删除。任何会话都可产生, 不要求有进行中 plan。
+
 ## 插件结构
 
 ```
 .zcode-plugin/plugin.json        # 清单
-commands/init-agentspace.md      # /agentspace-init 命令
-commands/update-agentspace.md    # /agentspace-update 命令
-commands/doctor-agentspace.md    # /agentspace-doctor 命令(深度健康检查)
+commands/agentspace-init.md      # /agentspace-init 命令
+commands/agentspace-update.md    # /agentspace-update 命令
+commands/agentspace-doctor.md    # /agentspace-doctor 命令(深度健康检查)
+commands/agentspace-handoff-produce.md  # /agentspace-handoff-produce 命令(会话收尾)
+commands/agentspace-handoff-consume.md  # /agentspace-handoff-consume 命令(会话开始)
 skills/agentspace-init/          # 初始化 skill(仅命令显式触发) + init 脚本 + 全部模板 assets
 skills/agentspace-update/        # 更新 skill + 版本档案 + 更新脚本
 skills/agentspace/               # 日常管理 skill(自动触发, 带守卫)
 skills/agentspace-doctor/        # 深度审计 skill(仅显式命令触发, 绝不自动触发)
+skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不自动触发)
 ```
 
 ## 版本管理
