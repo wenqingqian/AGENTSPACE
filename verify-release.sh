@@ -209,6 +209,20 @@ bilingual() {
 bilingual "$ROOT/skills/agentspace"
 bilingual "$ROOT/skills/agentspace-update"
 bilingual "$ROOT/skills/agentspace-doctor"
+# mechanism-parity spot checks: load-bearing upgrade rules must exist in BOTH
+# languages — heading/token parity cannot catch a missing rule paragraph
+# (e.g. the skip-missing-archive rule once existed only in SKILL.md)
+for pair in "skip to the next existing archive|跳过缺失的中间档案"; do
+  en="${pair%%|*}"; zh="${pair##*|}"
+  grep -Fq -- "$en" "$ROOT/skills/agentspace-update/SKILL.md" || {
+    echo "  [issue] agentspace-update SKILL.md missing mechanism phrase: $en"
+    issues=$((issues+1))
+  }
+  grep -Fq -- "$zh" "$ROOT/skills/agentspace-update/SKILL.zh-CN.md" || {
+    echo "  [issue] agentspace-update SKILL.zh-CN.md missing mechanism phrase: $zh"
+    issues=$((issues+1))
+  }
+done
 # rule-level token parity (daily skill only, per DEVELOPMENT.md Step 6)
 for t in MUST SHOULD MAY; do
   en=$(grep -o "$t" "$ROOT/skills/agentspace/SKILL.md" | wc -l | tr -d ' ')
