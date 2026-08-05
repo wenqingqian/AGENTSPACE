@@ -1,9 +1,8 @@
-# AGENTSPACE v0.4.1 (合并 v0.4.1-v0.4.4)
+# AGENTSPACE v0.4.1
 
 Upgrade from v0.4.0. Date: 2026-08-05
 
-> **合并说明**: v0.4.1-v0.4.4 四个同日碎片 bug-fix 版已合并为本版(用户拍板, 档案压缩)。
-> 从 v0.4.0 升级时按本档案一次性应用以下全部变更; 若工作区版本标记落在旧编号 v0.4.1-v0.4.4 任一版本, 内容与本版相同, 直接按本档案升级(update agent: 跳过缺失的中间档案)。
+> **版本说明**: 从 v0.4.0 升级时按本档案一次性应用以下全部变更; 若工作区版本标记落在 v0.4.1-v0.4.4 任一编号, 内容与本版相同, 直接按本档案升级(update agent: 跳过缺失的中间档案)。
 
 ## Summary
 
@@ -148,7 +147,7 @@ Upgrade from v0.4.0. Date: 2026-08-05
 2. **No data migration**: behavior unchanged — this is a doc-context fix.
 
 ### [Fix] 历史 CHANGELOG 档案修订: 升级链文本点补全(GAP #1-3)
-**What**: three historical changelogs gained the exact migration text they were missing (found by the upgrade-chain compatibility audit — a strict replay of v0.1.0 → v0.4.3 failed at these anchors):
+**What**: three historical changelogs gained the exact migration text they were missing (found by the upgrade-chain compatibility audit — a strict replay of v0.1.0 → v0.4.1 failed at these anchors):
 - `versions/v0.2.1/CHANGELOG.md`: the data module insert text now matches the asset wording (`大文件/权重默认 gitignore, 小型共享文件可取消注释`) instead of `data/ 全部 gitignore`.
 - `versions/v0.2.7/CHANGELOG.md`: added the notes when/how bullet exact-replace instruction (old → new, 模块 section) — the v0.2.12 back-link replace anchors on the new text, so skipping v0.2.7's AGENTS.md change breaks v0.2.12.
 - `versions/v0.4.0/CHANGELOG.md`: added the structure-tree `├── templates/` line update (append `/ handoff`) alongside the existing `handoff/` insert line.
@@ -165,4 +164,4 @@ Upgrade from v0.4.0. Date: 2026-08-05
 2. **Maintenance note**: when a new version adds workspace content changes (AGENTS.md text ops), extend the version-op table in the test.
 
 ### No structural changes
-- plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; new constant `STALE_DAYS` registered in architecture.json (lib.sh ↔ constants sync); AGENTS.md bullet wording is content, not schema. 本版为原 v0.4.1-v0.4.4 四版合并, 无额外结构变化。
+- plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; new constant `STALE_DAYS` registered in architecture.json (lib.sh ↔ constants sync); AGENTS.md bullet wording is content, not schema. 无额外结构变化。

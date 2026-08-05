@@ -193,6 +193,6 @@ Any mismatch means a rule exists in one language only — fix before release.
 
 ## Release Cadence (batching discipline)
 
-- **Batch small changes**: fixes and small optimizations accumulate into ONE release — never ship a version per fix. v0.4.1-v0.4.4 (four changelogs for four small batches on one day) is the anti-pattern; a release is for a meaningful capability step or an accumulated batch.
+- **Batch small changes**: fixes and small optimizations accumulate into ONE release — never ship a version per fix. Four small fix batches on one day, each with its own changelog, is the anti-pattern; a release is for a meaningful capability step or an accumulated batch.
 - **Capability-only bumps**: bump the version only when the plugin's capability changes; dev-tooling and doc changes (new-version.sh, verify-release.sh, tests, SKILL text, historical changelog anchors) ship without a version — management improvements.
 - **Archive count is a cost**: every version adds a CHANGELOG+architecture pair that the upgrade chain replays (t13) and users carry. Prefer fewer, richer archives over many thin ones.

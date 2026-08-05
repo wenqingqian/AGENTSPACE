@@ -89,7 +89,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
-| v0.4.1 | 2026-08-05 | handoff doctor 审计 [10]/[11] + status 摘要 + cleanup 批量(--list \| 修复、close 自动 diff、doctor [12]、--keep 标记)+ 风险审计修复 + bash 生态硬化(环境闸门、LC_ALL=C)+ 升级链 GAP 修复 + t13 重放测试(原 v0.4.1-v0.4.4 已合并为本档案) |
+| v0.4.1 | 2026-08-05 | handoff doctor 审计 [10]/[11] + status 摘要 + cleanup 批量(--list \| 修复、close 自动 diff、doctor [12]、--keep 标记)+ 风险审计修复 + bash 生态硬化(环境闸门、LC_ALL=C)+ 升级链 GAP 修复 + t13 重放测试 |
 | v0.4.0 | 2026-08-05 | handoff 模块(一次性会话交接: produce/consume)+ 命令统一为 `/agentspace-*` 前缀(破坏性) |
 | v0.3.3 | 2026-08-05 | 24h review 加固: 原子写补全、update-version 锚点 legacy 化、`--fix` 标题容错 + 失败可见 |
 | v0.3.2 | 2026-08-05 | 教训提炼升级为 MUST; 更新迁移台账(逐项 已应用/跳过) |

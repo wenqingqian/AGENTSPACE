@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# t12: v0.4.2 batch — doctor [12] register module consistency (report-only,
-# no --fix) and close-iteration auto host-diff collection (data/diff-*.patch).
+# t12: doctor [12] register module consistency (report-only, no --fix) and
+# close-iteration auto host-diff collection (data/diff-*.patch).
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 

@@ -8,9 +8,8 @@
 #
 # Maintenance: when a new version adds workspace content changes (AGENTS.md
 # text ops), extend the version-op table in the embedded python below.
-# Note: v0.4.1-v0.4.4 archives were merged into v0.4.1 (fragmented fix
-# versions); the replay table keeps their historical not-applicable rows —
-# the table replays semantics, the archive directory is irrelevant to it.
+# Note: v0.4.1-v0.4.4 share the single v0.4.1 archive (marker aliases); the
+# replay table mirrors the archive chain — one version-op row per archive.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 
@@ -75,7 +74,7 @@ edit(A, "- 状态自检: `scripts/status.sh`; 一致性检查与修复: `scripts
         "- **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用; 这些数据仅用于插件自身开发",
         "v0.2.0", "AGENTS.md 纪律: 禁止读取 bullet")
 
-# --- v0.2.1: data + examples modules (bullet wording per the v0.4.4-fixed archive) ---
+# --- v0.2.1: data + examples modules (bullet wording per the current v0.2.1 archive) ---
 os.makedirs(f"{WS}/data", exist_ok=True); os.makedirs(f"{WS}/examples", exist_ok=True)
 cp_asset("data.md", "data.md"); cp_asset("examples.md", "examples.md"); cp_asset("utils.md", "utils.md")
 edit(A, "├── utils.md + utils/  ← 复用工具(做图/机器状态/运行状态/日志分析等)",
@@ -178,7 +177,7 @@ edit(A, "2. 任务相关时读 plan.md; 会话续接时读 `iterations/latest/re
         "2. 任务相关时读 plan.md; 会话续接时: 有 handoff 先读 `handoff/index.md` 选最新并 consume, 否则读 `iterations/latest/readme.md` 的\"当前状态 · 下一步\"",
         "v0.4.0", "AGENTS.md 读取规则 2")
 
-# --- v0.4.1(合并版): data bullet wording sync (GAP #3) ---
+# --- v0.4.1: data bullet wording sync (GAP #3) ---
 edit(A, "- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; 大文件/权重默认 gitignore, 小型共享文件可取消注释",
         "- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; data/ 全部 gitignore(与 .gitignore 行为一致, 无 opt-out)",
         "v0.4.1", "AGENTS.md data bullet 措辞同步")

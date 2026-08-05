@@ -54,8 +54,8 @@ assert_output_contains "$OUT" "summarization-baseline | 基线实验收尾, 下�
 assert_output_contains "$OUT" "基线实验收尾"
 assert_output_not_contains "$OUT" "name |"
 assert_output_not_contains "$OUT" "---"
-# escaped-| description stays one intact row WITH its date column (v0.4.2 fix:
-# a naive -F'|' split dropped the date and split the desc)
+# escaped-| description stays one intact row WITH its date column (a naive
+# -F'|' split dropped the date and split the desc)
 assert_output_contains "$OUT" "piped-desc | a \\| b | handoff_piped-desc.md | $D"
 
 # --- consume without --name: refuses and points at --list ---
