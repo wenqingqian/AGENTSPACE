@@ -87,8 +87,8 @@ Present the update plan to the user in a clear, itemized format:
 ## Update Plan: v0.1.0 → v0.2.0
 
 ### Safe (automatic)
-- scripts/*.sh — 8 files replaced with latest versions
-- templates/*.md — 4 files replaced
+- scripts/*.sh — all scripts replaced with latest versions (9 at v0.4.x)
+- templates/*.md — all templates replaced (5 at v0.4.x)
 - .gitignore — replaced
 
 ### Schema Changes
@@ -124,7 +124,7 @@ Then:
 
 **Maintain a migration ledger** as you apply the changelog: for every change block, record `applied` / `skipped` / `not-applicable` (with the reason for skipped items). The ledger is the audit trail for the Step 11 report — do not rely on session memory alone.
 
-**a. Replace plugin-managed files**:
+**a. Replace plugin-managed files** (relative paths below are from the PLUGIN REPO ROOT — run them there, or use absolute paths when working from a subdirectory):
 ```bash
 # Scripts
 cp -R skills/agentspace-update/../../skills/agentspace-init/assets/agentspace/scripts/*.sh AGENTSPACE/scripts/

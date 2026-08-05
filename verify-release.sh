@@ -229,6 +229,15 @@ for f in "$ROOT/skills/agentspace/SKILL.md" "$ROOT/skills/agentspace/SKILL.zh-CN
   fi
 done
 
+# --- [10] README release history coverage ----------------------------------
+echo "[10] README release history"
+for f in README.md README.zh-CN.md; do
+  if ! grep -Fq "| v${LATEST#v} |" "$ROOT/$f"; then
+    echo "  [issue] $f Release History 缺 v${LATEST#v} 行(手动维护, 需随发版同步)"
+    issues=$((issues+1))
+  fi
+done
+
 # --- summary ----------------------------------------------------------------
 dirty=$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)
 echo ""
