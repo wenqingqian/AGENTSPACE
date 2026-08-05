@@ -56,15 +56,28 @@ as_handoff_check_name() {
 
 case "$ACTION" in
   list)
-    # data rows only (skip header + separator); print name|description|location|time
-    awk -F'|' '
-      /^\| *---/ || /^\| *name *\|/ { next }
-      /^\| [^|]+ \|/ {
-        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3)
-        gsub(/^ +| +$/, "", $4); gsub(/^ +| +$/, "", $5)
-        print "- " $2 " | " $3 " | " $4 " | " $5
-      }
-    ' "$INDEX" 2>/dev/null || true
+    # Section-scoped row extraction (same ## Handoffs anchor as doctor [10]);
+    # header and separator rows are excluded here, so the shape parse below
+    # only sees data rows. A naive -F'|' split would break on escaped \| in
+    # descriptions (as_cell) and drop the trailing date column — same lesson
+    # as doctor [10]/[11] and the v0.4.0 as_insert_row ENVIRON fix.
+    rows="$(awk -v sec="## $SEC_HANDOFF" '
+      $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; next }
+      /^## / { in_sec=0 }
+      in_sec && /^\| / && !/^\| *name *\|/ && !/^\|[ :|-]+\|$/ { print }
+    ' "$INDEX" 2>/dev/null || true)"
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      tmp="${line#| }"; name="${tmp%% | *}"; rest="${tmp#* | }"
+      date="${rest##* | }"; date="${date% |}"
+      nodate="${rest% | *}"; loc="${nodate##* | }"; desc="${nodate%% | *}"
+      if [ -z "$name" ] || [ -z "$loc" ] || [[ "$name" == *'|'* ]] \
+         || [[ "$loc" != handoff_*.md ]] || [[ "$date" != [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] ]]; then
+        echo "- (行格式异常: $line)"
+        continue
+      fi
+      echo "- $name | $desc | $loc | $date"
+    done <<< "$rows"
     ;;
 
   produce)
@@ -121,11 +134,16 @@ EOF
       as_die "handoff not indexed: $NAME (run --list)"
     fi
     [ -f "$FILE" ] || as_die "handoff file missing: $FILE"
+    as_lock
     if [ "$KEEP" -eq 1 ]; then
-      echo "handoff kept (--keep): $FILE (index row kept)"
+      # Mark the snapshot so doctor [11] skips it — a kept handoff is
+      # intentionally preserved, not abandoned. The marker lives in the
+      # (gitignored) file, not the index — no schema change. (Side effect:
+      # the append refreshes mtime, which also pushes staleness out.)
+      printf '\n> 状态: kept(--keep, %s)\n' "$(as_today)" >> "$FILE"
+      echo "handoff kept (--keep): $FILE (index row kept, marked)"
       exit 0
     fi
-    as_lock
     rm -f "$FILE"
     # remove the index row by first-column string equality, section-scoped
     tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"

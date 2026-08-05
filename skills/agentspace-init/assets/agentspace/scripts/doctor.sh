@@ -391,17 +391,21 @@ fi
 # up invisibly. Report-only: consuming requires reading the snapshot first —
 # doctor analyzes what the handoff is for and never deletes or consumes it.
 echo "[11] handoff staleness"
-STALE_DAYS=7
 if [ -d "$HO_DIR" ]; then
   # line-wise iteration — find output must not be word-split (a space anywhere
   # in the workspace path would fragment it) or glob-expanded.
-  # find -mtime +N = strictly more than N whole days; +6 ⇒ 7 天以上, so the
-  # check and the messages' ">7 天" claim agree exactly.
+  # find -mtime +N = strictly more than N whole days; +$((STALE_DAYS-1)) ⇒
+  # STALE_DAYS 天以上(默认 7), so the check and the messages agree exactly.
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     loc="$(basename "$f")"
     # orphans were already reported by [10] — do not double-report
     if [ -n "${orphans:-}" ] && printf '%s\n' "$orphans" | grep -Fx "$loc" >/dev/null; then
+      continue
+    fi
+    # --keep'd snapshots are intentionally preserved (marker written by
+    # handoff.sh consume --keep) — not abandoned, so not stale
+    if grep -Fq '> 状态: kept(--keep,' "$f" 2>/dev/null; then
       continue
     fi
     info="$(printf '%s\n' "$indexed" | grep -F "$loc"$'\t' | head -1 || true)"
@@ -414,11 +418,42 @@ if [ -d "$HO_DIR" ]; then
       desc="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
       date="$rest"
     fi
-    todo="$(awk '/^## 下一步[[:space:]]*$/ {in_todo=1; next} in_todo && /^## / {exit} in_todo {print}' "$f" 2>/dev/null \
-             | sed '/^[[:space:]]*$/d; /^[[:space:]]*<!--/d' | head -1 || true)"
+    # first non-empty, non-comment line under ## 下一步 (comment blocks may be
+    # multi-line — same state machine as status.sh)
+    todo="$(awk '/^## 下一步[[:space:]]*$/ {in_todo=1; next}
+                 in_todo && /^## / {exit}
+                 in_todo && /^<!--/ { if ($0 !~ /-->/) inc=1; next }
+                 inc && /-->/ { inc=0; next }
+                 inc { next }
+                 in_todo && /^[[:space:]]*$/ { next }
+                 in_todo { print; exit }' "$f" 2>/dev/null || true)"
     [ -n "$todo" ] || todo="—"
     warn "stale handoff $name ($date, $loc): $desc — 下一步: $todo (consume it, or decide to keep/delete — doctor only reports)"
   done <<< "$(find "$HO_DIR" -maxdepth 1 -type f -name 'handoff_*.md' -mtime "+$((STALE_DAYS - 1))" 2>/dev/null || true)"
+fi
+
+# ---- 12. register: module rows ↔ module files ----
+# register-module.sh contract: a registered module owns NAME.md + NAME/ in the
+# workspace root. Report-only — re-creating a module requires user
+# confirmation (register discipline), so doctor never auto-repairs here.
+echo "[12] register consistency"
+if [ -f "$AS_ROOT/register.md" ]; then
+  mods="$(awk -F'|' -v sec="## $SEC_REGISTERED" '
+    $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; next }
+    /^## / { in_sec=0 }
+    in_sec && /^\| / && !/^\| *模块 *\|/ && !/^\|[ :|-]+\|$/ {
+      c=$2; gsub(/^ +| +$/, "", c); print c
+    }
+  ' "$AS_ROOT/register.md" 2>/dev/null || true)"
+  while IFS= read -r m; do
+    [ -n "$m" ] || continue
+    if [[ ! "$m" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+      warn "register.md malformed module name: \"$m\" (expected lowercase alphanumeric/hyphen)"
+      continue
+    fi
+    [ -f "$AS_ROOT/$m.md" ] || warn "register.md: module $m missing $m.md (register-module.sh contract: NAME.md + NAME/)"
+    [ -d "$AS_ROOT/$m/" ] || warn "register.md: module $m missing $m/ directory (register-module.sh contract: NAME.md + NAME/)"
+  done <<< "$mods"
 fi
 
 echo

@@ -10,6 +10,7 @@ SB="$(build_sandbox t10)"
 WS="$SB/AGENTSPACE"
 HS="$WS/scripts/handoff.sh"
 INDEX="$WS/handoff/index.md"
+D="$(date +%F)"
 
 # --- produce with an explicit semantic name ---
 OUT="$(bash "$HS" --produce --name "summarization-baseline" --description "基线实验收尾, 下一步微调" 2>&1)"
@@ -53,6 +54,9 @@ assert_output_contains "$OUT" "summarization-baseline | 基线实验收尾, 下�
 assert_output_contains "$OUT" "基线实验收尾"
 assert_output_not_contains "$OUT" "name |"
 assert_output_not_contains "$OUT" "---"
+# escaped-| description stays one intact row WITH its date column (v0.4.2 fix:
+# a naive -F'|' split dropped the date and split the desc)
+assert_output_contains "$OUT" "piped-desc | a \\| b | handoff_piped-desc.md | $D"
 
 # --- consume without --name: refuses and points at --list ---
 OUT="$(bash "$HS" --consume 2>&1 || true)"

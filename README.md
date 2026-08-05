@@ -89,6 +89,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v0.4.2 | 2026-08-05 | handoff --list escaped-\| fix; close-iteration auto host-diff; doctor [12] register consistency (report-only); --keep marker (doctor [11] skips kept); STALE_DAYS single-source constant |
 | v0.4.1 | 2026-08-05 | doctor [10] handoff residue + [11] handoff staleness (report-only — never auto-deletes or consumes); status.sh handoff summary; update-flow verify gate; doctor --major content-level handoff review |
 | v0.4.0 | 2026-08-05 | handoff module (one-shot session handoffs: produce/consume) + command naming unified to `/agentspace-*` (breaking) |
 | v0.3.3 | 2026-08-05 | 24h-review hardening: atomic writes completed, legacy-safe update-version anchor, `--fix` heading-drift tolerance + visible failures |

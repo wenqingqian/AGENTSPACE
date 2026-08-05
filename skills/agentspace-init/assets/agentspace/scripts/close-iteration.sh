@@ -39,6 +39,23 @@ if [ -n "$HOST_HEAD" ] && grep -q '^## 环境$' "$README" \
   fi
 fi
 
+# Auto-collect the host code diff (best-effort metadata): the start/end commits
+# recorded at creation/close delimit this iteration's window; save `git diff
+# start..end` to data/ when non-empty. No git host / missing commits / empty
+# diff → silently skip (guards keep failure impossible under lock).
+START="$(grep -E '^> 宿主起始 commit: [0-9a-f]+' "$README" | head -1 | grep -oE '[0-9a-f]{7,40}' || true)"
+END="$(grep -E '^> 宿主结束 commit: [0-9a-f]+' "$README" | head -1 | grep -oE '[0-9a-f]{7,40}' || true)"
+if [ -n "$START" ] && [ -n "$END" ] && [ "$START" != "$END" ] \
+   && git -C "$AS_ROOT/.." rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  [ -d "$AS_ROOT/$DIR/data" ] || mkdir -p "$AS_ROOT/$DIR/data"
+  PATCH="$AS_ROOT/$DIR/data/diff-$START..$END.patch"
+  if git -C "$AS_ROOT/.." diff "$START".."$END" > "$PATCH" 2>/dev/null && [ -s "$PATCH" ]; then
+    echo "code diff saved → $DIR/data/diff-$START..$END.patch"
+  else
+    rm -f "$PATCH"
+  fi
+fi
+
 # iterations.md: remove 进行中 row, insert into 最近完成, truncate to 10
 as_remove_row "$AS_ROOT/iterations.md" "$ID"
 as_insert_row "$AS_ROOT/iterations.md" "$SEC_RECENT" \

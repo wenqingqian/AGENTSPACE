@@ -120,6 +120,19 @@ OUT="$(bash "$SB2/project/AGENTSPACE/scripts/doctor.sh" 2>&1 || true)"
 assert_output_contains "$OUT" "stale handoff spaced"
 rm -rf "$SB2"
 
+# --- --keep marker: a kept snapshot is intentionally preserved — [11] skips it ---
+bash "$HS" --produce --name "kept" >/dev/null 2>&1
+touch -t 202001010000 "$WS/handoff/handoff_kept.md"
+OUT="$(bash "$DOC" 2>&1 || true)"
+assert_output_contains "$OUT" "stale handoff kept"     # unmarked: red
+bash "$HS" --consume --keep --name "kept" >/dev/null 2>&1
+assert_contains "$WS/handoff/handoff_kept.md" "> 状态: kept(--keep"
+touch -t 202001010000 "$WS/handoff/handoff_kept.md"   # make it old again despite the append
+mc
+assert_ok bash "$DOC"                                  # marked: skipped → green
+bash "$HS" --consume --name "kept" >/dev/null 2>&1
+mc
+
 # --- cleanup: consume the remaining handoffs ---
 bash "$HS" --consume --name "gamma" >/dev/null 2>&1
 bash "$HS" --consume --name "esc" >/dev/null 2>&1

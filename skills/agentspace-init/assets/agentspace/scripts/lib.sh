@@ -17,6 +17,11 @@ readonly SEC_REGISTERED="已注册模块"
 readonly SEC_HANDOFF="Handoffs"
 readonly STATUS_TODO="> 状态: todo"
 readonly STATUS_PROGRESS="> 状态: 进行中"
+# Staleness threshold for handoff [11] / status summary (days unconsumed
+# before a handoff is flagged 过时). Single source — doctor.sh and status.sh
+# both use it (find -mtime +$((STALE_DAYS-1)) = strictly more than STALE_DAYS-1
+# whole days = 7 天以上).
+readonly STALE_DAYS="7"
 # ---- Placeholder constants (must match template comments exactly; doctor [5] checks drift) ----
 # Gate: close-iteration refuses while present. Template: iteration-readme.md "结果"
 readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
