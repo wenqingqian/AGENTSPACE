@@ -77,6 +77,32 @@ Each plugin version maintains a version archive (`CHANGELOG.md` + `architecture.
 
 See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on adding new versions.
 
+## Release History
+
+| Version | Date | What changed |
+| --- | --- | --- |
+| v0.4.0 | 2026-08-05 | handoff module (one-shot session handoffs: produce/consume) + command naming unified to `/agentspace-*` (breaking) |
+| v0.3.3 | 2026-08-05 | 24h-review hardening: atomic writes completed, legacy-safe update-version anchor, `--fix` heading-drift tolerance + visible failures |
+| v0.3.2 | 2026-08-05 | lesson distillation is now a MUST; update migration ledger (applied/skipped per change block) |
+| v0.3.1 | 2026-08-05 | doctor [8] link-level back-links + [9] version metadata; ID union scan; update-version cwd fix; status 推进总览; init self-check |
+| v0.3.0 | 2026-08-04 | `/agentspace-doctor` deep health check (deterministic core + per-file review + cross-cutting audit, tiered `--fix`) |
+| v0.2.12 | 2026-08-04 | notes↔iteration back-link discipline |
+| v0.2.11 | 2026-08-04 | update-flow hardening (skill text) |
+| v0.2.10 | 2026-08-02 | audit-fix release (5 external-audit findings) |
+| v0.2.9 | 2026-08-02 | daily skill slimmed; CN skill fixed |
+| v0.2.8 | 2026-08-02 | host start/end commits auto-recorded in iteration readmes |
+| v0.2.7 | 2026-08-02 | knowledge distillation workflow (SHOULD); notes 标签 column |
+| v0.2.6 | 2026-08-02 | doctor resume-block freshness + placeholder-drift checks |
+| v0.2.5 | 2026-08-02 | wrap-up protocol + result-section gates + MUST rule levels |
+| v0.2.4 | 2026-08-02 | v0.2.3 template regression fixed (duplicated sections) |
+| v0.2.3 | 2026-08-02 | iteration redefined as a code/state change step; template → 代码变更 |
+| v0.2.2 | 2026-08-02 | scripts converted to English; CJK slug truncation fixed |
+| v0.2.1 | 2026-08-02 | data + examples modules |
+| v0.2.0 | 2026-07-31 | skills English-primary; `/agentspace-update` changelog-driven migration |
+| v0.1.0 | 2026-07-31 | initial release: plan + iteration dual mainline, entry views, scripts-only indexes |
+
+Per-version change notes and migration guidance live in `skills/agentspace-update/versions/`.
+
 ## License
 
 MIT

@@ -77,6 +77,32 @@ skills/agentspace-doctor/        # 深度审计 skill(仅显式命令触发, 绝
 
 详见 `skills/agentspace-update/DEVELOPMENT.md`(英文)获取添加新版本的贡献指南。
 
+## 版本历史
+
+| 版本 | 日期 | 更新内容 |
+| --- | --- | --- |
+| v0.4.0 | 2026-08-05 | handoff 模块(一次性会话交接: produce/consume)+ 命令统一为 `/agentspace-*` 前缀(破坏性) |
+| v0.3.3 | 2026-08-05 | 24h review 加固: 原子写补全、update-version 锚点 legacy 化、`--fix` 标题容错 + 失败可见 |
+| v0.3.2 | 2026-08-05 | 教训提炼升级为 MUST; 更新迁移台账(逐项 已应用/跳过) |
+| v0.3.1 | 2026-08-05 | doctor [8] 链接级回链 + [9] 版本元数据; ID 并集扫描; update-version cwd 修复; status 推进总览; init 自检 |
+| v0.3.0 | 2026-08-04 | `/agentspace-doctor` 深度健康检查(确定性核心 + 逐文件审查 + 跨历史审计, 分级 `--fix`) |
+| v0.2.12 | 2026-08-04 | notes↔iteration 回链纪律 |
+| v0.2.11 | 2026-08-04 | 更新流程加固(skill 文本) |
+| v0.2.10 | 2026-08-02 | 外部审计修复版(5 项发现) |
+| v0.2.9 | 2026-08-02 | 日常 skill 精简; 中文 skill 修复 |
+| v0.2.8 | 2026-08-02 | iteration readme 自动记录宿主起始/结束 commit |
+| v0.2.7 | 2026-08-02 | 知识提炼流程(SHOULD); notes 增加标签列 |
+| v0.2.6 | 2026-08-02 | doctor 续接块新鲜度 + 占位符漂移检查 |
+| v0.2.5 | 2026-08-02 | 收尾协议 + 结果节质量闸门 + MUST 规则分级 |
+| v0.2.4 | 2026-08-02 | 修复 v0.2.3 模板回归(重复节) |
+| v0.2.3 | 2026-08-02 | iteration 重新定义为代码/状态变更步骤; 模板改 代码变更 |
+| v0.2.2 | 2026-08-02 | 脚本改英文; 修复 CJK slug 截断 |
+| v0.2.1 | 2026-08-02 | data + examples 模块 |
+| v0.2.0 | 2026-07-31 | skill 以英文为主; `/agentspace-update` 变更日志驱动迁移 |
+| v0.1.0 | 2026-07-31 | 初始版本: plan + iteration 双主线、入口视图、scripts 独占索引 |
+
+各版本详细变更与迁移指引见 `skills/agentspace-update/versions/`。
+
 ## License
 
 MIT
