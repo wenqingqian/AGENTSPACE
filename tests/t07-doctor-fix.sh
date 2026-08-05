@@ -186,4 +186,27 @@ git -C "$WS" commit -qm "test: t07f milestone (fixed)" >/dev/null 2>&1
 assert_ok bash "$WS/scripts/doctor.sh"
 rm -rf "$SB"
 
+# --- v0.3.3: section heading with trailing whitespace — --fix still repairs ---
+# (both the orphan-row detection and as_remove_row_section tolerate heading drift)
+SB="$(build_sandbox t07g)"
+WS="$SB/AGENTSPACE"
+# inject an orphan Todo row, then drift the heading with a trailing space
+python3 - "$WS/plan.md" <<'EOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+s = s.replace("## Todo", "## Todo ", 1)
+s = s.replace("| --- | --- | --- | --- |",
+              "| --- | --- | --- | --- |\n| 9998 | Drifted Ghost | 2026-08-03 | [plan/todo/9998-x.md](plan/todo/9998-x.md) |", 1)
+open(p, "w").write(s)
+EOF
+git -C "$WS" add -A >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t07g milestone (fault)" >/dev/null 2>&1
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "orphan row"
+OUT="$(bash "$WS/scripts/doctor.sh" --fix 2>&1 || true)"
+assert_output_contains "$OUT" "removed orphan Todo row 9998 (no file)"
+assert_output_not_contains "$OUT" "NOT removed"
+rm -rf "$SB"
+
 echo "PASS t07"

@@ -6,12 +6,14 @@ set -euo pipefail
 #
 # Locates the project root automatically (walks up from cwd until an AGENTSPACE/
 # workspace is found), so it can be invoked from the project root or any subdir.
+# Anchor = the scripts/ dir (present in every workspace version incl. v0.1.0-era
+# workspaces without a version marker — those go through the create path below).
 
 PROJECT_ROOT="$(pwd)"
-while [ ! -f "$PROJECT_ROOT/AGENTSPACE/scripts/doctor.sh" ]; do
+while [ ! -d "$PROJECT_ROOT/AGENTSPACE/scripts" ]; do
   parent="$(dirname "$PROJECT_ROOT")"
   if [ "$parent" = "$PROJECT_ROOT" ]; then
-    echo "error: no AGENTSPACE/ workspace found from $(pwd) upward (looked for AGENTSPACE/scripts/doctor.sh)" >&2
+    echo "error: no AGENTSPACE/ workspace found from $(pwd) upward (looked for AGENTSPACE/scripts/)" >&2
     exit 1
   fi
   PROJECT_ROOT="$parent"

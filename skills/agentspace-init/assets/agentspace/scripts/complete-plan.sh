@@ -55,7 +55,7 @@ awk -F'|' -v id="$ID" -v st="$STATUS_CN" -v d="$DATE" -v r="$RESULT_CELL" -v lin
   { print }
   END { if (!found) exit 3 }
 ' "$AS_ROOT/plan/index.md" > "$tmp" || { rm -f "$tmp"; as_die "index missing plan:$ID"; }
-cat "$tmp" > "$AS_ROOT/plan/index.md" && rm -f "$tmp"
+as_atomic_write "$AS_ROOT/plan/index.md" "$tmp"
 
 # Move file + update status line (only after above operations succeed)
 mv "${SRC[0]}" "$AS_ROOT/$DEST"

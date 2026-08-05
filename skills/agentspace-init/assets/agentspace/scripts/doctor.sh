@@ -109,7 +109,7 @@ done
 
 # Todo rows must have corresponding files
 todo_ids="$(awk -F'|' -v sec="$SEC_TODO" '
-  $0 == ("## " sec) { f=1; next }
+  $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
   /^## / { f=0 }
   f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
 ' "$AS_ROOT/plan.md")"
@@ -123,6 +123,9 @@ for id in $todo_ids; do
     as_remove_row_section "$AS_ROOT/plan.md" "$SEC_TODO" "$id"
     if [ "$(wc -l < "$AS_ROOT/plan.md")" -lt "$before" ]; then
       ok "removed orphan Todo row $id (no file)"
+    else
+      # v0.3.3: a failed repair must not report green — surface it instead
+      warn "plan.md orphan row $id NOT removed (section \"$SEC_TODO\" missing or drifted)"
     fi
   else
     warn "plan.md Todo row $id has no corresponding file (orphan row)"
@@ -153,7 +156,7 @@ done
 
 # In-progress rows must have corresponding dirs
 prog_ids="$(awk -F'|' -v sec="$SEC_PROGRESS" '
-  $0 == ("## " sec) { f=1; next }
+  $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
   /^## / { f=0 }
   f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
 ' "$AS_ROOT/iterations.md")"
@@ -165,6 +168,9 @@ for id in $prog_ids; do
     as_remove_row_section "$AS_ROOT/iterations.md" "$SEC_PROGRESS" "$id"
     if [ "$(wc -l < "$AS_ROOT/iterations.md")" -lt "$before" ]; then
       ok "removed orphan in-progress row $id (no dir)"
+    else
+      # v0.3.3: a failed repair must not report green — surface it instead
+      warn "iterations.md in-progress row $id NOT removed (section \"$SEC_PROGRESS\" missing or drifted)"
     fi
   else
     warn "iterations.md in-progress row $id has no corresponding dir (orphan row)"

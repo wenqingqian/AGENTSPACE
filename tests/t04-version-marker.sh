@@ -34,5 +34,17 @@ python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['version']
 V="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['version'])" "$VERSION_FILE")"
 [ "$V" = "0.9.11" ] || fail "walk-up project-root resolution failed: $V"
 
+# update-version.sh locates the project root by walking up from subdirs (v0.3.1)
+(cd "$SB/AGENTSPACE/plan" && assert_ok bash "$UPDATE_SH" 0.9.11)
+V="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['version'])" "$VERSION_FILE")"
+[ "$V" = "0.9.11" ] || fail "walk-up project-root resolution failed: $V"
+
+# v0.3.3: legacy workspace (no version marker) from a subdir — create path still
+# resolves via the scripts/ anchor instead of walking past the workspace
+rm "$VERSION_FILE"
+(cd "$SB/AGENTSPACE/plan" && assert_ok bash "$UPDATE_SH" 0.9.12)
+python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['version']=='0.9.12' and d['installedAt']=='$(date +%F)', d" "$VERSION_FILE" \
+  || fail "legacy create path via subdir failed"
+
 rm -rf "$SB"
 echo "PASS t04"

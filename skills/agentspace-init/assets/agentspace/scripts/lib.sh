@@ -134,7 +134,7 @@ as_remove_row_section() {
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
   awk -v sec="## $2" -v id="$3" '
     BEGIN { pat="^ *\\| *" id " *\\|" }
-    $0 == sec { in_sec=1; print; next }
+    $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; print; next }
     /^## / { in_sec=0 }
     in_sec && $0 ~ pat { next }
     { print }

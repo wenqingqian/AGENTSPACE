@@ -57,7 +57,7 @@ awk -F'|' -v id="$ID" -v d="$DATE" -v r="$RESULT_CELL" '
   { print }
   END { if (!found) exit 3 }
 ' "$AS_ROOT/iterations/index.md" > "$tmp" || { rm -f "$tmp"; as_die "iterations/index.md missing iteration_$ID"; }
-cat "$tmp" > "$AS_ROOT/iterations/index.md" && rm -f "$tmp"
+as_atomic_write "$AS_ROOT/iterations/index.md" "$tmp"
 
 # Atomic: replace status line + append close log in single awk pass
 tmp2="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
@@ -69,7 +69,7 @@ awk -v status_old="$STATUS_PROGRESS" -v status_new="> 状态: 已完成 ($DATE)"
     print log_line
   }
 ' "$README" > "$tmp2" || { rm -f "$tmp2"; as_die "readme status line $STATUS_PROGRESS not found"; }
-cat "$tmp2" > "$README" && rm -f "$tmp2"
+as_atomic_write "$README" "$tmp2"
 
 echo "iteration_$ID closed → $DIR/readme.md (frozen)"
 echo "Next [SHOULD]: if the result holds transferable lessons, write a note (templates/note.md) with source iteration_$ID, back-linking this readme in 详情"
