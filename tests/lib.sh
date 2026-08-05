@@ -16,10 +16,13 @@ fail() {
 
 assert_ok() { "$@" || fail "command failed: $*"; }
 assert_fails() { "$@" && fail "expected failure (exit 0): $*"; return 0; }
-assert_contains() { grep -Fq "$2" "$1" || fail "expected '$2' in $1"; }
-assert_not_contains() { grep -Fq "$2" "$1" && fail "unexpected '$2' in $1"; return 0; }
-assert_output_contains() { printf '%s' "$1" | grep -Fq "$2" || fail "expected '$2' in command output"; }
-assert_output_not_contains() { printf '%s' "$1" | grep -Fq "$2" && fail "unexpected '$2' in command output"; return 0; }
+# `--` after grep flags: a pattern starting with `-` (e.g. "---") must not be
+# parsed as an option — without it BSD grep errors and the && / || chain makes
+# the assertion silently pass (v0.4.1 audit)
+assert_contains() { grep -Fq -- "$2" "$1" || fail "expected '$2' in $1"; }
+assert_not_contains() { grep -Fq -- "$2" "$1" && fail "unexpected '$2' in $1"; return 0; }
+assert_output_contains() { printf '%s' "$1" | grep -Fq -- "$2" || fail "expected '$2' in command output"; }
+assert_output_not_contains() { printf '%s' "$1" | grep -Fq -- "$2" && fail "unexpected '$2' in command output"; return 0; }
 
 build_sandbox() {
   local tag="$1" sb

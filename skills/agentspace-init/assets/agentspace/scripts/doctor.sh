@@ -2,7 +2,8 @@
 # Consistency check: entry tables / full indexes ↔ filesystem.
 # Broken latest symlink auto-repaired; other issues reported.
 # --fix: additionally auto-repair safe deterministic items (orphan table rows,
-# missing notes.md rows); semantic issues are always reported, never auto-fixed.
+# missing notes.md rows, dangling handoff index rows); semantic issues are
+# always reported, never auto-fixed.
 # Usage: doctor.sh [--fix]
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
@@ -302,6 +303,120 @@ ver="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$AS_ROOT/.agentspace
 arch="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$AS_ROOT/.agentspace-architecture.json" 2>/dev/null | head -1 | sed 's/.*: *"//; s/"$//' || true)"
 if [ -n "$ver" ] && [ -n "$arch" ] && [ "$ver" != "$arch" ]; then
   warn "version marker v$ver vs architecture snapshot v$arch (mismatch — run /agentspace-update, or fix once with user confirmation)"
+fi
+
+# ---- 10. handoff: index rows ↔ handoff files (residue) ----
+# The index row and the handoff file are produced and consumed as a pair; a
+# crash between the two leaves a dangling row or an orphan file, both
+# gitignored (invisible to git, silent drift). --fix only removes dead index
+# rows (the file is already gone — no data loss, same pattern as [2]/[3]);
+# orphan files may still hold unread context, so they are reported with their
+# path and left for the user to read and remove — doctor never deletes handoff
+# files and never consumes (reading the snapshot first is the module contract).
+echo "[10] handoff consistency"
+HO_DIR="$AS_ROOT/handoff"
+HO_INDEX="$HO_DIR/index.md"
+rows=""
+names=""
+locs=""
+indexed=""
+if [ -d "$HO_DIR" ]; then
+  if [ -f "$HO_INDEX" ]; then
+    rows="$(awk -v sec="## $SEC_HANDOFF" '
+      $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; next }
+      /^## / { in_sec=0 }
+      in_sec && /^\| / && !/^\| *name *\|/ && !/^\|[ :|-]+\|$/ { print }
+    ' "$HO_INDEX" 2>/dev/null || true)"
+  fi
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    # Fields located by shape (first name cell / last date cell), not by a bare
+    # | split — descriptions may hold escaped \| (as_cell, v0.4.0 ENVIRON fix)
+    tmp="${line#| }"; name="${tmp%% | *}"; rest="${tmp#* | }"
+    date="${rest##* | }"; date="${date% |}"
+    nodate="${rest% | *}"; loc="${nodate##* | }"; desc="${nodate%% | *}"
+    if [ -z "$name" ] || [ -z "$loc" ] || [[ "$name" == *'|'* ]] || [[ "$loc" != handoff_*.md ]] || [[ "$loc" == */* ]] || [[ "$date" != [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] ]]; then
+      warn "handoff index row malformed (expected \"| name | description | location | time |\"): $line"
+      continue
+    fi
+    names+="$name"$'\n'; locs+="$loc"$'\n'
+    indexed+="$loc"$'\t'"$name"$'\t'"$desc"$'\t'"$date"$'\n'
+    if [ ! -e "$HO_DIR/$loc" ]; then
+      if [ "$FIX" -eq 1 ]; then
+        before="$(wc -l < "$HO_INDEX")"
+        tmpf="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+        # Match on name AND the row's location cell: with duplicate names a
+        # name-only first match could delete the LIVE row instead of the
+        # dangling one. index() is literal (no regex metachars in loc).
+        awk -F'|' -v sec="## $SEC_HANDOFF" -v name="$name" -v loc="$loc" '
+          $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; print; next }
+          /^## / { in_sec=0 }
+          in_sec && /^\|/ && !done { c=$2; gsub(/^ +| +$/, "", c); if (c == name && index($0, loc)) { done=1; next } }
+          { print }
+        ' "$HO_INDEX" > "$tmpf" && as_atomic_write "$HO_INDEX" "$tmpf"
+        if [ "$(wc -l < "$HO_INDEX")" -lt "$before" ]; then
+          ok "removed dangling handoff row $name (file $loc missing)"
+        else
+          # v0.3.3 discipline: a failed repair must not report green
+          warn "handoff row $name NOT removed (section \"$SEC_HANDOFF\" missing or drifted)"
+        fi
+      else
+        warn "handoff index row $name → missing file $loc (dangling row — a crashed consume? --fix removes the row)"
+      fi
+    fi
+  done <<< "$rows"
+  # duplicate rows (hand-edit artifact; consume removes only the first match)
+  while IFS= read -r d; do
+    [ -n "$d" ] || continue
+    warn "duplicate handoff index rows: \"$d\" ($(printf '%s' "$names" | grep -Fxc -- "$d" || true)×) — keep one row, confirm with the user"
+  done < <(printf '%s' "$names" | sort | uniq -d)
+  while IFS= read -r d; do
+    [ -n "$d" ] || continue
+    warn "duplicate handoff index locations: \"$d\" ($(printf '%s' "$locs" | grep -Fxc -- "$d" || true)×) — keep one row, confirm with the user"
+  done < <(printf '%s' "$locs" | sort | uniq -d)
+  # files without rows (orphans) — reported, never auto-deleted
+  for f in "$HO_DIR"/handoff_*.md; do
+    [ -e "$f" ] || continue
+    loc="$(basename "$f")"
+    if ! printf '%s\n' "$locs" | grep -Fx "$loc" >/dev/null; then
+      warn "handoff file not indexed (orphan): $f — read it, then remove manually (doctor never deletes handoff files)"
+      orphans+="$loc"$'\n'
+    fi
+  done
+fi
+
+# ---- 11. handoff staleness: unconsumed handoffs older than STALE_DAYS ----
+# A handoff waits for the next session to consume it; one lingering past the
+# threshold is likely abandoned, and being gitignored it would otherwise pile
+# up invisibly. Report-only: consuming requires reading the snapshot first —
+# doctor analyzes what the handoff is for and never deletes or consumes it.
+echo "[11] handoff staleness"
+STALE_DAYS=7
+if [ -d "$HO_DIR" ]; then
+  # line-wise iteration — find output must not be word-split (a space anywhere
+  # in the workspace path would fragment it) or glob-expanded
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    loc="$(basename "$f")"
+    # orphans were already reported by [10] — do not double-report
+    if [ -n "${orphans:-}" ] && printf '%s\n' "$orphans" | grep -Fx "$loc" >/dev/null; then
+      continue
+    fi
+    info="$(printf '%s\n' "$indexed" | grep -F "$loc"$'\t' | head -1 || true)"
+    name="?"; desc=""; date="?"
+    if [ -n "$info" ]; then
+      # tab-split preserving empty cells — IFS=$'\t' read would collapse an
+      # empty description and shift the date into the description slot
+      rest="${info#*$'\t'}"
+      name="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+      desc="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+      date="$rest"
+    fi
+    todo="$(awk '/^## 下一步[[:space:]]*$/ {in_todo=1; next} in_todo && /^## / {exit} in_todo {print}' "$f" 2>/dev/null \
+             | sed '/^[[:space:]]*$/d; /^[[:space:]]*<!--/d' | head -1 || true)"
+    [ -n "$todo" ] || todo="—"
+    warn "stale handoff $name ($date, $loc): $desc — 下一步: $todo (consume it, or decide to keep/delete — doctor only reports)"
+  done <<< "$(find "$HO_DIR" -maxdepth 1 -type f -name 'handoff_*.md' -mtime "+${STALE_DAYS}" 2>/dev/null || true)"
 fi
 
 echo

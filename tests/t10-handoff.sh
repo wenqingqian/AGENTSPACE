@@ -92,9 +92,17 @@ rm "$WS/handoff/handoff_self-init.md"
 OUT="$(bash "$HS" --consume --name "self-init" 2>&1 || true)"
 assert_output_contains "$OUT" "handoff file missing"
 
-# --- index stays a valid table; doctor unaffected (handoff not in doctor scope) ---
+# --- handoff is in doctor scope: the dangling row left by the file-missing
+#     case is exactly doctor [10]; --fix removes the row. The four orphan files
+#     (rows destroyed when index.md was recreated in the self-init test) are
+#     reported but never deleted by doctor — the user removes them manually ---
+OUT="$(bash "$WS/scripts/doctor.sh" --fix 2>&1 || true)"
+assert_output_contains "$OUT" "removed dangling handoff row"
+assert_output_contains "$OUT" "not indexed"
+[ -f "$WS/handoff/handoff_axb.md" ] || fail "--fix must never delete an orphan handoff file"
+rm "$WS"/handoff/handoff_*.md   # user cleanup per doctor's guidance
 git -C "$WS" add -A >/dev/null 2>&1
-git -C "$WS" commit -qm "test: t10 milestone" >/dev/null 2>&1
+git -C "$WS" commit -qm "test: t10 milestone" >/dev/null 2>&1 || true
 assert_ok bash "$WS/scripts/doctor.sh"
 
 rm -rf "$SB"

@@ -61,7 +61,7 @@ AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 
 需要更深的审计(逐文件内容审查 `--minor` / 跨历史对照宿主仓库 `--major` / 分级修复 `--fix`)时, 显式运行 `/agentspace-doctor` 命令; 该命令绝不自动触发。
 
-一次性会话交接(`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): 会话收尾时 produce 把上下文快照写入 `AGENTSPACE/handoff/`(语义命名必需——冲突会拒绝, 绝不自动改名); 下个会话 consume 读取后删除。任何会话都可产生, 不要求有进行中 plan。
+一次性会话交接(`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): 会话收尾时 produce 把上下文快照写入 `AGENTSPACE/handoff/`(语义命名必需——冲突会拒绝, 绝不自动改名); 下个会话 consume 读取后删除。任何会话都可产生, 不要求有进行中 plan。doctor 已覆盖该模块 — [10] 残留一致性(死行/孤儿文件/重复行)与 [11] 过时审核(>7 天未消费; 报告该 handoff 要干什么 — 绝不自动删除或 consume); `AGENTSPACE/scripts/status.sh` 列出待消费 handoff 并带过时标记。
 
 ## 插件结构
 
@@ -89,6 +89,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.4.1 | 2026-08-05 | doctor [10] handoff 残留 + [11] handoff 过时审核(只报告 — 绝不自动删除或 consume); status.sh handoff 摘要; update 流程 verify 闸门; doctor --major 内容级 handoff 审查 |
 | v0.4.0 | 2026-08-05 | handoff 模块(一次性会话交接: produce/consume)+ 命令统一为 `/agentspace-*` 前缀(破坏性) |
 | v0.3.3 | 2026-08-05 | 24h review 加固: 原子写补全、update-version 锚点 legacy 化、`--fix` 标题容错 + 失败可见 |
 | v0.3.2 | 2026-08-05 | 教训提炼升级为 MUST; 更新迁移台账(逐项 已应用/跳过) |

@@ -22,6 +22,42 @@ overview="$(awk -F'|' '
 [ -n "$overview" ] && echo "$overview" || echo "  (无迭代)"
 echo
 
+echo "## Handoffs (待消费)"
+# 会话续接入口; 过时判龄与 doctor [11] 一致(STALE_DAYS=7, find -mtime, 无日期算术)
+if [ -d "$AS_ROOT/handoff" ] && [ -f "$AS_ROOT/handoff/index.md" ]; then
+  rows="$(awk -v sec="## $SEC_HANDOFF" '
+    $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; next }
+    /^## / { in_sec=0 }
+    in_sec && /^\| / && !/^\| *name *\|/ && !/^\|[ :|-]+\|$/ { print }
+  ' "$AS_ROOT/handoff/index.md" 2>/dev/null || true)"
+  found=0
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    # 字段按形状定位(首列 name / 末尾日期), 容忍 description 中的 \| (同 doctor [10])
+    tmp="${line#| }"; name="${tmp%% | *}"; rest="${tmp#* | }"
+    date="${rest##* | }"; date="${date% |}"
+    nodate="${rest% | *}"; loc="${nodate##* | }"; desc="${nodate%% | *}"
+    if [ -z "$name" ] || [ -z "$loc" ] || [[ "$name" == *'|'* ]] || [[ "$loc" != handoff_*.md ]] || [[ "$loc" == */* ]]; then
+      echo "  (行格式异常: $line)"
+      found=1
+      continue
+    fi
+    [ -n "$desc" ] || desc="—"
+    if [ ! -e "$AS_ROOT/handoff/$loc" ]; then
+      echo "  - $name | $desc | $date (文件缺失 — 见 doctor [10])"
+    elif [ -n "$(find "$AS_ROOT/handoff/$loc" -mtime +7 2>/dev/null)" ]; then
+      echo "  - $name | $desc | $date ⚠ 过时(>7 天未消费 — 见 doctor [11])"
+    else
+      echo "  - $name | $desc | $date"
+    fi
+    found=1
+  done <<< "$rows"
+  [ "$found" -eq 1 ] || echo "  (空)"
+else
+  echo "  (无 handoff 模块)"
+fi
+echo
+
 echo "## Todo plans"
 shopt -s nullglob
 todo_files=( "$AS_ROOT"/plan/todo/[0-9]*.md )

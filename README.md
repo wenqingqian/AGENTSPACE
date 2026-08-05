@@ -61,7 +61,7 @@ AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 
 For deeper audits — per-file content review (`--minor`), cross-cutting history audit against the host repo (`--major`), and tiered repairs (`--fix`) — run the explicit `/agentspace-doctor` command; it is never triggered automatically.
 
-One-shot session handoffs (`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): at session close, produce writes a disposable context snapshot into `AGENTSPACE/handoff/` (semantic name required — conflicts are refused, never auto-renamed); the next session consumes it (reads, then deletes). Any session can produce one, with or without in-progress plans.
+One-shot session handoffs (`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): at session close, produce writes a disposable context snapshot into `AGENTSPACE/handoff/` (semantic name required — conflicts are refused, never auto-renamed); the next session consumes it (reads, then deletes). Any session can produce one, with or without in-progress plans. Doctor covers the module — [10] residue consistency (dangling rows / orphan files / duplicates) and [11] staleness (unconsumed > 7 days; reported with what the handoff is for — never auto-deleted or auto-consumed); `AGENTSPACE/scripts/status.sh` lists pending handoffs with a staleness marker.
 
 ## Plugin Structure
 
@@ -89,6 +89,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v0.4.1 | 2026-08-05 | doctor [10] handoff residue + [11] handoff staleness (report-only — never auto-deletes or consumes); status.sh handoff summary; update-flow verify gate; doctor --major content-level handoff review |
 | v0.4.0 | 2026-08-05 | handoff module (one-shot session handoffs: produce/consume) + command naming unified to `/agentspace-*` (breaking) |
 | v0.3.3 | 2026-08-05 | 24h-review hardening: atomic writes completed, legacy-safe update-version anchor, `--fix` heading-drift tolerance + visible failures |
 | v0.3.2 | 2026-08-05 | lesson distillation is now a MUST; update migration ledger (applied/skipped per change block) |
