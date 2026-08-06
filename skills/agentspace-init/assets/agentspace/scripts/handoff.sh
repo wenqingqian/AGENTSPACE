@@ -90,8 +90,10 @@ case "$ACTION" in
     # self-initializes below); without this, produce dies on a raw cat error
     mkdir -p "$HANDOFF_DIR"
     # index.md may be absent in workspaces upgraded before v0.4.0 — init it
+    # (tmp+mv: atomic, no half-written index on crash — audit R8)
     if [ ! -f "$INDEX" ]; then
-      cat > "$INDEX" <<EOF
+      tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+      cat > "$tmp" <<EOF
 # Handoff 索引
 
 > 一次性会话交接文件索引, 由 scripts/handoff.sh 维护, 请勿手工编辑。
@@ -102,6 +104,7 @@ case "$ACTION" in
 | name | description | location | time |
 | --- | --- | --- | --- |
 EOF
+      mv "$tmp" "$INDEX"
     fi
     # Conflict check INSIDE the lock — refuse, never auto-rename (-2/-3
     # destroys meaning); a near-collision slug is refused the same way
@@ -113,6 +116,7 @@ EOF
     fi
     if ! PH_NAME="$NAME" PH_DATE="$(as_today)" \
       as_fill_template "$AS_ROOT/templates/handoff.md" "$HANDOFF_DIR/$LOC"; then
+      rm -f "$HANDOFF_DIR/$LOC"   # no 0-byte orphan on template failure (audit R8)
       as_die "failed to create handoff file: $LOC"
     fi
     if ! as_insert_row "$INDEX" "$SEC_HANDOFF" \
@@ -130,9 +134,10 @@ EOF
     LOC="handoff_$(as_handoff_slug "$NAME").md"
     FILE="$HANDOFF_DIR/$LOC"
     [ -f "$INDEX" ] || as_die "handoff index missing: $INDEX"
-    # row present? (first column == name, string compare — no regex metachars)
-    if ! awk -F'|' -v name="$NAME" '
-        /^\| [^|]+ \|/ { c=$2; gsub(/^ +| +$/, "", c); if (c == name) found=1 }
+    # row present? (name AND derived location — a duplicate-name row must not
+    # be consumed by mistake; same dual match as doctor [10] --fix)
+    if ! awk -F'|' -v name="$NAME" -v loc="$LOC" '
+        /^\| [^|]+ \|/ { c=$2; gsub(/^ +| +$/, "", c); if (c == name && index($0, loc)) found=1 }
         END { exit found ? 0 : 1 }
       ' "$INDEX"; then
       as_die "handoff not indexed: $NAME (run --list)"
@@ -144,17 +149,20 @@ EOF
       # intentionally preserved, not abandoned. The marker lives in the
       # (gitignored) file, not the index — no schema change. (Side effect:
       # the append refreshes mtime, which also pushes staleness out.)
-      printf '\n> 状态: kept(--keep, %s)\n' "$(as_today)" >> "$FILE"
+      # tmp+mv: atomic append (audit R8)
+      tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+      { cat "$FILE" 2>/dev/null || true; printf '\n> 状态: kept(--keep, %s)\n' "$(as_today)"; } > "$tmp" \
+        && mv "$tmp" "$FILE"
       echo "handoff kept (--keep): $FILE (index row kept, marked)"
       exit 0
     fi
     rm -f "$FILE"
-    # remove the index row by first-column string equality, section-scoped
+    # remove the index row by name + location (dual match), section-scoped
     tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-    awk -F'|' -v sec="## $SEC_HANDOFF" -v name="$NAME" '
+    awk -F'|' -v sec="## $SEC_HANDOFF" -v name="$NAME" -v loc="$LOC" '
       $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; print; next }
       /^## / { in_sec=0 }
-      in_sec && /^\|/ && !done { c=$2; gsub(/^ +| +$/, "", c); if (c == name) { done=1; next } }
+      in_sec && /^\|/ && !done { c=$2; gsub(/^ +| +$/, "", c); if (c == name && index($0, loc)) { done=1; next } }
       { print }
     ' "$INDEX" > "$tmp" && as_atomic_write "$INDEX" "$tmp"
     echo "handoff consumed → deleted $FILE + index row"

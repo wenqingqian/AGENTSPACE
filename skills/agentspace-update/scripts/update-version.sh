@@ -28,8 +28,17 @@ fi
 NEW_VER="$1"
 TODAY="$(date +%F)"
 
+# Atomic write via same-dir tmp + mv — a crash mid-`cat >` leaves an empty
+# marker that doctor [9] silently passes (grep on empty string, audit R6).
+write_version_file() {
+  local tmp
+  tmp="$(mktemp "${VERSION_FILE}.tmp.XXXXXX")" || { echo "error: mktemp failed for $VERSION_FILE" >&2; exit 1; }
+  cat > "$tmp" || { rm -f "$tmp"; echo "error: cannot write $VERSION_FILE" >&2; exit 1; }
+  mv "$tmp" "$VERSION_FILE"
+}
+
 if [ ! -f "$VERSION_FILE" ]; then
-  cat > "$VERSION_FILE" <<EOF
+  write_version_file <<EOF
 {
   "version": "$NEW_VER",
   "installedAt": "$TODAY",
@@ -41,7 +50,7 @@ else
   # Preserve original installedAt
   installed_at="$(grep '"installedAt"' "$VERSION_FILE" | sed 's/.*: *"//;s/".*//')" || installed_at="$TODAY"
   if [ -z "$installed_at" ] || [ "$installed_at" = "null" ]; then installed_at="$TODAY"; fi
-  cat > "$VERSION_FILE" <<EOF
+  write_version_file <<EOF
 {
   "version": "$NEW_VER",
   "installedAt": "$installed_at",

@@ -44,8 +44,10 @@ fi
 as_insert_row "$AS_ROOT/iterations.md" "$SEC_PROGRESS" \
   "| $ID | plan:$PLAN_ID | $CELL | $DATE | [$DIR/readme.md]($DIR/readme.md) |"
 
-echo "| $ID | plan:$PLAN_ID | $CELL | 进行中 | $DATE |  |  | [$DIR/readme.md]($DIR/readme.md) |" \
-  >> "$AS_ROOT/iterations/index.md"
+# Index append via tmp+mv: atomic (audit R8) — same rationale as new-plan.sh
+tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+{ cat "$AS_ROOT/iterations/index.md" 2>/dev/null || true; echo "| $ID | plan:$PLAN_ID | $CELL | 进行中 | $DATE |  |  | [$DIR/readme.md]($DIR/readme.md) |"; } > "$tmp" \
+  && as_atomic_write "$AS_ROOT/iterations/index.md" "$tmp"
 
 # Append to plan document's "相关迭代" section
 ENTRY="- [iteration_$ID](../../iterations/iteration_$ID/readme.md) — $CELL ($DATE)"

@@ -196,3 +196,15 @@ Any mismatch means a rule exists in one language only — fix before release.
 - **Batch small changes**: fixes and small optimizations accumulate into ONE release — never ship a version per fix. Four small fix batches on one day, each with its own changelog, is the anti-pattern; a release is for a meaningful capability step or an accumulated batch.
 - **Capability-only bumps**: bump the version only when the plugin's capability changes; dev-tooling and doc changes (new-version.sh, verify-release.sh, tests, SKILL text, historical changelog anchors) ship without a version — management improvements.
 - **Archive count is a cost**: every version adds a CHANGELOG+architecture pair that the upgrade chain replays (t13) and users carry. Prefer fewer, richer archives over many thin ones.
+
+## Script pattern discipline (MUST)
+
+Hard-won contracts from the 2026-08-06 risk audit (8 findings + same-pattern sweep). Every workspace script MUST follow these; new code that violates one is a release blocker — the patterns already exist as helpers, reuse them instead of re-implementing:
+
+1. **as_cell-escaped content passes to awk via ENVIRON, never `-v`** — `awk -v` processes backslash escapes and eats the `\` of `\|` (corrupted plan/index.md and iterations/index.md rows; the hazard is documented at `as_insert_row`). Same for any variable that may contain `\|`.
+2. **Row deletion/matching is dual-condition or normalized** — delete by `name AND location` (handoff consume, doctor [10]) or `as_norm_id` before matching files/dirs (doctor --fix orphan rows). Name-only or raw-id matching deletes the wrong row.
+3. **Every write is atomic** — `as_atomic_write` (tmp+mv in $AS_TMPDIR), never `cat >`, `>`, or `>>` on a live file (crash windows leave half-written rows/markers; `update-version.sh` once silently lost the version marker this way).
+4. **Every `$(...)` read path is guarded** — `2>/dev/null || true` (a bare awk/grep on a missing file aborts the whole script under `set -euo pipefail` and skips remaining checks).
+5. **Read-only commands must not write** — anything declared read-only (status.sh workbench) must stay read-only; write paths belong behind explicit gates (`--fix`) or dedicated scripts.
+6. **New tools join the environment gate** — lib.sh's toolchain list must include every external command the scripts use (head, cut, wc, ...).
+

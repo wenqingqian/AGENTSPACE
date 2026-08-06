@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Consistency check: entry tables / full indexes ↔ filesystem.
-# Broken latest symlink auto-repaired; other issues reported.
-# --fix: additionally auto-repair safe deterministic items (orphan table rows,
-# missing notes.md rows, dangling handoff index rows); semantic issues are
-# always reported, never auto-fixed.
+# Issues reported; tier-1 repairs (latest symlink, orphan table rows, missing
+# notes.md rows, dangling handoff index rows) applied with --fix only.
+# Semantic issues are always reported, never auto-fixed.
 # Usage: doctor.sh [--fix]
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
@@ -28,8 +27,10 @@ ok()   { printf '  [fixed] %s\n' "$*"; fixed=$((fixed + 1)); }
 notes_insert_row() {
   local row="$1" tmp
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-  awk -v row="$row" '
-    /^\|[ :|-]+\|$/ && !inserted { print; print row; inserted=1; next }
+  # row travels via ENVIRON, not -v — awk -v would unescape the \| cells
+  # produced by as_cell, corrupting the inserted notes row (audit R8)
+  row="$row" awk '
+    /^\|[ :|-]+\|$/ && !inserted { print; print ENVIRON["row"]; inserted=1; next }
     { print }
     END { if (!inserted) exit 3 }
   ' "$AS_ROOT/notes.md" > "$tmp" || { rm -f "$tmp"; warn "notes.md: table separator not found, row not inserted"; return 1; }
@@ -76,17 +77,28 @@ if [ -e "$AS_ROOT/.git" ]; then  # -e covers git worktrees (.git as file), match
 fi
 
 # ---- 1. latest symlink ----
+# Report-only without --fix: doctor is invoked read-only from status.sh, and an
+# unguarded write would make the "read-only workbench" mutate the workspace
+# (audit F1). Repairs happen under --fix only, like every other tier-1 item.
 echo "[1] iterations/latest"
 L="$AS_ROOT/iterations/latest"
 if [ -L "$L" ] && [ ! -e "$L" ]; then
-  rm -f "$L"
-  warn "latest symlink broken, removed"
+  if [ "$FIX" -eq 1 ]; then
+    rm -f "$L"
+    ok "latest symlink broken, removed"
+  else
+    warn "latest symlink broken (run --fix to repair)"
+  fi
 fi
 if [ ! -L "$L" ]; then
   last="$(ls -d "$AS_ROOT"/iterations/iteration_[0-9]* 2>/dev/null | sort | tail -1 || true)"
   if [ -n "$last" ]; then
-    ln -sfn "$(basename "$last")" "$L"
-    ok "latest -> $(basename "$last")"
+    if [ "$FIX" -eq 1 ]; then
+      ln -sfn "$(basename "$last")" "$L"
+      ok "latest -> $(basename "$last")"
+    else
+      warn "iterations/latest missing (run --fix to repair)"
+    fi
   fi
 fi
 
@@ -113,8 +125,16 @@ todo_ids="$(awk -F'|' -v sec="$SEC_TODO" '
   $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
   /^## / { f=0 }
   f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
-' "$AS_ROOT/plan.md")"
+' "$AS_ROOT/plan.md" 2>/dev/null || true)"
 for id in $todo_ids; do
+  # Normalize before matching files: a hand-written `| 1 |` row must resolve
+  # to 0001-*.md — deleting on the raw id would remove a live row (audit R4)
+  if [[ "$id" =~ ^[0-9]+$ ]]; then
+    id="$(as_norm_id "$id")"
+  else
+    warn "plan.md Todo row $id malformed (non-numeric id) — not removed"
+    continue
+  fi
   # compgen -G: nullglob is on for the forward loops, which would turn a bare
   # unmatched glob into an empty arg and make `ls` succeed on cwd (silent no-op)
   if compgen -G "$AS_ROOT/plan/todo/$id-*.md" >/dev/null; then
@@ -160,8 +180,15 @@ prog_ids="$(awk -F'|' -v sec="$SEC_PROGRESS" '
   $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
   /^## / { f=0 }
   f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
-' "$AS_ROOT/iterations.md")"
+' "$AS_ROOT/iterations.md" 2>/dev/null || true)"
 for id in $prog_ids; do
+  # Normalize before matching dirs — same live-row protection as [2]
+  if [[ "$id" =~ ^[0-9]+$ ]]; then
+    id="$(as_norm_id "$id")"
+  else
+    warn "iterations.md in-progress row $id malformed (non-numeric id) — not removed"
+    continue
+  fi
   if [ -d "$AS_ROOT/iterations/iteration_$id" ]; then
     :
   elif [ "$FIX" -eq 1 ]; then

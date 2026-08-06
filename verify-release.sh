@@ -202,9 +202,21 @@ bilingual() {
   en="$(mktemp "/tmp/ag-verify-en.XXXXXX")" || return 1
   zh="$(mktemp "/tmp/ag-verify-zh.XXXXXX")" || { rm -f "$en"; return 1; }
   # strip fenced code blocks first — their pseudo-headings (e.g. the update
-  # skill's "## Update Plan:" example) must not pollute the heading sequence
-  awk '/^```/{f=!f} !f' "$d/SKILL.md" | grep -o '^#\+' > "$en"
-  awk '/^```/{f=!f} !f' "$d/SKILL.zh-CN.md" | grep -o '^#\+' > "$zh"
+  # skill's "## Update Plan:" example) must not pollute the heading sequence.
+  # Guards + explicit cleanup: a missing SKILL.md must surface as an issue,
+  # not abort the gate and leak the /tmp files (audit R8)
+  if ! awk '/^```/{f=!f} !f' "$d/SKILL.md" 2>/dev/null | grep -o '^#\+' > "$en"; then
+    echo "  [issue] $name: SKILL.md unreadable"
+    rm -f "$en" "$zh"
+    issues=$((issues+1))
+    return 0
+  fi
+  if ! awk '/^```/{f=!f} !f' "$d/SKILL.zh-CN.md" 2>/dev/null | grep -o '^#\+' > "$zh"; then
+    echo "  [issue] $name: SKILL.zh-CN.md unreadable"
+    rm -f "$en" "$zh"
+    issues=$((issues+1))
+    return 0
+  fi
   if ! diff -q "$en" "$zh" >/dev/null; then
     echo "  [issue] $name: heading-level sequence mismatch (EN vs zh-CN)"
     issues=$((issues+1))

@@ -14,7 +14,7 @@ if [ "${BASH_VERSINFO[0]:-0}" -lt 3 ] || { [ "${BASH_VERSINFO[0]:-0}" -eq 3 ] &&
   printf 'error: AGENTSPACE scripts need bash >= 3.1 (found %s) — upgrade bash and re-run.\n' "${BASH_VERSION:-unknown}" >&2
   exit 1
 fi
-for _as_cmd in grep awk sed find date tr mkdir mktemp git; do
+for _as_cmd in grep awk sed find date tr mkdir mktemp git head; do
   if ! command -v "$_as_cmd" >/dev/null 2>&1; then
     printf 'error: required command not found: %s (AGENTSPACE scripts need the core POSIX toolchain)\n' "$_as_cmd" >&2
     exit 1

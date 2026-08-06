@@ -43,18 +43,23 @@ as_insert_row "$AS_ROOT/plan.md" "$SEC_DONE" \
   "| $ID | $TITLE | $STATUS_CN | $RESULT_CELL | $DATE | [$DEST]($DEST) |"
 as_truncate_section "$AS_ROOT/plan.md" "$SEC_DONE" 10
 
-# plan/index.md: update status/completed-date/result/link
+# plan/index.md: update status/completed-date/result/link.
+# Escape-aware: \| cells (result) are shielded before the -F'|' split and
+# restored after; RESULT_CELL travels via ENVIRON, not -v (awk -v unescapes
+# the \| cells produced by as_cell — same hazard as lib.sh::as_insert_row).
 tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-awk -F'|' -v id="$ID" -v st="$STATUS_CN" -v d="$DATE" -v r="$RESULT_CELL" -v link="[$DEST]($DEST)" '
-  BEGIN { pat="^\\| *" id " *\\|"; found=0 }
-  $0 ~ pat {
-    $4=" " st " "; $6=" " d " "; $7=" " r " "; $8=" " link " "
-    out=$1; for (i=2; i<=NF; i++) out=out "|" $i
-    print out; found=1; next
-  }
-  { print }
-  END { if (!found) exit 3 }
-' "$AS_ROOT/plan/index.md" > "$tmp" || { rm -f "$tmp"; as_die "index missing plan:$ID"; }
+ESC="$(printf '\037')"
+sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan/index.md" \
+  | RESULT_CELL="$RESULT_CELL" awk -F'|' -v id="$ID" -v st="$STATUS_CN" -v d="$DATE" -v link="[$DEST]($DEST)" -v esc="$ESC" '
+    BEGIN { pat="^\\| *" id " *\\|"; found=0; r=ENVIRON["RESULT_CELL"] }
+    $0 ~ pat {
+      $4=" " st " "; $6=" " d " "; $7=" " r " "; $8=" " link " "
+      out=$1; for (i=2; i<=NF; i++) out=out "|" $i
+      print out; found=1; next
+    }
+    { print }
+    END { if (!found) exit 3 }
+  ' | sed "s/$ESC/\\\\|/g" > "$tmp" || { rm -f "$tmp"; as_die "index missing plan:$ID"; }
 as_atomic_write "$AS_ROOT/plan/index.md" "$tmp"
 
 # Move file + update status line (only after above operations succeed)
