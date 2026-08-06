@@ -8,6 +8,7 @@ Upgrade from v0.5.0. Date: 2026-08-06
 - **同构扫描收口**: 审计后全仓模式扫描再抓出第 7 处 `-v` 转义漏洞(doctor notes_insert_row)与 3 处 `>>` 非原子追加,一并修复。
 - **t16-audit-regressions 回归**: 五项审计修复的永久护栏。
 - **方法论沉淀**: DEVELOPMENT.md 新增「脚本模式纪律」六条契约(ENVIRON 传参/双匹配/原子写/守卫/FIX 门控/闸门清单),防同类问题再现。
+- **status 近期动态重做**: 工作区事件流(计划/迭代/笔记/交接, 不依赖 commit)+ 提交摘要(类型前缀映射中文), 不再裸列 commit 名字。
 
 ## Changes
 
@@ -72,5 +73,15 @@ Upgrade from v0.5.0. Date: 2026-08-06
 **Migration**:
 1. **Plugin-side (no workspace action)**: ships with the plugin.
 
+### [Feature] status.sh 近期动态重做: 工作区事件流 + 提交摘要(不再裸列 commit)
+**What**: `/agentspace-status` 的「近期动态」从"最近 10 条 commit 标题"改为"最多 10 条带日期的活动时间线", 两条数据流合并取前 10 — 按日期倒序, 同日之内按各流"新→旧"稳定排序(非字节序, 忙碌日不会丢掉最新活动; 跨流同日顺序 = 流发射顺序); 显示日期, 不按日期窗口筛选:
+- **工作区事件**(索引表自带日期列, 不依赖 commit): 计划创建/完成(失败/放弃)、迭代开启/关闭、笔记新增、交接生成 — "不是 commit 的活动也是近期动态"。
+- **提交摘要**: 工作区 git 提交按类型前缀映射中文摘要(plan→计划 / iteration→迭代 / notes→笔记 / handoff→交接 / update→升级 / fix→修复 / feat→功能 / docs→文档 / test→测试 / chore→杂项 / refactor→重构 / merge→合并 / release→发布 / revert→回退, 未识别前缀归"提交"), 不再列举无意义的 commit 名字。
+空态由 `(无提交)` 改为 `(无动态)`; 节头 `(最近 10 条)` → `(最多 10 条)`; 所有读取守卫, 缺文件自然为空流。
+**Why**: 用户反馈"近期动态仅仅是列举一些 commit 没有意义" — 动态应是活动时间线, 且 commit 至少要总结在干什么。
+**Migration**:
+1. **Script (handled by step 8a — no manual work)**: `AGENTSPACE/scripts/status.sh` is replaced from assets.
+2. **No data migration**: t01/t15 断言与 SKILL 模板(EN/zh-CN)同步更新节头后缀。
+
 ### No structural changes
-- plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; no new constants; AGENTS.md 无内容操作(t13 重放表无需扩展); 全部修复为脚本行为层。
+- plan/iterations/notes/utils/tests/data/examples/register/handoff schemas unchanged; no new constants; AGENTS.md 无内容操作(t13 重放表无需扩展); 全部改动为脚本行为层(近期动态重做只改 status.sh 输出, 无结构变化)。

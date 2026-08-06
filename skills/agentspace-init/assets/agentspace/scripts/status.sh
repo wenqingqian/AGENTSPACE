@@ -153,20 +153,107 @@ else
 fi
 echo
 
-# --- 近期动态: 最近 10 条, 显示日期但不按日期筛选 ---
-echo "## 近期动态 (最近 10 条)"
-if [ "$git_ok" -eq 1 ]; then
-  log10="$(git -C "$AS_ROOT" log -10 --format='%ad %s' --date=short 2>/dev/null || true)"
-  if [ -n "$log10" ]; then
-    while IFS= read -r line; do
-      [ -n "$line" ] || continue
-      echo "- $(trunc "$line" 60)"
-    done <<< "$log10"
-  else
-    echo "  (无提交)"
+# --- 近期动态: 工作区事件 + 提交摘要 — 最多 10 条, 显示日期但不按日期筛选 ---
+# 事件流取自索引表自带的日期列(创建/完成/开始/关闭/日期/time), 不依赖
+# commit — 有些活动不是 commit 也是近期动态; 提交流把类型前缀映射为中文
+# 摘要(plan:→计划, fix:→修复…), 不再裸列 commit 名字。两流按日期倒序合并
+# 取前 10: sort -s -k1,1r 按日期字段稳定排序 — 同日之内保持各流"新→旧"
+# 发射顺序(脚本管理的 plan/iterations 索引为末尾追加 → 反转流; notes/handoff
+# 为表头插入 → 保持文件序; git log 本就新→旧), 不会因字节序丢掉最新活动。
+# 跨流同日顺序 = 流发射顺序(plan/iteration/notes/handoff/commit) — 日期是
+# 日粒度无时间戳, 这是该设计的天花板。所有读取均守卫, 缺失文件自然为空流。
+commit_summary() {
+  local line="$1" d="${1%% *}" s="${1#* }" t label matched=0
+  t="${s%%:*}"
+  case "$t" in
+    plan) label="计划"; matched=1 ;;
+    iteration|iterations) label="迭代"; matched=1 ;;
+    notes|note) label="笔记"; matched=1 ;;
+    handoff) label="交接"; matched=1 ;;
+    update|upgrade) label="升级"; matched=1 ;;
+    fix) label="修复"; matched=1 ;;
+    feat|feature) label="功能"; matched=1 ;;
+    docs) label="文档"; matched=1 ;;
+    test|tests) label="测试"; matched=1 ;;
+    chore) label="杂项"; matched=1 ;;
+    refactor) label="重构"; matched=1 ;;
+    merge) label="合并"; matched=1 ;;
+    release) label="发布"; matched=1 ;;
+    revert) label="回退"; matched=1 ;;
+    *) label="提交" ;;
+  esac
+  # 仅当已知类型前缀命中才剥离前缀 — 未命中的标题(含 ": " 或 fixup! 标记)
+  # 必须原样保留, 否则摘要头部会被吞掉。
+  if [ "$matched" -eq 1 ]; then
+    s="${s#*:}"; s="${s# }"
   fi
+  printf '%s %s: %s\n' "$d" "$label" "$s"
+}
+
+echo "## 近期动态 (最多 10 条)"
+recent="$(
+  {
+    # 计划: 创建(创建日期, 仅未完成时) / 完成·失败·放弃(完成日期) — 同日
+    # 闭环的计划由"完成"事件代表, 不再重复"创建", 给提交流留出位置。
+    # 末尾追加的索引 → END 反转使流内新→旧。
+    # -F'|' 下首列以 | 开头 → $1 恒为空, 实际列从 $2 起(ID) — 全脚本同约定。
+    sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
+      /^\| [0-9]/ {
+        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(/^ +| +$/, "", $4)
+        gsub(/^ +| +$/, "", $5); gsub(/^ +| +$/, "", $6)
+        if ($5 != "" && $6 == "") { gsub(esc, "\\|", $3); buf[++n] = $5 " 计划创建: " $3 " (plan:" $2 ")" }
+        if ($6 != "") {
+          k = ($4 == "失败" ? "失败" : ($4 == "放弃" ? "放弃" : "完成"))
+          gsub(esc, "\\|", $3); buf[++n] = $6 " 计划" k ": " $3 " (plan:" $2 ")"
+        }
+      }
+      END { for (i = n; i >= 1; i--) print buf[i] }
+    '
+    # 迭代: 开启(开始日期, 仅未关闭时) / 关闭(完成日期); 同上反转
+    sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations/index.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
+      /^\| [0-9]/ {
+        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $4)
+        gsub(/^ +| +$/, "", $6); gsub(/^ +| +$/, "", $7)
+        if ($6 != "" && $7 == "") { gsub(esc, "\\|", $4); buf[++n] = $6 " 迭代开启: " $4 " (iteration_" $2 ")" }
+        if ($7 != "") { gsub(esc, "\\|", $4); buf[++n] = $7 " 迭代关闭: " $4 " (iteration_" $2 ")" }
+      }
+      END { for (i = n; i >= 1; i--) print buf[i] }
+    '
+    # 笔记: 新增(日期列; 与 NOTES 计数同表同形状)。notes.md 为表头插入
+    # (doctor --fix 的 notes_insert_row), 文件序即新→旧, 不反转。
+    sed "s/\\\\|/$ESC/g" "$AS_ROOT/notes.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
+      /^\|[ :|-]*-[ :|-]*\|$/ { seen=1; next }
+      seen && /^\| / {
+        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $6)
+        if ($6 != "") { gsub(esc, "\\|", $2); print $6 " 笔记新增: " $2 }
+      }
+    '
+    # 交接: 生成(待消费项, time 列)。与 会话入口 同构, 限定 ## Handoffs 节;
+    # 行由 as_insert_row 表头插入, 文件序即新→旧, 不反转。
+    sed "s/\\\\|/$ESC/g" "$AS_ROOT/handoff/index.md" 2>/dev/null | awk -F'|' -v sec="$SEC_HANDOFF" -v esc="$ESC" '
+      $0 == ("## " sec) { in_sec=1; next }
+      /^## / { in_sec=0 }
+      in_sec && /^\| / && !/^\| *name *\|/ && !/^\|[ :|-]*-[ :|-]*\|$/ {
+        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $5)
+        if ($5 != "") { gsub(esc, "\\|", $2); print $5 " 交接生成: " $2 }
+      }
+    '
+    # 提交: 类型前缀 → 中文摘要; git log 本就新→旧, 不反转
+    if [ "$git_ok" -eq 1 ]; then
+      git -C "$AS_ROOT" log -20 --format='%ad %s' --date=short 2>/dev/null | while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        commit_summary "$line"
+      done
+    fi
+  } | sort -s -k1,1r | head -10 || true
+)"
+if [ -n "$recent" ]; then
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    echo "- $(trunc "$line" 60)"
+  done <<< "$recent"
 else
-  echo "  (无 git 记录)"
+  echo "  (无动态)"
 fi
 echo
 

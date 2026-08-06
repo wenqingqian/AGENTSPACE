@@ -36,8 +36,8 @@ The workbench is a current-state snapshot (what the project is, what state it is
 ## 进行中
 - <one line per item> / ✓ 无进行中
 
-## 近期动态 (最近 10 条)
-- <one line per commit>
+## 近期动态 (最多 10 条)
+- <one line per activity — workspace event or commit summary> / (无动态)
 
 ## 软告警 (N)
 - <one line per alert> / ✓ 无软告警
@@ -60,3 +60,4 @@ Section names, order and empty-state placeholders are hard-coded by status.sh �
 
 - The script output is a complete template even without the paragraph (the line stays `—`).
 - Status ≠ progress: never invent "next steps"; if the workspace has no active work, the sections say so.
+- 近期动态 is a mechanical activity timeline (max 10, dates shown, no date-window filter): workspace events from the index date columns (plan created/completed, iteration opened/closed, note added, handoff produced) merged with commit summaries (type prefix mapped to a Chinese label, e.g. plan:→计划 / fix:→修复).

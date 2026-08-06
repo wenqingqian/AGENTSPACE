@@ -97,7 +97,7 @@ OUT="$(bash "$WS/scripts/status.sh")"
 assert_output_contains "$OUT" "## 项目总览"
 assert_output_contains "$OUT" "## 推进总览"
 assert_output_contains "$OUT" "## 进行中"
-assert_output_contains "$OUT" "## 近期动态 (最近 10 条)"
+assert_output_contains "$OUT" "## 近期动态 (最多 10 条)"
 assert_output_contains "$OUT" "## 软告警 ("
 assert_output_contains "$OUT" "## 会话入口"
 
