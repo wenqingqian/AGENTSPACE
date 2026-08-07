@@ -272,6 +272,23 @@ if [ -n "$LATEST" ]; then
   done
 fi
 
+# --- [11] changelog-driven rehearsal record ---------------------------------
+# MUST (user rule): every release that adds a changelog must first be
+# rehearsed — sandbox built from the previous version's assets, the new
+# changelog's Migration instructions applied, convergence verified. The
+# record lives in the version archive; without a PASSING one the release is
+# not ready (written by rehearse-update.sh).
+echo "[11] changelog-driven rehearsal record"
+if [ -n "$LATEST" ]; then
+  REH="$VERSIONS/v${LATEST#v}/rehearsal.md"
+  if [ -f "$REH" ] && grep -q '^Result: PASS' "$REH" 2>/dev/null; then
+    echo "  rehearsal record present (v${LATEST#v})"
+  else
+    echo "  [issue] v${LATEST#v} 缺 PASS 演练留痕 — 新增 changelog 必须先演练: bash rehearse-update.sh <old-ref> ${LATEST#v}"
+    issues=$((issues+1))
+  fi
+fi
+
 # --- summary ----------------------------------------------------------------
 dirty=$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)
 echo ""

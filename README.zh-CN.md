@@ -90,7 +90,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
-| v0.5.1 | 2026-08-06 | 风险审计修复: complete-plan ENVIRON+shield、doctor 守卫/id 归一化/latest FIX 门控、handoff consume 双匹配、update-version 原子写、python 3.6 兼容、索引追加原子化 + t16 回归 + 脚本模式纪律 |
+| v0.5.1 | 2026-08-06 | 风险审计修复: complete-plan ENVIRON+shield、doctor 守卫/id 归一化/latest FIX 门控、handoff consume 双匹配、update-version 原子写、python 3.6 兼容、索引追加原子化 + t16 回归 + 脚本模式纪律 + status 近期动态事件流+提交摘要 |
 | v0.5.0 | 2026-08-06 | status 工作台: `/agentspace-status` 命令 + skill(硬脚本聚合、严格模板、子代理项目段落)+ status.sh 重写(总览/版本环境/推进总览转义感知/近期动态 10 条/软告警形状校验/handoff)+ `\|` 转义感知修复(close-iteration index 改写、as_row_cell)+ zh-CN 文档同步(示例数字、两段式验证闸门)+ 架构 subsections 补全 + t15 回归 |
 | v0.4.1 | 2026-08-05 | handoff doctor 审计 [10]/[11] + status 摘要 + cleanup 批量(--list \| 修复、close 自动 diff、doctor [12]、--keep 标记)+ 风险审计修复 + bash 生态硬化(环境闸门、LC_ALL=C)+ 升级链 GAP 修复 + t13 重放测试 |
 | v0.4.0 | 2026-08-05 | handoff 模块(一次性会话交接: produce/consume)+ 命令统一为 `/agentspace-*` 前缀(破坏性) |

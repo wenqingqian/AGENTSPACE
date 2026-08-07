@@ -197,6 +197,21 @@ Any mismatch means a rule exists in one language only — fix before release.
 - **Capability-only bumps**: bump the version only when the plugin's capability changes; dev-tooling and doc changes (new-version.sh, verify-release.sh, tests, SKILL text, historical changelog anchors) ship without a version — management improvements.
 - **Archive count is a cost**: every version adds a CHANGELOG+architecture pair that the upgrade chain replays (t13) and users carry. Prefer fewer, richer archives over many thin ones.
 
+## Release pipeline (MUST)
+
+Fixed gate sequence for every release (hard gates, agent-driven execution — there is no single one-command pipeline; the gates below are the template):
+
+1. `new-version.sh X.Y.Z` — 5 version markers (plugin.json, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
+2. Write `versions/vX.Y.Z/CHANGELOG.md` — every change block carries Migration instructions (8a scripts / 8b AGENTS.md text ops / 8c markers / plugin-side / dev-only); this is the upgrade chain's instruction sheet.
+3. **Rehearse the update (MUST for every new changelog)**: `bash rehearse-update.sh <old-ref> <new-version>` — sandbox built from the previous version's assets (`git archive <old-ref>`), the new changelog's Migration instructions applied (8a + 8c mechanical; 8b agent-executed per the changelog), convergence verified (markers / scripts byte-identical / doctor green / status renders). Writes the record `versions/vX.Y.Z/rehearsal.md`; a release with a new changelog but no PASSING record fails verify-release [11].
+4. `bash verify-release.sh` → [pass] (checks [0]-[11], incl. the rehearsal record).
+5. `bash self-test.sh` → all green (t01-t16, incl. t13 full-chain replay).
+6. code review pipeline (major + sub-1/sub-2 + merger + executor) — 发布走 code review.
+7. Commit + push.
+8. Nested workspace dogfooding upgrade — real /agentspace-update flow (8a/8b/8c), two-phase gate (pre-commit all green except doctor [0] → milestone commit → post-commit all green).
+
+Conditional extras depending on the release's content: real-project evaluation / third-party synthetic regression (first release of a big capability), 24h read-only risk audit (user-initiated), verify-gate negative smoke (t14) when the gate itself changed.
+
 ## Script pattern discipline (MUST)
 
 Hard-won contracts from the 2026-08-06 risk audit (8 findings + same-pattern sweep). Every workspace script MUST follow these; new code that violates one is a release blocker — the patterns already exist as helpers, reuse them instead of re-implementing:

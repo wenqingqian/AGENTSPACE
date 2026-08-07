@@ -9,6 +9,7 @@ Upgrade from v0.5.0. Date: 2026-08-06
 - **t16-audit-regressions 回归**: 五项审计修复的永久护栏。
 - **方法论沉淀**: DEVELOPMENT.md 新增「脚本模式纪律」六条契约(ENVIRON 传参/双匹配/原子写/守卫/FIX 门控/闸门清单),防同类问题再现。
 - **status 近期动态重做**: 工作区事件流(计划/迭代/笔记/交接, 不依赖 commit)+ 提交摘要(类型前缀映射中文), 不再裸列 commit 名字。
+- **发版流程硬化**: changelog 驱动更新演练 MUST 化 — 新增 changelog 必须先演练并留痕, verify-release [11] 强制。
 
 ## Changes
 
@@ -72,6 +73,15 @@ Upgrade from v0.5.0. Date: 2026-08-06
 **Why**: 审计 8 项 + 同构扫描的根因是"既有正确模式未被一致复用"; 方法论契约 + t16 护栏双管齐下防再现。
 **Migration**:
 1. **Plugin-side (no workspace action)**: ships with the plugin.
+
+### [Addition] changelog 驱动更新演练 MUST 化: rehearse-update.sh + verify [11] 闸门
+**What**: 用户规则"changelog 驱动更新演练变成 must, 只要是新增 changelog 就必须演练"落地为三层:
+- `rehearse-update.sh`(dev 工具, 仓库根): 从上一版资产(`git archive <old-ref>`)建沙箱工作区 → 按 vX.Y.Z CHANGELOG 的 Migration 指令应用 8a(scripts/templates/.gitignore)+ 8c(update-version.sh + architecture.json)→ 里程碑提交 → 收敛验证(版本标记 / installedAt 保留 / scripts 与资产逐字节一致 / doctor 绿 / status 可渲染)→ 留痕 `versions/vX.Y.Z/rehearsal.md`。8b(AGENTS.md 文本操作)检测到 `AGENTS.md (step 8b` 指令时留痕标 MANUAL, 由 agent 按 changelog 手工执行后翻转 PASS。
+- `verify-release.sh` 新增 [11]: 当前版本无 `Result: PASS` 演练留痕 = [issue] — 新增 changelog 未演练不发版。
+- `DEVELOPMENT.md` 新增「Release pipeline (MUST)」节: 固定闸门序列(版本标记 → changelog → **演练** → verify → self-test → code review → commit+push → 嵌套升级两段式闸门), 变体按内容挂载。
+**Why**: 演练此前是 v0.5.1 的手工一次性流程; 用户要求固化为 MUST, 每次新增 changelog 必做 — 脚本强制机械部分, agent 按 changelog 执行分析部分。
+**Migration**:
+1. **Dev-only (no workspace action)**: ships with the repo. 已用本工具对 v0.5.1 执行真实演练(7e8c097 → 0.5.1, 留痕见本目录 rehearsal.md)。
 
 ### [Feature] status.sh 近期动态重做: 工作区事件流 + 提交摘要(不再裸列 commit)
 **What**: `/agentspace-status` 的「近期动态」从"最近 10 条 commit 标题"改为"最多 10 条带日期的活动时间线", 两条数据流合并取前 10 — 按日期倒序, 同日之内按各流"新→旧"稳定排序(非字节序, 忙碌日不会丢掉最新活动; 跨流同日顺序 = 流发射顺序); 显示日期, 不按日期窗口筛选:

@@ -15,8 +15,19 @@ git -C "$REPO" archive HEAD | tar -x -C "$SB" 2>/dev/null
 OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"
 assert_output_contains "$OUT" "[pass] release-ready"
 
-# break the latest CHANGELOG: drop its ## Summary line (verify [3] requires it)
+# [11] negative: drop the rehearsal record of the latest version → gate must
+# fail with a [11] finding (a new changelog without a PASSING rehearsal record
+# is not release-ready)
 LATEST="$(ls -d "$SB"/skills/agentspace-update/versions/v* | sed 's|.*/v||' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
+REH="$SB/skills/agentspace-update/versions/v$LATEST/rehearsal.md"
+[ -f "$REH" ] || fail "rehearsal record missing in HEAD snapshot — the gate's own baseline is broken"
+mv "$REH" "$REH.bak"
+OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "[fail]"
+assert_output_contains "$OUT" "[11]"
+mv "$REH.bak" "$REH"
+
+# break the latest CHANGELOG: drop its ## Summary line (verify [3] requires it)
 CL="$SB/skills/agentspace-update/versions/v$LATEST/CHANGELOG.md"
 grep -vF "## Summary" "$CL" > "$CL.tmp" && mv "$CL.tmp" "$CL"
 
