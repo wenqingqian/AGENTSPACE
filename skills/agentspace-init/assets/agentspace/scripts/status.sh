@@ -261,13 +261,15 @@ echo
 alerts=""
 for f in plan.md plan/index.md iterations.md iterations/index.md notes.md register.md utils.md tests.md data.md examples.md handoff/index.md; do
   [ -f "$AS_ROOT/$f" ] || continue
-  alerts+="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/$f" 2>/dev/null | awk -F'|' -v f="$f" '
+  a="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/$f" 2>/dev/null | awk -F'|' -v f="$f" '
     /^## / { sec=$0; sub(/^## +/, "", sec); expect=0; next }
     /^\|[ :|-]*-[ :|-]*\|$/ { expect=NF; next }
     /^\| / && expect > 0 && NF != expect {
       printf "  ⚠ 形状: %s %s 节第 %d 行 %d 列 != 表头 %d 列\n", f, sec, NR, NF, expect
     }
-  ' || true)"$'\n'
+  ' || true)"
+  # 只有实际产出告警才追加 — 空输出追加会留下每文件一个空行
+  [ -n "$a" ] && alerts+="$a"$'\n'
 done
 if [ -n "$PLUGIN_VERSION" ] && [ "$WS_VERSION" != "$PLUGIN_VERSION" ]; then
   alerts+="  ⚠ 版本: 工作区 v$WS_VERSION != 插件 v$PLUGIN_VERSION"$'\n'

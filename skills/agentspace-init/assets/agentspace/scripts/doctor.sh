@@ -532,7 +532,9 @@ if [ "$(as_mode)" = "standalone" ]; then
       elif [ -d "$target" ] || [ -f "$target" ]; then
         sz="$(as_ref_size_bytes "$target")"
         if [ "${sz:-0}" -lt "$WHITELIST_LARGE_BYTES" ]; then
-          warn "白名单小文件条目(需用户显式确认): $entry"
+          # 提示不计数: 用户显式豁免的小文件是合法状态, 不应让 doctor 恒红 —
+          # 该条目的"用户显式确认"属性由流程纪律保证, doctor 只做提醒
+          printf '  [note] 白名单小文件条目(需用户显式确认): %s\n' "$entry"
         fi
       fi
     done < "$AS_ROOT/.agentspace-whitelist"

@@ -14,10 +14,10 @@ SB="$(build_sandbox t17)"
 SB="$(cd -P "$SB" 2>/dev/null && pwd -P)"
 WS="$SB/AGENTSPACE"
 MODE="$WS/scripts/mode.sh"
-EXT="$(mktemp -d /tmp/as-t17-ext-XXXXXX)"
+EXT_RAW="$(mktemp -d /tmp/as-t17-ext-XXXXXX)"
 # 规范化 /tmp → /private/tmp — as_external_refs 的 canonicalize 同款, 断言路径拼写一致
-EXT="$(cd -P "$EXT" 2>/dev/null && pwd -P)"
-trap 'rm -rf "$SB" "$EXT"' EXIT
+EXT="$(cd -P "$EXT_RAW" 2>/dev/null && pwd -P)"
+trap 'rm -rf "$SB" "$EXT_RAW"' EXIT
 
 # --- 0) 默认 hybrid + legacy insert 路径: 无块工作区 --standalone 应把标记块
 #         插到 ## 项目简介 之前 ---
@@ -101,5 +101,16 @@ OUT="$(bash "$MODE" --standalone 2>&1 || true)"
 assert_output_contains "$OUT" "whitelisted: $EXT/big2.bin"
 OUT="$(bash "$MODE" --list)"
 assert_output_contains "$OUT" "$EXT/big2.bin"
+
+# --- 7) 输入规范化: /tmp 拼写 --allow 也必须命中(真实三方验证发现: 未规范化
+#          拼写入库的条目永不匹配) ---
+printf 'x\n' > "$EXT_RAW/small2.sh"
+ln -s "$EXT_RAW/small2.sh" "$WS/data/small2-link"
+printf '| small2 | 小2 | 软连接到 %s | [link](data/small2-link) |\n' "$EXT_RAW/small2.sh" >> "$WS/data.md"
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "外部引用未白名单: $EXT/small2.sh"
+bash "$MODE" --allow "$EXT_RAW/small2.sh" >/dev/null 2>&1
+OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
+assert_output_not_contains "$OUT" "外部引用未白名单: $EXT/small2.sh"
 
 echo "PASS t17"

@@ -145,6 +145,13 @@ as_whitelisted() {
 add_whitelist_entry() {
   local entry="$1" tmp base covered
   [ -n "$entry" ] || return 1
+  # 输入规范化: /tmp 拼写 → /private/tmp, 与 as_whitelisted/as_external_refs 一致 —
+  # 否则条目以未规范化拼写入库, 匹配时永不命中(真实三方验证发现)
+  if [ -e "$entry" ]; then
+    local canon
+    canon="$(cd -P "$(dirname "$entry")" 2>/dev/null && pwd -P)/$(basename "$entry")" || canon="$entry"
+    entry="$canon"
+  fi
   base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
   case "$entry" in
     "$base"/*) entry="${entry#"$base"/}" ;;
@@ -170,6 +177,12 @@ add_whitelist_entry() {
 remove_whitelist_entry() {
   local entry="$1" tmp base before after
   [ -n "$entry" ] || return 1
+  # 输入规范化(同上) — deny 拼写与 allow 不一致时也能命中
+  if [ -e "$entry" ]; then
+    local canon
+    canon="$(cd -P "$(dirname "$entry")" 2>/dev/null && pwd -P)/$(basename "$entry")" || canon="$entry"
+    entry="$canon"
+  fi
   base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
   case "$entry" in
     "$base"/*) entry="${entry#"$base"/}" ;;
