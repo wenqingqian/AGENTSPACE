@@ -90,6 +90,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v0.5.2 | 2026-08-07 | `/agentspace-mode` command: workspace mode control (hybrid default / standalone) + external-dependency whitelist (.agentspace-whitelist, large ≥1G auto-exempt, small needs explicit user confirmation) + doctor [13] standalone external-ref check (minor face, --fix large-only) + AGENTS.md mode block |
 | v0.5.1 | 2026-08-06 | risk-audit fixes: complete-plan ENVIRON+shield, doctor guards/id-normalization/latest FIX-gate, handoff consume dual-match, update-version atomic write, python 3.6 compat, atomic index appends + t16 regression + script pattern discipline + status recent-activity event stream + commit summaries |
 | v0.5.0 | 2026-08-06 | status workbench: `/agentspace-status` command + skill (hard-script aggregation, strict template, subagent project paragraph) + status.sh rewrite (overview/versions/progress escape-aware/recent-10/soft-alert shape checks/handoffs) + `\|` escape-aware fixes (close-iteration index rewrite, as_row_cell) + zh-CN doc sync (example numbers, two-phase verify gate) + architecture subsections + t15 regression |
 | v0.4.1 | 2026-08-05 | handoff doctor audit [10]/[11] + status summary + cleanup batch (--list \| fix, close-iteration diff, doctor [12], --keep marker) + risk-audit fixes + bash ecosystem hardening (env gate, LC_ALL=C) + upgrade-chain GAP fixes + t13 replay test |

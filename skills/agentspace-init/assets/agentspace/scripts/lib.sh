@@ -14,7 +14,7 @@ if [ "${BASH_VERSINFO[0]:-0}" -lt 3 ] || { [ "${BASH_VERSINFO[0]:-0}" -eq 3 ] &&
   printf 'error: AGENTSPACE scripts need bash >= 3.1 (found %s) — upgrade bash and re-run.\n' "${BASH_VERSION:-unknown}" >&2
   exit 1
 fi
-for _as_cmd in grep awk sed find date tr mkdir mktemp git head; do
+for _as_cmd in grep awk sed find date tr mkdir mktemp git head du; do
   if ! command -v "$_as_cmd" >/dev/null 2>&1; then
     printf 'error: required command not found: %s (AGENTSPACE scripts need the core POSIX toolchain)\n' "$_as_cmd" >&2
     exit 1
@@ -44,6 +44,11 @@ readonly STATUS_PROGRESS="> 状态: 进行中"
 # both use it (find -mtime +$((STALE_DAYS-1)) = strictly more than STALE_DAYS-1
 # whole days = 7 天以上).
 readonly STALE_DAYS="7"
+# Large-file threshold for the standalone whitelist (bytes): external refs at
+# or above this size are auto-whitelisted (copying them is unrealistic — e.g.
+# datasets); smaller external refs must be integrated or explicitly exempted
+# by the user (mode.sh / doctor.sh [13]).
+readonly WHITELIST_LARGE_BYTES="1073741824"
 # ---- Placeholder constants (must match template comments exactly; doctor [5] checks drift) ----
 # Gate: close-iteration refuses while present. Template: iteration-readme.md "结果"
 readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
@@ -73,6 +78,218 @@ as_host_head() {
 }
 
 as_today() { date +%F; }
+
+# ---- Workspace mode (hybrid / standalone) ----
+# Single source of truth: the `## agentspace mode` block in AGENTS.md (value
+# on the line after the heading; `rules` line follows in standalone mode).
+# Session agents see the block when loading AGENTS.md — zero-cost mode check;
+# scripts grep it; mode.sh rewrites it (scripts-only rule). A missing block
+# (legacy workspace) defaults to hybrid — never an error.
+as_mode() {
+  local m
+  m="$(awk '/^## agentspace mode[[:space:]]*$/{f=1; next} f && NF { print; exit }' "$AS_ROOT/AGENTS.md" 2>/dev/null | head -1 || true)"
+  case "$m" in
+    standalone) echo standalone ;;
+    *) echo hybrid ;;
+  esac
+}
+
+# ---- External-dependency whitelist (.agentspace-whitelist) ----
+# Entries: relative-to-project-root paths (no leading /) or absolute paths
+# (leading /); files or directories — a directory entry covers everything
+# under it (`path == entry` or `path` starts with `entry/`). `#` comments.
+# Entries are normalized on read/write: `./` prefix stripped, single trailing
+# `/` stripped (shell-completion spelling) — a bare `/` is kept.
+as_whitelist_norm() {
+  local e="$1"
+  case "$e" in
+    ./*) e="${e#./}" ;;
+  esac
+  case "$e" in
+    /) ;;
+    */) e="${e%/}" ;;
+  esac
+  printf '%s' "$e"
+}
+
+# as_whitelisted <abs-path>: canonicalize the path (resolves symlinked
+# prefixes like /tmp → /private/tmp; dangling refs keep their raw spelling so
+# doctor can report "目标不存在"), normalize project-internal paths to
+# project-root-relative, then match entries (equal or dir-prefix).
+as_whitelisted() {
+  local p="$1" base entry
+  base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  if [ -e "$p" ]; then
+    local canon
+    canon="$(cd -P "$(dirname "$p")" 2>/dev/null && pwd -P)/$(basename "$p")" || canon="$p"
+    p="$canon"
+  fi
+  case "$p" in
+    "$base"/*) p="${p#"$base"/}" ;;
+  esac
+  [ -f "$AS_ROOT/.agentspace-whitelist" ] || return 1
+  while IFS= read -r entry; do
+    [ -n "$entry" ] || continue
+    case "$entry" in \#*) continue ;; esac
+    entry="$(as_whitelist_norm "$entry")"
+    [ -n "$entry" ] || continue
+    if [ "$p" = "$entry" ] || [ "${p#"$entry"/}" != "$p" ]; then
+      return 0
+    fi
+  done < "$AS_ROOT/.agentspace-whitelist"
+  return 1
+}
+
+# Whitelist entry add/remove (atomic; ENVIRON for the entry — no -v unescape
+# hazard). Project-internal paths normalize to project-root-relative.
+add_whitelist_entry() {
+  local entry="$1" tmp base covered
+  [ -n "$entry" ] || return 1
+  base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  case "$entry" in
+    "$base"/*) entry="${entry#"$base"/}" ;;
+  esac
+  entry="$(as_whitelist_norm "$entry")"
+  # 目录条目已覆盖 → 明说, 不加(精确行查重保持静默幂等)
+  covered="$(as_whitelist_covering "$entry")"
+  if [ -n "$covered" ] && [ "$covered" != "$entry" ]; then
+    printf '  already covered by whitelist entry: %s\n' "$covered"
+    return 0
+  fi
+  if grep -Fqx "$entry" "$AS_ROOT/.agentspace-whitelist" 2>/dev/null; then
+    return 0
+  fi
+  [ -n "${AS_TMPDIR:-}" ] || as_die "add_whitelist_entry: as_lock required"
+  tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+  chmod 644 "$tmp"
+  { cat "$AS_ROOT/.agentspace-whitelist" 2>/dev/null || true; printf '%s\n' "$entry"; } > "$tmp"
+  as_atomic_write "$AS_ROOT/.agentspace-whitelist" "$tmp"
+  printf '  whitelisted: %s\n' "$entry"
+}
+
+remove_whitelist_entry() {
+  local entry="$1" tmp base before after
+  [ -n "$entry" ] || return 1
+  base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  case "$entry" in
+    "$base"/*) entry="${entry#"$base"/}" ;;
+  esac
+  entry="$(as_whitelist_norm "$entry")"
+  if [ ! -f "$AS_ROOT/.agentspace-whitelist" ]; then
+    echo "  no whitelist file — nothing to remove" >&2
+    return 1
+  fi
+  [ -n "${AS_TMPDIR:-}" ] || as_die "remove_whitelist_entry: as_lock required"
+  before="$(grep -vcE '^(#.*|[[:space:]]*)$' "$AS_ROOT/.agentspace-whitelist" || true)"
+  tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
+  entry="$entry" awk '!/^#/ && $0 == ENVIRON["entry"] { next } { print }' "$AS_ROOT/.agentspace-whitelist" > "$tmp"
+  after="$(grep -vcE '^(#.*|[[:space:]]*)$' "$tmp" || true)"
+  if [ "$before" = "$after" ]; then
+    rm -f "$tmp"
+    printf '  not in whitelist: %s\n' "$entry"
+    return 0
+  fi
+  as_atomic_write "$AS_ROOT/.agentspace-whitelist" "$tmp"
+  printf '  removed: %s\n' "$entry"
+}
+
+# The whitelist entry covering <path> (equal or dir-prefix), if any.
+as_whitelist_covering() {
+  local p="$1" entry base
+  base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  case "$p" in
+    "$base"/*) p="${p#"$base"/}" ;;
+  esac
+  [ -f "$AS_ROOT/.agentspace-whitelist" ] || return 0
+  while IFS= read -r entry; do
+    [ -n "$entry" ] || continue
+    case "$entry" in \#*) continue ;; esac
+    entry="$(as_whitelist_norm "$entry")"
+    [ -n "$entry" ] || continue
+    if [ "$p" = "$entry" ] || [ "${p#"$entry"/}" != "$p" ]; then
+      printf '%s\n' "$entry"
+      return 0
+    fi
+  done < "$AS_ROOT/.agentspace-whitelist"
+  return 0
+}
+
+# Size in bytes: dirs → contents size (du -sk), files → stat. The standalone
+# large-file grading (≥ WHITELIST_LARGE_BYTES) must see directory contents —
+# a dataset dir with a 1G file inside is copy-unrealistic.
+as_ref_size_bytes() {
+  local p="$1"
+  if [ -d "$p" ]; then
+    du -sk "$p" 2>/dev/null | awk '{ print $1 * 1024 }' || printf '0'
+  else
+    stat -f '%z' "$p" 2>/dev/null || stat -c '%s' "$p" 2>/dev/null || printf '0'
+  fi
+}
+
+# External references (standalone scan, minor face): symlinks under the
+# workspace resolving OUTSIDE AS_ROOT, plus absolute path tokens in the
+# registration tables' designated columns (data.md 来源/链接, utils.md
+# 用法/链接, register.md 入口). Outputs canonicalized absolute paths
+# (symlinked prefixes like /tmp → /private/tmp resolved; dangling refs keep
+# their raw spelling), internal paths dropped, deduped. The major face
+# (whole-file path grep) lives in the /agentspace-doctor --major skill flow.
+as_external_refs() {
+  local esc base
+  esc="$(printf '\037')"
+  base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  {
+    # 1) symlinks — relative targets joined to the link's dir (cd -P resolves
+    #    ..), then canonicalized by the shared post-filter
+    find "$AS_ROOT" \( -path "$AS_ROOT/.git" -o -path "$AS_ROOT/.scripts.lock" -o -path "$AS_ROOT/.scripts-tmp.*" \) -prune -o -type l -print 2>/dev/null \
+      | while IFS= read -r l; do
+          t="$(readlink "$l" 2>/dev/null || true)"
+          [ -n "$t" ] || continue
+          case "$t" in
+            /*) ;;
+            *) t="$(cd -P "$(dirname "$l")/$(dirname "$t")" 2>/dev/null && pwd -P)/$(basename "$t")" || continue ;;
+          esac
+          printf '%s\n' "$t"
+        done
+    # 2) registration columns — token extraction, internal-path filter via
+    #    ROOT (ENVIRON; canonicalized spelling), /tmp-style prefixes are
+    #    canonicalized by the shared post-filter
+    for f in data.md utils.md register.md; do
+      [ -f "$AS_ROOT/$f" ] || continue
+      sed "s/\\\\|/$esc/g" "$AS_ROOT/$f" 2>/dev/null | ROOT="$AS_ROOT" awk -v esc="$esc" -v fname="$f" '
+        function scan(s) {
+          gsub(/[a-zA-Z][a-zA-Z0-9+.-]*:\/\/[^ )]+/, "", s)   # URL 方案整体摘除(下载自 https://… 不当作路径)
+          while (match(s, /(^|[ \/([:space:]])(\/[^ )]+)/)) {
+            t = substr(s, RSTART + 1, RLENGTH - 1)
+            gsub(/[)\]>,;:]$/, "", t)
+            if (t != "" && t ~ /^\//) print t
+            s = substr(s, RSTART + RLENGTH)
+          }
+        }
+        /^\| / {
+          gsub(esc, "\\|", $0)
+          n = split($0, a, "|")
+          # split 含前导空: a[1]=""; data.md 数据列: 名称=a[2] 说明=a[3] 来源=a[4] 链接=a[5]
+          if (fname == "data.md") scan(a[4] " " a[5])
+          else if (fname == "utils.md") scan(a[5] " " a[6])   # 用法=a[5] 链接=a[6]
+          else if (fname == "register.md") scan(a[4])         # 入口=a[4]
+        }
+      '
+    done
+  } 2>/dev/null | while IFS= read -r p; do
+    # shared post-filter: canonicalize existing paths (resolves symlinked
+    # prefixes), drop internal ones, keep dangling refs raw (doctor reports
+    # them as 目标不存在)
+    if [ -e "$p" ]; then
+      local canon
+      canon="$(cd -P "$(dirname "$p")" 2>/dev/null && pwd -P)/$(basename "$p")" || canon="$p"
+      p="$canon"
+    fi
+    case "$p" in
+      "$AS_ROOT"/* | "$AS_ROOT") continue ;;
+    esac
+    printf '%s\n' "$p"
+  done | sort -u || true
+}
 
 # Table cell sanitization: | and newlines break markdown tables.
 as_cell() { printf '%s' "$1" | sed 's/|/\\|/g' | tr '\n\t' '  ' | tr -d '\r'; }

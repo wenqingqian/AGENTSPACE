@@ -112,6 +112,11 @@ fi
 # --- 6) rehearsal record ------------------------------------------------------
 if [ "$PASS" -eq 1 ]; then
   RECORD="$ROOT/skills/agentspace-update/versions/v$NEW/rehearsal.md"
+  if [ "$HAS_8B" = "yes" ]; then
+    RESULT_LINE="PENDING-8B — agent 按 changelog 在保留的沙箱执行 8b 并验证后, 将本行改为 PASS"
+  else
+    RESULT_LINE="PASS"
+  fi
   {
     echo "# Changelog-driven update rehearsal — v$NEW"
     echo
@@ -126,10 +131,18 @@ if [ "$PASS" -eq 1 ]; then
     fi
     echo "8c: PASS (version markers + architecture.json)"
     echo "Convergence: PASS (scripts byte-identical, doctor green, status renders)"
-    echo "Result: PASS"
+    echo "Result: $RESULT_LINE"
   } > "$RECORD"
   echo "== 6/6 record written: ${RECORD#$ROOT/}"
-  echo "== rehearsal PASS (v$OLD_VER → v$NEW)"
+  if [ "$HAS_8B" = "yes" ]; then
+    trap - EXIT
+    echo "== rehearsal PASS (v$OLD_VER → v$NEW); 8b 待 agent 执行:"
+    echo "   sandbox kept at: $WS"
+    echo "   execute the AGENTS.md text ops per the changelog, then flip"
+    echo "   'Result: PENDING-8B' to 'Result: PASS' in ${RECORD#$ROOT/}"
+  else
+    echo "== rehearsal PASS (v$OLD_VER → v$NEW)"
+  fi
   exit 0
 else
   echo "== rehearsal FAILED — fix and re-run (sandbox was cleaned)"

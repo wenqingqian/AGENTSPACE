@@ -90,6 +90,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.5.2 | 2026-08-07 | `/agentspace-mode` 命令: 工作区模式控制(默认 hybrid / standalone)+ 外部依赖白名单(.agentspace-whitelist, 大文件 ≥1G 自动豁免、小文件须用户显式确认)+ doctor [13] standalone 外部引用检查(minor 面, --fix 只自动白名单大文件)+ AGENTS.md 模式标记块 |
 | v0.5.1 | 2026-08-06 | 风险审计修复: complete-plan ENVIRON+shield、doctor 守卫/id 归一化/latest FIX 门控、handoff consume 双匹配、update-version 原子写、python 3.6 兼容、索引追加原子化 + t16 回归 + 脚本模式纪律 + status 近期动态事件流+提交摘要 |
 | v0.5.0 | 2026-08-06 | status 工作台: `/agentspace-status` 命令 + skill(硬脚本聚合、严格模板、子代理项目段落)+ status.sh 重写(总览/版本环境/推进总览转义感知/近期动态 10 条/软告警形状校验/handoff)+ `\|` 转义感知修复(close-iteration index 改写、as_row_cell)+ zh-CN 文档同步(示例数字、两段式验证闸门)+ 架构 subsections 补全 + t15 回归 |
 | v0.4.1 | 2026-08-05 | handoff doctor 审计 [10]/[11] + status 摘要 + cleanup 批量(--list \| 修复、close 自动 diff、doctor [12]、--keep 标记)+ 风险审计修复 + bash 生态硬化(环境闸门、LC_ALL=C)+ 升级链 GAP 修复 + t13 重放测试 |

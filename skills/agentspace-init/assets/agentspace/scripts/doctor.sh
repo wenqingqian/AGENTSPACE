@@ -483,6 +483,64 @@ if [ -f "$AS_ROOT/register.md" ]; then
   done <<< "$mods"
 fi
 
+# ---- 13. standalone external-dependency discipline ----
+# Active only in standalone mode (## agentspace mode block in AGENTS.md);
+# hybrid mode: the whole mode concept is absent — check skipped.
+# External refs (as_external_refs: symlinks resolving outside the workspace +
+# absolute path tokens in registration source/link columns) are matched
+# against the whitelist: hit → exempt; miss → violation, graded by size —
+# large (≥ WHITELIST_LARGE_BYTES) refs have an auto-exempt path (--fix adds
+# them; copying them is unrealistic), small refs --fix never touches
+# (integration or explicit user exemption required). Whitelist hygiene:
+# dead entries are reported, never deleted; small-file entries are flagged
+# as user-confirmation-only.
+echo "[13] standalone external refs"
+if [ "$(as_mode)" = "standalone" ]; then
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    if as_whitelisted "$ref"; then
+      printf '  [ok] whitelisted: %s\n' "$ref"
+      continue
+    fi
+    if [ -e "$ref" ]; then
+      sz="$(as_ref_size_bytes "$ref")"
+      if [ "${sz:-0}" -ge "$WHITELIST_LARGE_BYTES" ]; then
+        warn "外部大文件引用未白名单: $ref (≥1G — 自动豁免路径: doctor --fix 或切换 standalone 时自动)"
+        if [ "$FIX" -eq 1 ]; then
+          add_whitelist_entry "$ref" >/dev/null
+          ok "大文件引用已自动白名单: $ref"
+        fi
+      else
+        warn "外部引用未白名单: $ref (<1G — 必须集成到 AGENTSPACE/ 或用户显式豁免; --fix 不自动处理)"
+      fi
+    else
+      warn "外部引用目标不存在: $ref (引用失效)"
+    fi
+  done <<< "$(as_external_refs || true)"
+  if [ -f "$AS_ROOT/.agentspace-whitelist" ]; then
+    while IFS= read -r entry; do
+      [ -n "$entry" ] || continue
+      case "$entry" in \#*) continue ;; esac
+      entry="$(as_whitelist_norm "$entry")"
+      target="$entry"
+      case "$entry" in
+        /*) ;;
+        *) target="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")/$entry" ;;
+      esac
+      if [ ! -e "$target" ]; then
+        warn "白名单条目失效(目标不存在): $entry (换机器后外部盘未挂载? 不自动删除)"
+      elif [ -d "$target" ] || [ -f "$target" ]; then
+        sz="$(as_ref_size_bytes "$target")"
+        if [ "${sz:-0}" -lt "$WHITELIST_LARGE_BYTES" ]; then
+          warn "白名单小文件条目(需用户显式确认): $entry"
+        fi
+      fi
+    done < "$AS_ROOT/.agentspace-whitelist"
+  fi
+else
+  echo "  (hybrid — 检查不启用)"
+fi
+
 echo
 echo "== Done: $issues issues, $fixed auto-repaired =="
 if [ "$issues" -eq 0 ]; then

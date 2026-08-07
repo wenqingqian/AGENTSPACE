@@ -60,6 +60,8 @@ for f in sorted(os.listdir(f"{ASSET}/templates")):
 log("8a", "templates/*.md", "applied")
 shutil.copy2(f"{ASSET}/.gitignore", f"{WS}/.gitignore")
 log("8a", ".gitignore", "applied")
+shutil.copy2(f"{ASSET}/.agentspace-whitelist", f"{WS}/.agentspace-whitelist")
+log("8a", ".agentspace-whitelist", "applied")
 
 # ---------- STEP 8b: changelog items in order (exact anchors) ----------
 A = f"{WS}/AGENTS.md"
@@ -182,6 +184,11 @@ edit(A, "- **when/how**: 多个实验需要同一份数据时放入 data/ 并在
         "- **when/how**: 多个实验需要同一份数据时放入 data/ 并在 data.md 登记; data/ 全部 gitignore(与 .gitignore 行为一致, 无 opt-out)",
         "v0.4.1", "AGENTS.md data bullet 措辞同步")
 
+# --- v0.5.2: agentspace mode block (default hybrid, before 项目简介) ---
+edit(A, "## 项目简介",
+        "## agentspace mode\nhybrid\n\n## 项目简介",
+        "v0.5.2", "AGENTS.md 模式标记块")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -205,6 +212,9 @@ assert_contains "$WS/AGENTS.md" '建议打主题"标签"'                       
 assert_contains "$WS/AGENTS.md" "data/ 全部 gitignore(与 .gitignore 行为一致"  # GAP #3: data bullet(唯一子串)
 assert_contains "$WS/.agentspace-version.json" "\"version\": \"$CUR\""
 assert_contains "$WS/.agentspace-architecture.json" "\"version\": \"$CUR\""
+assert_contains "$WS/AGENTS.md" "## agentspace mode"
+assert_contains "$WS/AGENTS.md" "hybrid"
+[ -f "$WS/.agentspace-whitelist" ] || fail "whitelist file missing after 8a"
 # --- final byte-diff vs the canonical asset (normalized: HTML comment blocks
 #     are init-time user content, not part of the migration chain) — catches
 #     any future drift in the changelog archives or this table (R2) ---
