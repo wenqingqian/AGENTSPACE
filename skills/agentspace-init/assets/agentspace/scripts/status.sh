@@ -37,6 +37,17 @@ WS_VERSION="${WS_VERSION:-?}"
 git_ok=0
 git -C "$AS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 && git_ok=1
 
+# 宿主仓库判定(与 close-iteration 的 as_host_head 同款): AS_ROOT 的父目录若
+# 在 git 工作树内即为宿主; 宿主根用 toplevel(嵌套 workspace 时根可能深于父
+# 目录), 且必须 != AS_ROOT 自身(防误判)。
+HOST_OK=0; HOST_ROOT=""
+HOST_ROOT="$(git -C "$AS_ROOT/.." rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -n "$HOST_ROOT" ]; then
+  AS_P="$(cd "$AS_ROOT" && pwd -P)"
+  HP="$(cd "$HOST_ROOT" && pwd -P)"
+  [ "$HP" != "$AS_P" ] && HOST_OK=1
+fi
+
 echo "# AGENTSPACE Status $(as_today)"
 echo
 
@@ -153,15 +164,17 @@ else
 fi
 echo
 
-# --- 近期动态: 工作区事件 + 提交摘要 — 最多 10 条, 显示日期但不按日期筛选 ---
-# 事件流取自索引表自带的日期列(创建/完成/开始/关闭/日期/time), 不依赖
-# commit — 有些活动不是 commit 也是近期动态; 提交流把类型前缀映射为中文
-# 摘要(plan:→计划, fix:→修复…), 不再裸列 commit 名字。两流按日期倒序合并
-# 取前 10: sort -s -k1,1r 按日期字段稳定排序 — 同日之内保持各流"新→旧"
-# 发射顺序(脚本管理的 plan/iterations 索引为末尾追加 → 反转流; notes/handoff
-# 为表头插入 → 保持文件序; git log 本就新→旧), 不会因字节序丢掉最新活动。
-# 跨流同日顺序 = 流发射顺序(plan/iteration/notes/handoff/commit) — 日期是
-# 日粒度无时间戳, 这是该设计的天花板。所有读取均守卫, 缺失文件自然为空流。
+# --- 近期动态: 四分区 — 主线(软槽) / 代码提交(宿主仓库) / 工作区事件 /
+# 台账(agentspace 记账)。事件流取自索引表自带的日期列(创建/完成/开始/
+# 关闭/日期/time), 不依赖 commit — 有些活动不是 commit 也是近期动态;
+# 台账流把类型前缀映射为中文摘要(plan:→计划, fix:→修复…), 不再裸列
+# commit 名字。代码提交块 = 机械事实(sha/日期/主题/stat/关联反查) + 概括
+# 占位符(`概括[<sha>]: —`), 由命令侧子代理按键替换为分析文本 — 槽是模板
+# 硬编码的, 内容是 agent 分析(软), 失败保持 —。各分区独立 cap, 分区内
+# 日期倒序; 事件流跨流同日顺序 = 流发射顺序(plan/iteration/notes/handoff),
+# 日期是日粒度无时间戳, 这是该设计的天花板。所有读取均守卫,
+# 缺失文件自然为空流。宿主 log 排除工作区路径(相对宿主根, 嵌套工作区也
+# 不会渗入; git pathspec 对非通配模式只匹配顶层, basename 在嵌套时会失效)。
 commit_summary() {
   local line="$1" d="${1%% *}" s="${1#* }" t label matched=0
   t="${s%%:*}"
@@ -190,7 +203,55 @@ commit_summary() {
   printf '%s %s: %s\n' "$d" "$label" "$s"
 }
 
-echo "## 近期动态 (最多 10 条)"
+# 宿主 SHA → 关联反查: close-iteration 在 iteration readme 记录
+# `> 宿主起始/结束 commit: <sha>`, 前缀匹配(短 sha, 记录与 %h 同 abbrev 规则);
+# 命中后经 iterations/index.md 回填 plan, 再经 plan/index.md 回填 plan 标题。
+host_link() {
+  local sha="$1" d id plan title
+  d="$(grep -rlE "^> 宿主.*commit: $sha" "$AS_ROOT"/iterations/iteration_*/readme.md 2>/dev/null | head -1 || true)"
+  [ -n "$d" ] || return 0
+  id="$(basename "$(dirname "$d")")"; id="${id#iteration_}"
+  plan="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations/index.md" 2>/dev/null | awk -F'|' -v id="$id" '
+    /^\| [0-9]/ { gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); if ($2 == id) { print $3; exit } }
+  ' || true)"
+  [ -n "$plan" ] || return 0
+  title="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v pid="${plan#plan:}" -v esc="$ESC" '
+    /^\| [0-9]/ { gsub(/^ +| +$/, "", $2); if ($2 == pid) { gsub(/^ +| +$/, "", $3); gsub(esc, "\\|", $3); print $3; exit } }
+  ' || true)"
+  printf 'iteration_%s · %s %s' "$id" "$plan" "$(trunc "${title:-—}" 30)"
+}
+
+echo "## 近期动态"
+echo
+echo "### 主线"
+echo "- 近期主线: —"
+echo
+echo "### 代码提交 (宿主仓库 · 最近 5 条)"
+if [ "$HOST_OK" -eq 1 ]; then
+  host_commits="$(git -C "$HOST_ROOT" log -5 --format="%h%x1f%ad%x1f%s" --date=short -- . ":(exclude)${AS_ROOT#"$HOST_ROOT"/}" 2>/dev/null || true)"
+  if [ -n "$host_commits" ]; then
+    while IFS="$(printf '\037')" read -r sha date subj; do
+      [ -n "$sha" ] || continue
+      stats="$(git -C "$HOST_ROOT" show --format= --shortstat "$sha" 2>/dev/null | grep -E '[0-9]+ files? changed' | head -1 || true)"
+      # 空 commit / 纯重命名无 shortstat 行 → 三数均归 0 显示; merge 输出
+      # 首父聚合统计(git 2.39 实测), 正常解析。
+      f="$(printf '%s' "$stats" | grep -oE '[0-9]+ files?' | grep -oE '[0-9]+' || true)"; [ -n "$f" ] || f=0
+      i="$(printf '%s' "$stats" | grep -oE '[0-9]+ insertions?' | grep -oE '[0-9]+' || true)"; [ -n "$i" ] || i=0
+      d="$(printf '%s' "$stats" | grep -oE '[0-9]+ deletions?' | grep -oE '[0-9]+' || true)"; [ -n "$d" ] || d=0
+      link="$(host_link "$sha")"
+      [ "$f" = "1" ] && funit="file" || funit="files"
+      echo "- $sha · $date · $(trunc "$subj" 80)"
+      echo "  改动: $f $funit, +$i/-$d · 关联: ${link:-—}"
+      echo "  概括[$sha]: —"
+    done <<< "$host_commits"
+  else
+    echo "  (宿主无提交)"
+  fi
+else
+  echo "  (无宿主仓库)"
+fi
+echo
+echo "### 工作区事件 (最近 10 条)"
 recent="$(
   {
     # 计划: 创建(创建日期, 仅未完成时) / 完成·失败·放弃(完成日期) — 同日
@@ -238,13 +299,6 @@ recent="$(
         if ($5 != "") { gsub(esc, "\\|", $2); print $5 " 交接生成: " $2 }
       }
     '
-    # 提交: 类型前缀 → 中文摘要; git log 本就新→旧, 不反转
-    if [ "$git_ok" -eq 1 ]; then
-      git -C "$AS_ROOT" log -20 --format='%ad %s' --date=short 2>/dev/null | while IFS= read -r line; do
-        [ -n "$line" ] || continue
-        commit_summary "$line"
-      done
-    fi
   } | sort -s -k1,1r | head -10 || true
 )"
 if [ -n "$recent" ]; then
@@ -254,6 +308,24 @@ if [ -n "$recent" ]; then
   done <<< "$recent"
 else
   echo "  (无动态)"
+fi
+echo
+echo "### 台账 (agentspace 记账 · 最近 5 条)"
+if [ "$git_ok" -eq 1 ]; then
+  ledger="$(git -C "$AS_ROOT" log -5 --format='%ad %s' --date=short 2>/dev/null | while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    commit_summary "$line"
+  done || true)"
+  if [ -n "$ledger" ]; then
+    printf '%s\n' "$ledger" | while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      echo "- $(trunc "$line" 60)"
+    done
+  else
+    echo "  (无台账)"
+  fi
+else
+  echo "  (无台账)"
 fi
 echo
 
@@ -294,6 +366,25 @@ echo
 
 # --- 会话入口 ---
 echo "## 会话入口"
+# 最近关闭锚点: 最近一次关闭的 iteration(完成日期最大者) + 其记录的宿主
+# 结束 commit(close-iteration 写入 readme)。无进行中任务时它是重开会话的
+# 上下文锚点 — 标题 / 关闭日期 / 宿主 SHA 一次给全。
+LATEST_CLOSED="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations/index.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
+  /^\| [0-9]/ {
+    gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $4); gsub(/^ +| +$/, "", $7)
+    # 同日多次关闭取靠后行(index 末尾追加, 靠后 = 更新) → >= 而非 >
+    if ($7 != "" && $7 >= best) { best=$7; id=$2; title=$4 }
+  }
+  END { if (best != "") { gsub(esc, "\\|", title); print id "|" best "|" title } }
+')"
+if [ -n "$LATEST_CLOSED" ]; then
+  lid="${LATEST_CLOSED%%|*}"; lrest="${LATEST_CLOSED#*|}"; ldate="${lrest%%|*}"; ltitle="${lrest#*|}"
+  lsha="$(grep -E '^> 宿主结束 commit: [0-9a-f]+' "$AS_ROOT/iterations/iteration_$lid/readme.md" 2>/dev/null | head -1 | grep -oE '[0-9a-f]{4,40}' || true)"
+  echo "- 最近关闭: iteration_$lid — $(trunc "$ltitle" 40) ($ldate 关闭 · 宿主 ${lsha:-—})"
+else
+  echo "  ✓ 无已关闭迭代"
+fi
+echo
 # handoff 行由 handoff.sh 机器生成, 字段受约束 (name/desc 无原始 |, 行形状
 # 由下方校验把关), 因此不需要 \037 屏蔽 — 原始解析 + 行格式异常兜底即可
 if [ -d "$AS_ROOT/handoff" ] && [ -f "$AS_ROOT/handoff/index.md" ]; then
