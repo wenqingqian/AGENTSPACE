@@ -166,8 +166,8 @@ cp skills/agentspace-update/versions/v<recorded>/architecture.json AGENTSPACE/.a
 ### 9. Verify (gate)
 
 Run `AGENTSPACE/scripts/doctor.sh --fix` (tier-1 repairs: latest symlink, orphan table rows, missing notes.md rows, dangling handoff index rows), then run `AGENTSPACE/scripts/doctor.sh`:
-- Red items other than [0] (uncommitted changes — expected mid-update; committed in step 10) must be resolved before proceeding: discuss repairs with the user per doctor's Tip, never hand-edit tables. Only [0] may remain.
-- Proceed to step 10, then re-run `AGENTSPACE/scripts/doctor.sh` — it must exit 0 (全绿). If red: fix (doctor.sh --fix or a user-confirmed repair) and commit the fixup. The update is NOT complete until the post-commit doctor is green — never announce success with red items pending.
+- Red items other than [0] (uncommitted changes — expected mid-update; committed in step 10) and [15] (report-only ex-post audit of registered repos — disposition is the user's call, never auto-repaired) must be resolved before proceeding: discuss repairs with the user per doctor's Tip, never hand-edit tables. Only [0] and [15] may remain.
+- Proceed to step 10, then re-run `AGENTSPACE/scripts/doctor.sh` — it must exit 0 (全绿). If red: fix (doctor.sh --fix or a user-confirmed repair) and commit the fixup. The update is NOT complete until the post-commit doctor is green — never announce success with red items pending. (若 [15] 因既有历史违规报红, 记录并留给用户处置即可, 不构成更新未完成)
 
 ### 10. Git Commit
 

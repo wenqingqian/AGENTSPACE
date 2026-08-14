@@ -167,6 +167,12 @@ add_whitelist_entry() {
     return 0
   fi
   [ -n "${AS_TMPDIR:-}" ] || as_die "add_whitelist_entry: as_lock required"
+  # Guard against a silent entry drop: a failed cat on an unreadable whitelist
+  # would leave a tmp with only the new entry and as_atomic_write would
+  # replace the whitelist, losing every existing entry.
+  if [ -f "$AS_ROOT/.agentspace-whitelist" ] && [ ! -r "$AS_ROOT/.agentspace-whitelist" ]; then
+    as_die "whitelist exists but is unreadable: $AS_ROOT/.agentspace-whitelist (fix permissions)"
+  fi
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
   chmod 644 "$tmp"
   { cat "$AS_ROOT/.agentspace-whitelist" 2>/dev/null || true; printf '%s\n' "$entry"; } > "$tmp"
@@ -302,6 +308,108 @@ as_external_refs() {
     esac
     printf '%s\n' "$p"
   done | sort -u || true
+}
+
+# ---- Key code-repo registry (.agentspace-repos) + commit discipline ----
+# One repo per line: repos inside the project root are stored root-relative,
+# external repos absolute; spelling is physical (cd -P) and git-toplevel
+# normalized at write time. `#` comments. Written ONLY by scripts/repos.sh;
+# consumed by commit-check.sh (gate), doctor.sh ([14]/[15]) and status.sh.
+# Message ban — canonical bookkeeping-id forms only (the workspace idiom,
+# AGENTS.md 相互引用 rule): canonical ids are as_norm_id %04d zero-padded, so
+# the leading 0 anchors the match and spares natural text like
+# "test plan: 3 phases" and year mentions like "roadmap plan: 2026". Ids past
+# 0999 (no leading zero) and non-canonical variants (plan_0013, 迭代 3) are the
+# agent semantic layer's job, not the script's. Single source for
+# commit-check.sh and doctor [15] — the pre-commit gate and the ex-post audit
+# must never drift apart. [15] 为报告型子集: 只查硬阻断规则, message 只报首个
+# 命中行; WARN 级(数据扩展名/输出目录)属 agent 语义层, 不在事后扫描内。
+readonly COMMIT_BAN_PLAN_RE="plan:[[:space:]]*0[0-9]{3,}"
+readonly COMMIT_BAN_ITER_RE="iteration_0[0-9]{3,}"
+# Staged-file hard blocks: workspace paths, experiment-output signatures
+# (top-level dirs / tfevents basename), and any single blob at/above
+# COMMIT_BLOCK_BYTES. Warn level: data extensions at/above COMMIT_WARN_BYTES
+# and top-level output dirs — judgment deferred to the agent layer.
+readonly COMMIT_BLOCK_BYTES="52428800"    # 50MB (GitHub's own warning line)
+readonly COMMIT_WARN_BYTES="102400"       # 100KB
+readonly COMMIT_SIG_DIRS="wandb mlruns lightning_logs"
+readonly COMMIT_OUT_DIRS="runs outputs checkpoints logs results exps experiments"
+readonly COMMIT_DATA_EXTS="npy npz pt pth ckpt h5 hdf5 parquet safetensors onnx log"
+readonly COMMIT_AUDIT_N="20"              # doctor [15]: commits scanned per repo
+readonly COMMIT_HOT_DAYS="7"              # doctor [14]: recently-active window
+readonly COMMIT_SIZE_CHECK_MAX="2000"     # doctor [15]: per-commit path cap — above it the per-file size check is skipped (cost bound)
+readonly STATUS_REPO_COMMITS="3"          # status 代码提交: commits shown per repo
+
+# Canonical repo root for any path: git toplevel, physical spelling (cd -P
+# resolves symlinked prefixes like /tmp → /private/tmp — the eacbeda lesson).
+# Contract: a DANGLING path (no longer existing) resolves via dirname to the
+# CONTAINING repo's toplevel — the exact previously-fixed trap. Callers must
+# pre-guard with `[ -d ]` / `[ -e ]` before calling; only repos.sh --remove
+# may pass a dangling path, and it never falls back to git-toplevel
+# resolution (parent-physicalize instead).
+as_repo_canon() {
+  local p="$1" top
+  [ -d "$p" ] || p="$(dirname "$p")"
+  [ -d "$p" ] || return 1
+  top="$(git -C "$p" rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$top" ] || return 1
+  (cd -P "$top" 2>/dev/null && pwd -P) || return 1
+}
+
+# as_repos: registered rows, one absolute path per line (root-relative rows
+# joined to the physical project root). Missing file → empty, never an error.
+as_repos() {
+  local base line
+  [ -f "$AS_ROOT/.agentspace-repos" ] || return 0
+  base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  while IFS= read -r line; do
+    case "$line" in ''|\#*) continue ;; esac
+    case "$line" in
+      /*) printf '%s\n' "$line" ;;
+      *)  printf '%s/%s\n' "$base" "$line" ;;
+    esac
+  done < "$AS_ROOT/.agentspace-repos"
+}
+
+# as_repo_registered <path>: 0 when the canonical toplevel containing <path>
+# is an exact registry row.
+as_repo_registered() {
+  local canon row
+  canon="$(as_repo_canon "$1")" || return 1
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    [ "$row" = "$canon" ] && return 0
+  done < <(as_repos)
+  return 1
+}
+
+# Host repo root (workspace nested form): toplevel of AS_ROOT's parent when it
+# is a git worktree other than AS_ROOT itself. Same rule status.sh and
+# close-iteration (as_host_head) apply — single-sourced here.
+as_host_root() {
+  local top as_p hp
+  top="$(git -C "$AS_ROOT/.." rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$top" ] || return 1
+  as_p="$(cd -P "$AS_ROOT" && pwd -P)"
+  hp="$(cd -P "$top" && pwd -P)"
+  [ "$hp" != "$as_p" ] || return 1
+  printf '%s\n' "$hp"
+}
+
+# as_repo_covered <abs-path>: the registered repo containing <path>, if any
+# (equal or dir-prefix — the whitelist matching grammar). Registered repos are
+# work OBJECTS, not external dependencies — doctor [13] exempts them from
+# whitelist semantics via this.
+as_repo_covered() {
+  local p="$1" row
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    if [ "$p" = "$row" ] || [ "${p#"$row"/}" != "$p" ]; then
+      printf '%s\n' "$row"
+      return 0
+    fi
+  done < <(as_repos)
+  return 1
 }
 
 # Table cell sanitization: | and newlines break markdown tables.

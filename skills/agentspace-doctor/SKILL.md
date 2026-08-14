@@ -34,6 +34,7 @@ Run `AGENTSPACE/scripts/doctor.sh [--fix]` first. Its output is the baseline:
 - If a scoped file is absent (e.g. `data.md`/`examples.md` in workspaces predating those modules): note the absence as a 蓝 observation — do not escalate to 红/黄
 - Host root `AGENTS.md` — the AGENTSPACE section: internal consistency only (rules and hard rules present and non-contradictory, structure block matches the workspace layout). Do NOT diff against plugin-side templates — plugin dev data is off-limits in user projects
 - `utils/`, `tests/` — existence/structure correspondence with their entry tables only (e.g. `utils.md` ↔ `utils/`); `scripts/` — correspondence with the architecture contract (`AGENTS.md` structure block + `.agentspace-architecture.json`), since `scripts/` has no entry table; do NOT prose-review scripts
+- `.agentspace-repos` / `.agentspace-whitelist` — script-managed config files (repos.sh / mode.sh only); never prose-review, never hand-edit. Their consistency is doctor.sh [13]/[14]'s job
 - `data/` payload: never read
 - Plugin dev data (`skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc.): never read (user projects)
 
@@ -52,7 +53,7 @@ Every finding carries a source label — `[script]` (from doctor.sh) or `[agent]
 Everything in Phase A + B, plus dispatch **parallel subagents** (one per block — the main agent does not do block work itself), then synthesize their reports. If the session has no subagent tooling, run the blocks serially and note the deviation in the report. Subagent instructions MUST include: read-only (never modify the workspace), never read plugin dev data in user projects, report findings with file:line evidence, return a structured list.
 
 - **Block 1 — 宿主代码+git 成果核对**: verify outcome claims in iterations/notes and handoff 下一步 items ("implemented / fixed / landed / 重试 push" etc.) against the host code and git log
-- **Block 2 — 工作区 git 审计**: workspace repo commit hygiene (milestone-shaped, not fragmented), host start/end commits recorded at close-iteration exist and are on the right branch, pre-update tags sane, `.agentspace-version.json` lastUpdatedAt not stale
+- **Block 2 — 工作区 git 审计**: workspace repo commit hygiene (milestone-shaped, not fragmented), host start/end commits recorded at close-iteration exist and are on the right branch, pre-update tags sane, `.agentspace-version.json` lastUpdatedAt not stale; PLUS semantic review of recent commit messages (最近 20 条 commit message, 与 doctor [15] 同窗口) in the registered key repos (`.agentspace-repos`) — catch the variants doctor.sh [15]'s regex cannot: `plan_0013`, "迭代 3", bookkeeping narrative in any language form
 - **Block 3 — 全历史纪律审计**: full-history discipline trace across ALL closed plans/iterations/notes — 回链 completeness, `plan:NNNN` / `iteration_NNNN` reference validity, notes 来源, index consistency
 - **Block 4 — 版本元数据断言核对**: version/metadata claims in notes/AGENTS.md/readmes vs `.agentspace-version.json` and actual script behavior
 - **Block 5 — 环境/脚本调用链 dry-run**: for `scripts/`, `utils/`, `tests/` — trace the call chain (source relations, dependencies, template references), judge whether each script can run and whether its intent matches what tests.md / plan / iterations claim; do NOT execute anything
@@ -68,6 +69,7 @@ Synthesize: dedupe findings, merge into the three-tier report, note per-block co
   - Content documents (plan docs, readmes, notes, examples, templates): edit directly
   - Tables (`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): scripts only, or the one-time user-confirmed manual exception
 - **Optimization (蓝)**: list as suggestions; never execute without an explicit user request
+- **[14]/[15] findings**: [14] repairs (removing stale registry rows via repos.sh, writing the host shield into .gitignore / .git/info/exclude) are always tier-2 — user-confirmed, never automatic. [15] findings (bookkeeping ids / experiment data already in a code repo's HISTORY) are report-only forever — no tier rewrites git history; rebase/filter-repo is the user's decision and the user's action
 - **Never**: modify in-progress plan/iteration state fields, `data/` payload, host project files (host root AGENTS.md only with explicit user approval), auto-memory
 
 ## 6. Report

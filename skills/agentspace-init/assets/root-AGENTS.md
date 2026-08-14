@@ -29,4 +29,5 @@
 
 - AGENTSPACE 初始化只通过显式 `/agentspace-init` 命令, 绝不自动创建
 - AGENTSPACE 的索引/条目状态(plan.md、iterations.md、两个 index.md)只能由 `AGENTSPACE/scripts/` 下的脚本改写
+- commit 门: 在已登记关键代码仓库(AGENTSPACE/.agentspace-repos)执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 并通过; 未登记仓库先登记(用户确认)后提交
 - 禁止读取插件开发数据: `skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等与项目无关, 不在 AGENTSPACE 管理范围内

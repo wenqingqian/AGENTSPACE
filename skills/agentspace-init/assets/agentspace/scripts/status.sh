@@ -39,14 +39,11 @@ git -C "$AS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 && git_ok=1
 
 # 宿主仓库判定(与 close-iteration 的 as_host_head 同款): AS_ROOT 的父目录若
 # 在 git 工作树内即为宿主; 宿主根用 toplevel(嵌套 workspace 时根可能深于父
-# 目录), 且必须 != AS_ROOT 自身(防误判)。
+# 目录), 且必须 != AS_ROOT 自身(防误判)。规则单点定义在 lib.sh as_host_root;
+# 登记处为空时它是 代码提交 分区的回退数据源。
 HOST_OK=0; HOST_ROOT=""
-HOST_ROOT="$(git -C "$AS_ROOT/.." rev-parse --show-toplevel 2>/dev/null || true)"
-if [ -n "$HOST_ROOT" ]; then
-  AS_P="$(cd "$AS_ROOT" && pwd -P)"
-  HP="$(cd "$HOST_ROOT" && pwd -P)"
-  [ "$HP" != "$AS_P" ] && HOST_OK=1
-fi
+HOST_ROOT="$(as_host_root || true)"
+[ -n "$HOST_ROOT" ] && HOST_OK=1
 
 echo "# AGENTSPACE Status $(as_today)"
 echo
@@ -82,6 +79,30 @@ esac
 echo "## 项目总览"
 echo "- 项目: —"
 echo "- 现状: 工作区 v$WS_VERSION | $AP plan / $AI iteration 进行中 | $NOTES 条 notes | next: plan $(as_next_plan_id) / iteration $(as_next_iteration_id) | doctor $DOC_MSG"
+echo
+
+# --- 关键代码仓库: 登记处驱动(每仓库一行机械事实: 分支/脏数/最新提交/上下游)。
+# 登记处为空 = 合法状态(用户可拒绝登记), 显示空态, 不告警。
+echo "### 关键代码仓库"
+repos_found=0
+while IFS= read -r repo; do
+  [ -n "$repo" ] || continue
+  repos_found=1
+  if [ ! -d "$repo" ]; then
+    echo "- (登记路径缺失: $repo — 见 doctor [14])"
+    continue
+  fi
+  rbr="$(git -C "$repo" symbolic-ref --short -q HEAD 2>/dev/null || git -C "$repo" rev-parse --short HEAD 2>/dev/null || true)"
+  rdirty="$(git -C "$repo" status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)"
+  rlast="$(git -C "$repo" log -1 --format='%h %ad %s' --date=short 2>/dev/null || true)"
+  rab="$(git -C "$repo" rev-list --left-right --count @{u}...HEAD 2>/dev/null || true)"
+  rab_str=""
+  if [ -n "$rab" ]; then
+    rab_str=" ↑$(printf '%s' "$rab" | cut -f2)/↓$(printf '%s' "$rab" | cut -f1)"
+  fi
+  echo "- $(basename "$repo") ($repo) · ${rbr:-—} · 脏 ${rdirty:-?} · 最新: $(trunc "${rlast:-—}" 50)$rab_str"
+done < <(as_repos)
+[ "$repos_found" -eq 0 ] && echo "  (无登记仓库)"
 echo
 
 # --- 版本与环境 ---
@@ -164,8 +185,8 @@ else
 fi
 echo
 
-# --- 近期动态: 四分区 — 主线(软槽) / 代码提交(宿主仓库) / 工作区事件 /
-# 台账(agentspace 记账)。事件流取自索引表自带的日期列(创建/完成/开始/
+# --- 近期动态: 四分区 — 主线(软槽) / 代码提交(关键代码仓库, 空登记回退宿主) /
+# 工作区事件 / 台账(agentspace 记账)。事件流取自索引表自带的日期列(创建/完成/开始/
 # 关闭/日期/time), 不依赖 commit — 有些活动不是 commit 也是近期动态;
 # 台账流把类型前缀映射为中文摘要(plan:→计划, fix:→修复…), 不再裸列
 # commit 名字。代码提交块 = 机械事实(sha/日期/主题/stat/关联反查) + 概括
@@ -221,34 +242,81 @@ host_link() {
   printf 'iteration_%s · %s %s' "$id" "$plan" "$(trunc "${title:-—}" 30)"
 }
 
+# 单条 commit 的三行块(stat / 关联反查 / 概括软槽), 登记仓库与回退宿主共用。
+emit_commit() {
+  local repo="$1" sha="$2" date="$3" subj="$4" stats f i d link funit
+  stats="$(git -C "$repo" show --format= --shortstat "$sha" 2>/dev/null | grep -E '[0-9]+ files? changed' | head -1 || true)"
+  # 空 commit / 纯重命名无 shortstat 行 → 三数均归 0 显示; merge 输出
+  # 首父聚合统计(git 2.39 实测), 正常解析。
+  f="$(printf '%s' "$stats" | grep -oE '[0-9]+ files?' | grep -oE '[0-9]+' || true)"; [ -n "$f" ] || f=0
+  i="$(printf '%s' "$stats" | grep -oE '[0-9]+ insertions?' | grep -oE '[0-9]+' || true)"; [ -n "$i" ] || i=0
+  d="$(printf '%s' "$stats" | grep -oE '[0-9]+ deletions?' | grep -oE '[0-9]+' || true)"; [ -n "$d" ] || d=0
+  link="$(host_link "$sha")"
+  [ "$f" = "1" ] && funit="file" || funit="files"
+  echo "- $sha · $date · $(trunc "$subj" 80)"
+  echo "  改动: $f $funit, +$i/-$d · 关联: ${link:-—}"
+  echo "  概括[$sha]: —"
+}
+
 echo "## 近期动态"
 echo
 echo "### 主线"
 echo "- 近期主线: —"
 echo
-echo "### 代码提交 (宿主仓库 · 最近 5 条)"
-if [ "$HOST_OK" -eq 1 ]; then
-  host_commits="$(git -C "$HOST_ROOT" log -5 --format="%h%x1f%ad%x1f%s" --date=short -- . ":(exclude)${AS_ROOT#"$HOST_ROOT"/}" 2>/dev/null || true)"
-  if [ -n "$host_commits" ]; then
+# 代码提交: 登记处驱动(每仓库 #### 小块, 每仓库最近 STATUS_REPO_COMMITS 条);
+# 登记处为空时回退单宿主探测(兼容旧行为, 标注"未登记")。含工作区的仓库
+# 排除工作区路径(相对仓库根, 嵌套工作区也不会渗入; git pathspec 对非通配
+# 模式只匹配顶层, basename 在嵌套时会失效)。
+repos_seen=0
+repos_any=0
+repos_out=""
+while IFS= read -r repo; do
+  [ -n "$repo" ] || continue
+  repos_seen=$((repos_seen + 1))
+  [ -d "$repo" ] || continue
+  repos_any=1
+  block="#### $(basename "$repo") ($repo)"$'\n'
+  case "$AS_ROOT" in
+    "$repo"/*)
+      commits="$(git -C "$repo" log -"$STATUS_REPO_COMMITS" --format="%h%x1f%ad%x1f%s" --date=short -- . ":(exclude)${AS_ROOT#"$repo"/}" 2>/dev/null || true)" ;;
+    *)
+      commits="$(git -C "$repo" log -"$STATUS_REPO_COMMITS" --format="%h%x1f%ad%x1f%s" --date=short 2>/dev/null || true)" ;;
+  esac
+  if [ -n "$commits" ]; then
     while IFS="$(printf '\037')" read -r sha date subj; do
       [ -n "$sha" ] || continue
-      stats="$(git -C "$HOST_ROOT" show --format= --shortstat "$sha" 2>/dev/null | grep -E '[0-9]+ files? changed' | head -1 || true)"
-      # 空 commit / 纯重命名无 shortstat 行 → 三数均归 0 显示; merge 输出
-      # 首父聚合统计(git 2.39 实测), 正常解析。
-      f="$(printf '%s' "$stats" | grep -oE '[0-9]+ files?' | grep -oE '[0-9]+' || true)"; [ -n "$f" ] || f=0
-      i="$(printf '%s' "$stats" | grep -oE '[0-9]+ insertions?' | grep -oE '[0-9]+' || true)"; [ -n "$i" ] || i=0
-      d="$(printf '%s' "$stats" | grep -oE '[0-9]+ deletions?' | grep -oE '[0-9]+' || true)"; [ -n "$d" ] || d=0
-      link="$(host_link "$sha")"
-      [ "$f" = "1" ] && funit="file" || funit="files"
-      echo "- $sha · $date · $(trunc "$subj" 80)"
-      echo "  改动: $f $funit, +$i/-$d · 关联: ${link:-—}"
-      echo "  概括[$sha]: —"
-    done <<< "$host_commits"
+      block="$block$(emit_commit "$repo" "$sha" "$date" "$subj")"$'\n'
+    done <<< "$commits"
   else
-    echo "  (宿主无提交)"
+    block="$block  (无提交)"$'\n'
   fi
+  repos_out="$repos_out$block"
+done < <(as_repos)
+if [ "$repos_any" -eq 1 ]; then
+  echo "### 代码提交 (关键代码仓库 · 每仓库最近 $STATUS_REPO_COMMITS 条)"
+  printf '%s' "$repos_out"
 else
-  echo "  (无宿主仓库)"
+  echo "### 代码提交 (宿主仓库 · 最近 5 条)"
+  if [ "$HOST_OK" -eq 1 ]; then
+    # Rows exist but all unusable (moved-away repos — doctor [14] reports
+    # each stale row above) is distinct from an empty registry.
+    if [ "$repos_seen" -gt 0 ]; then
+      echo "  (登记仓库均不可用 — 回退宿主仓库探测; 见 doctor [14])"
+    else
+      echo "  (未登记 — 回退宿主仓库探测; 建议登记关键代码仓库)"
+    fi
+    host_commits="$(git -C "$HOST_ROOT" log -5 --format="%h%x1f%ad%x1f%s" --date=short -- . ":(exclude)${AS_ROOT#"$HOST_ROOT"/}" 2>/dev/null || true)"
+    if [ -n "$host_commits" ]; then
+      while IFS="$(printf '\037')" read -r sha date subj; do
+        [ -n "$sha" ] || continue
+        emit_commit "$HOST_ROOT" "$sha" "$date" "$subj"
+      done <<< "$host_commits"
+    else
+      echo "  (宿主无提交)"
+    fi
+  else
+    echo "  (无宿主仓库)"
+  fi
 fi
 echo
 echo "### 工作区事件 (最近 10 条)"

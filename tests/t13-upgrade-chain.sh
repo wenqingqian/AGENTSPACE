@@ -189,6 +189,44 @@ edit(A, "## 项目简介",
         "## agentspace mode\nhybrid\n\n## 项目简介",
         "v0.5.2", "AGENTS.md 模式标记块")
 
+# --- v0.6.0: key-repo registry seed (8a) + AGENTS.md 关键代码仓库节/结构树/纪律 (8b) ---
+if not os.path.exists(f"{WS}/.agentspace-repos"):
+    shutil.copy2(f"{ASSET}/.agentspace-repos", f"{WS}/.agentspace-repos")
+    log("v0.6.0", ".agentspace-repos seed", "applied")
+SEC = '''## 关键代码仓库
+
+> 登记处 = `.agentspace-repos`(一行一个仓库路径: 项目根内相对路径, 树外绝对路径; 物理路径 + git toplevel 规范化)。
+> **只能由 `scripts/repos.sh` 改写**(`--add` / `--remove` / `--list`); 每次登记/出册必须用户显式确认, agent 不得自行登记。
+> AGENTSPACE 自身(台账仓库)永远豁免、永不在册。
+
+- **形态**: 内嵌(工作区在代码仓库内 — 宿主须经 .gitignore 或 .git/info/exclude 豁免 AGENTSPACE/, 宿主历史不出现其内容与 gitlink)或分开存放(仓库在树外, 按路径登记)。形态是派生事实, 不存储。
+- **commit 门(MUST)**: 在登记仓库执行 `git commit` 前, 必须先运行 `scripts/commit-check.sh <仓库> "<message>"` 并通过(exit 0); 未登记仓库(exit 2)先登记后提交。完整规则见 agentspace-commit skill。
+- **message**: 记账 id(plan:NNNN / iteration_NNNN)与记账叙述永不进入代码仓库 commit; 归属由 iteration readme 的宿主 SHA 记录承担。
+- **文件**: 实验产物(`events.out.tfevents.*`、顶层 wandb/mlruns/lightning_logs、≥50MB blob)阻断; 数据扩展名 ≥100KB 与顶层输出目录为 WARN(agent 结合仓库上下文判断); 阻断后导流: unstage → `mv` 进 iteration_NNNN/data/ → 建议补 .gitignore(须用户同意)。
+- **standalone 模式**: 登记仓库是工作对象, 豁免白名单语义(doctor [13] 不报违规)。
+- **审计**: doctor [14](登记一致性/内嵌盾牌/热仓库未登记)与 [15](近期 commit 事后扫描, 只报告不改历史)。
+
+'''
+edit(A, "## 结构", SEC + "## 结构",
+        "v0.6.0", "AGENTS.md 关键代码仓库节(结构节前插入)")
+REG_LINE = "├── register.md        ← 按需扩展模块注册表"
+edit(A, REG_LINE,
+        REG_LINE + "\n├── .agentspace-repos  ← 关键代码仓库登记处(一行一路径; 只能由 scripts/repos.sh 改写)",
+        "v0.6.0", "AGENTS.md 结构树: 登记处行")
+edit(A, "└── scripts/           ← 状态流转脚本(索引与条目的唯一写入口)",
+        "└── scripts/           ← 状态流转与登记脚本(索引/条目/登记处的唯一写入口) + commit 检查门(commit-check.sh)",
+        "v0.6.0", "AGENTS.md 结构树: scripts 行")
+edit(A, "- **[MUST] scripts-only**: plan.md / iterations.md / plan/index.md / iterations/index.md **只能由 scripts/ 改写**, 禁止手工编辑",
+        "- **[MUST] scripts-only**: plan.md / iterations.md / plan/index.md / iterations/index.md 与 .agentspace-repos **只能由 scripts/ 改写**, 禁止手工编辑",
+        "v0.6.0", "AGENTS.md 纪律: scripts-only 行")
+CREATE_LINE = "- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration"
+edit(A, CREATE_LINE,
+        CREATE_LINE + "\n- **[MUST] commit 门**: 登记仓库 commit 前必过 `scripts/commit-check.sh <仓库> \"<message>\"`(见 关键代码仓库 节); 未登记仓库先登记后提交; 登记/出册必须用户显式确认",
+        "v0.6.0", "AGENTS.md 纪律: commit 门行")
+edit(A, "- 只在 AGENTSPACE/ 内做 git 操作; 宿主仓库代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/",
+        "- agentspace 记账的 git 操作只在 AGENTSPACE/ 内; 代码仓库的 commit 受 commit 门约束(见 关键代码仓库 节), 代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/",
+        "v0.6.0", "AGENTS.md 纪律: git 操作行")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -214,6 +252,11 @@ assert_contains "$WS/.agentspace-version.json" "\"version\": \"$CUR\""
 assert_contains "$WS/.agentspace-architecture.json" "\"version\": \"$CUR\""
 assert_contains "$WS/AGENTS.md" "## agentspace mode"
 assert_contains "$WS/AGENTS.md" "hybrid"
+assert_contains "$WS/AGENTS.md" "## 关键代码仓库"
+assert_contains "$WS/AGENTS.md" "commit 检查门(commit-check.sh)"
+[ -f "$WS/.agentspace-repos" ] || fail ".agentspace-repos seed missing after v0.6.0 replay"
+[ -f "$WS/scripts/repos.sh" ] && [ -f "$WS/scripts/commit-check.sh" ] \
+  || fail "v0.6.0 scripts missing after 8a"
 [ -f "$WS/.agentspace-whitelist" ] || fail "whitelist file missing after 8a"
 # --- final byte-diff vs the canonical asset (normalized: HTML comment blocks
 #     are init-time user content, not part of the migration chain) — catches

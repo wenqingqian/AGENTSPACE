@@ -227,6 +227,9 @@ bilingual "$ROOT/skills/agentspace"
 bilingual "$ROOT/skills/agentspace-update"
 bilingual "$ROOT/skills/agentspace-doctor"
 bilingual "$ROOT/skills/agentspace-status"
+bilingual "$ROOT/skills/agentspace-commit"
+bilingual "$ROOT/skills/agentspace-init"
+bilingual "$ROOT/skills/agentspace-mode"
 # mechanism-parity spot checks: load-bearing upgrade rules must exist in BOTH
 # languages — heading/token parity cannot catch a missing rule paragraph
 # (e.g. the skip-missing-archive rule once existed only in SKILL.md)

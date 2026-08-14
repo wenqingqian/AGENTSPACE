@@ -33,6 +33,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 - 范围内的文件缺失时(如早于 data/examples 模块的工作区没有 `data.md`/`examples.md`): 记为蓝级观察 — 不升级为红/黄
 - 宿主根 `AGENTS.md` — 其中的 AGENTSPACE 区块: 只做内部一致性(规则与硬规则存在且不互相矛盾、结构块与实际布局一致)。**不要**与插件侧模板比对 — 用户项目中插件开发数据禁读
 - `utils/`、`tests/` — 只做与入口表的存在性/结构对应(如 `utils.md` ↔ `utils/`); `scripts/` — 与架构契约(`AGENTS.md` 结构块 + `.agentspace-architecture.json`)对应, 因为 `scripts/` 没有入口表; 不对脚本做文字审查
+- `.agentspace-repos` / `.agentspace-whitelist` — 脚本管理态文件(只能 repos.sh / mode.sh 改写); 不做文字审查, 绝不手工编辑。它们的一致性由 doctor.sh [13]/[14] 负责
 - `data/` 载荷: 绝不读
 - 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等): 绝不读(用户项目)
 
@@ -50,7 +51,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 阶段 A + B 的全部, 再加**并行分发 subagent**(每块一个 — 主 agent 不做分块工作), 然后汇总各块报告。若本会话没有 subagent 工具, 串行执行各块并在报告中注明偏离。子代理指令必须包含: 只读(绝不修改工作区)、用户项目中绝不读插件开发数据、以 file:line 证据报告发现、返回结构化清单。
 
 - **块 1 — 宿主代码+git 成果核对**: 核对 iterations/notes 中的成果断言("已实现 / 已修复 / 已上线")在宿主代码与 git log 中是否有迹可循
-- **块 2 — 工作区 git 审计**: 工作区仓库提交卫生(里程碑化, 非碎片提交)、close-iteration 记录的宿主起始/结束 commit 存在且分支正确、pre-update tag 合理、`.agentspace-version.json` 的 lastUpdatedAt 未久未刷新
+- **块 2 — 工作区 git 审计**: 工作区仓库提交卫生(里程碑化, 非碎片提交)、close-iteration 记录的宿主起始/结束 commit 存在且分支正确、pre-update tag 合理、`.agentspace-version.json` 的 lastUpdatedAt 未久未刷新; **另加**: 对已登记关键代码仓库(`.agentspace-repos`)最近 20 条 commit message(与 doctor [15] 同窗口)做语义阅读 — 捞 doctor.sh [15] 正则看不到的变体(`plan_0013`、"迭代 3"、任何语言形态的记账叙述)
 - **块 3 — 全历史纪律审计**: 跨全部已关闭 plan/iteration/notes 的全量纪律追溯 — 回链完整性、`plan:NNNN` / `iteration_NNNN` 引用有效性、notes 来源、索引一致性
 - **块 4 — 版本元数据断言核对**: notes/AGENTS.md/readme 中的版本与元数据声称 ↔ `.agentspace-version.json` 及实际脚本行为
 - **块 5 — 环境/脚本调用链 dry-run**: 对 `scripts/`、`utils/`、`tests/` — 顺着调用链(source 关系、依赖、模板引用)分析每个脚本能否运行、写法是否正确、意图是否与 tests.md / plan / iterations 文档一致; **不执行任何东西**
@@ -66,6 +67,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
   - 内容文档(plan 文档、readme、notes、examples、templates): 直接编辑
   - 表格(`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): 只能走脚本, 或用户明确确认的一次性手工例外
 - **优化(蓝)**: 只列建议; 未经用户明确要求绝不执行
+- **[14]/[15] 发现**: [14] 的修复(repos.sh 摘除陈旧登记行、往宿主 .gitignore / .git/info/exclude 补盾牌)一律二级 — 必须用户确认, 绝不自动; [15] 的发现(已落入代码仓库**历史**的记账 id / 实验数据)永远只报告 — 任何 tier 都不改写 git 历史, rebase/filter-repo 是用户的决定与用户自己的操作
 - **绝不**: 修改进行中 plan/iteration 的状态字段、`data/` 载荷、宿主项目文件(宿主根 AGENTS.md 仅在用户明确批准时)、auto-memory
 
 ## 6. 报告

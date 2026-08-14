@@ -1,0 +1,5 @@
+# 关键代码仓库登记处 — 只能由 scripts/repos.sh 改写(--add / --remove / --list)。
+# 一行一个仓库路径: 项目根内用相对路径, 树外用绝对路径(入册时物理路径 + git toplevel 规范化)。
+# 项目根自身(宿主)的登记行存绝对路径(根不在 '根内' 相对范围); 移动项目目录后该行失效, 由 doctor [14] 报告, 重新 --add 即可。
+# 每次登记/出册必须用户显式确认; AGENTSPACE 自身(台账仓库)永远豁免、永不在册。
+# 登记仓库的 commit 受 scripts/commit-check.sh 门约束(见 AGENTS.md "关键代码仓库"节)。

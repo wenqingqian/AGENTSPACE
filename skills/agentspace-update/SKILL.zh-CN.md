@@ -141,8 +141,8 @@ cp skills/agentspace-update/versions/v<已记录>/architecture.json AGENTSPACE/.
 ### 9. 验证（闸门）
 
 先运行 `AGENTSPACE/scripts/doctor.sh --fix`（一级修复：latest 软链、孤儿表行、notes.md 缺失行、handoff 索引死行），再运行 `AGENTSPACE/scripts/doctor.sh`：
-- **[0]**（未提交改动——更新中途的正常状态，step 10 提交）以外的红项必须先解决再继续：按 doctor 的 Tip 与用户讨论修复方案，绝不手工改表。只允许 [0] 遗留。
-- 进入 step 10，然后**再跑一次** `AGENTSPACE/scripts/doctor.sh` —— 必须 exit 0（全绿）。若仍红：修复（doctor.sh --fix 或用户确认的修复）并提交修复。**post-commit doctor 全绿之前更新不算完成** —— 绝不在红项挂起时宣布成功。
+- **[0]**（未提交改动——更新中途的正常状态，step 10 提交）与 **[15]**（只报告的登记仓库事后审计，处置由用户决定，任何 tier 不改写历史）以外的红项必须先解决再继续：按 doctor 的 Tip 与用户讨论修复方案，绝不手工改表。只允许 [0] 与 [15] 遗留。
+- 进入 step 10，然后**再跑一次** `AGENTSPACE/scripts/doctor.sh` —— 必须 exit 0（全绿）。若仍红：修复（doctor.sh --fix 或用户确认的修复）并提交修复。**post-commit doctor 全绿之前更新不算完成** —— 绝不在红项挂起时宣布成功。（若 [15] 因既有历史违规报红，记录并留给用户处置即可，不构成更新未完成）
 
 ### 10. Git 提交
 

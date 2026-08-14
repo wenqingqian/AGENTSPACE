@@ -498,6 +498,11 @@ echo "[13] standalone external refs"
 if [ "$(as_mode)" = "standalone" ]; then
   while IFS= read -r ref; do
     [ -n "$ref" ] || continue
+    # 登记仓库是工作对象而非外部依赖 — 豁免白名单语义(v0.6.0)
+    if cov="$(as_repo_covered "$ref")"; then
+      printf '  [ok] 登记仓库 %s 内(豁免白名单语义): %s\n' "$cov" "$ref"
+      continue
+    fi
     if as_whitelisted "$ref"; then
       printf '  [ok] whitelisted: %s\n' "$ref"
       continue
@@ -542,6 +547,146 @@ if [ "$(as_mode)" = "standalone" ]; then
 else
   echo "  (hybrid — 检查不启用)"
 fi
+
+# ---- 14. key code-repo registry consistency ----
+# Rows valid (path exists, still a git repo, toplevel not drifted); nested
+# form: the containing repo's shield (gitignore / info-exclude — behavioral
+# check via git check-ignore) and no tracked workspace content (ls-files);
+# hot unregistered repos under the project root (maxdepth 2 like init, the
+# workspace's own repo excluded). A nested repo inside a REGISTERED repo is
+# skipped only when the parent tracks it as a gitlink (a real submodule is
+# the parent's affair); a standalone nested repo still gets the hot warning —
+# that is exactly the "近期更新但未登记" case. The hot scan arms only once
+# the registry has at least one row: an empty registry means key-repo
+# management was never opted into (init/update both ask, user may decline),
+# and a red-forever nudge would only teach ignoring red — the soft hint for
+# the empty case lives in status.sh's 代码提交 fallback line. All repairs
+# here are tier-2 (user-confirmed): registry rows via repos.sh, shield writes
+# touch a host file, so --fix never auto-repairs anything in [14].
+echo "[14] key repo registry"
+repos_snapshot="$(as_repos)"
+while IFS= read -r repo; do
+  [ -n "$repo" ] || continue
+  if [ ! -d "$repo" ]; then
+    warn "登记仓库路径不存在: $repo (仓库被移动/删除? — 用户确认后 repos.sh --remove)"
+    continue
+  fi
+  top="$(git -C "$repo" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -z "$top" ]; then
+    warn "登记仓库不再是 git 仓库: $repo (.git 丢失 — 确认后 repos.sh --remove 或恢复)"
+    continue
+  fi
+  topp="$(cd -P "$top" 2>/dev/null && pwd -P || true)"
+  if [ -n "$topp" ] && [ "$topp" != "$repo" ]; then
+    warn "登记仓库 toplevel 漂移: 登记 $repo, 实际 $topp (确认后 --remove/--add 纠正)"
+  fi
+  # nested form: this repo contains the workspace
+  case "$AS_ROOT" in
+    "$repo"/*)
+      rel="${AS_ROOT#"$repo"/}"
+      if ! git -C "$repo" check-ignore -q -- "$rel" 2>/dev/null; then
+        warn "盾牌缺失: $repo 未豁免 $rel (.gitignore 或 .git/info/exclude 任一即可 — 补写须用户同意, doctor 不动宿主文件)"
+      fi
+      leak="$(git -C "$repo" ls-files -- "$rel" 2>/dev/null | head -3 || true)"
+      if [ -n "$leak" ]; then
+        warn "工作区内容已被登记仓库跟踪: $repo → $rel (git ls-files 命中, 可能含 gitlink; 清理方式由用户决定)"
+      fi
+      ;;
+  esac
+done <<< "$repos_snapshot"
+# hot unregistered repos (project-root anchored; repos living outside the
+# project tree are invisible to this scan — stated boundary). Armed only with
+# a non-empty registry (see section header).
+if [ -n "$repos_snapshot" ]; then
+base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+while IFS= read -r gd; do
+  [ -n "$gd" ] || continue
+  rd="$(cd -P "$(dirname "$gd")" 2>/dev/null && pwd -P || true)"
+  [ -n "$rd" ] || continue
+  case "$rd" in
+    "$AS_ROOT"|"$AS_ROOT"/*) continue ;;
+  esac
+  reg=0
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    if [ "$rd" = "$row" ]; then reg=1; break; fi
+    case "$rd" in
+      "$row"/*)
+        # Nested inside a registered repo: exempt only when the parent tracks
+        # it as a gitlink (real submodule); a standalone nested repo is the
+        # unregistered case this scan exists for. No break — a later row may
+        # still be the exact match.
+        rel="${rd#"$row"/}"
+        # capture-then-case, not grep -q on the pipeline: an early grep exit
+        # would SIGPIPE-kill git (141) and the pipeline would fail under
+        # pipefail — the gitlink exemption would be missed (false hot warning)
+        m="$(git -C "$row" ls-files -s -- "$rel" 2>/dev/null || true)"
+        case "$m" in
+          160000*) reg=1; break ;;
+        esac
+        ;;
+    esac
+  done <<< "$repos_snapshot"
+  [ "$reg" -eq 1 ] && continue
+  hot="$(git -C "$rd" log -1 --since="$COMMIT_HOT_DAYS days ago" --format=%h 2>/dev/null || true)"
+  [ -n "$hot" ] || continue
+  warn "近期活跃但未登记的 git 仓库: $rd (近 $COMMIT_HOT_DAYS 天有提交 — 若是关键代码仓库, 用户确认后 repos.sh --add)"
+done < <(find "$base" -maxdepth 2 -name .git 2>/dev/null || true)
+else
+  echo "  (登记处为空 — 热仓库扫描未启用; init/update 会询问登记, 软提示见 status 代码提交区)"
+fi
+
+# ---- 15. commit discipline audit (registered repos, recent COMMIT_AUDIT_N) ----
+# Ex-post net for whatever the pre-commit gate missed (manual commits, agent
+# lapses). Same rule table as commit-check.sh — regexes/constants single-
+# sourced in lib.sh. REPORT-ONLY: rewriting history (rebase/filter-repo) is
+# destructive and always the user's call; no tier touches it.
+# Cost bound: per commit one git log (%B) + one git show (paths); the
+# per-file cat-file size check runs only when the commit touches ≤
+# COMMIT_SIZE_CHECK_MAX paths — one forked git cat-file -s per file on a huge
+# commit would make every doctor run take minutes (the path-rule warnings
+# still run for every path). Window fixed at COMMIT_AUDIT_N commits.
+echo "[15] commit discipline audit"
+while IFS= read -r repo; do
+  [ -n "$repo" ] || continue
+  [ -d "$repo" ] || continue  # stale rows already reported by [14]
+  git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+  while IFS= read -r sha; do
+    [ -n "$sha" ] || continue
+    msg="$(git -C "$repo" log -1 --format=%B "$sha" 2>/dev/null || true)"
+    mhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" 2>/dev/null | head -1 || true)"
+    if [ -n "$mhit" ]; then
+      warn "$repo @$sha: commit message 含工作区记账引用 — \"${mhit#*:}\" (已落历史, 只报告: 处置由用户决定)"
+    fi
+    npaths=0; paths=""
+    while IFS= read -r -d '' p; do
+      [ -n "$p" ] || continue
+      npaths=$((npaths + 1)); paths="$paths$p"$'\n'
+      top="${p%%/*}"; pb="$(basename "$p")"
+      case "$top" in
+        AGENTSPACE) warn "$repo @$sha: commit 触碰工作区路径 $p" ;;
+      esac
+      case "$pb" in
+        events.out.tfevents.*) warn "$repo @$sha: commit 含实验输出特征 $p (tensorboard 事件文件)" ;;
+      esac
+      for d in $COMMIT_SIG_DIRS; do
+        [ "$top" = "$d" ] && { warn "$repo @$sha: commit 含实验输出目录 $d/ ($p)"; break; }
+      done
+    done < <(git -C "$repo" show --name-only -z --format= --diff-filter=ACMT "$sha" 2>/dev/null || true)
+    if [ "$npaths" -gt "$COMMIT_SIZE_CHECK_MAX" ]; then
+      printf '  [note] %s @%s: commit 触碰 %s 个路径(> %s) — 超大文件尺寸检查跳过\n' "$repo" "$sha" "$npaths" "$COMMIT_SIZE_CHECK_MAX"
+    else
+      while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        sz="$(git -C "$repo" cat-file -s "$sha:$p" 2>/dev/null || printf '0')"
+        case "$sz" in ''|*[!0-9]*) sz=0 ;; esac
+        if [ "$sz" -ge "$COMMIT_BLOCK_BYTES" ]; then
+          warn "$repo @$sha: commit 含超大文件 $p ($((sz / 1048576))MB ≥ $((COMMIT_BLOCK_BYTES / 1048576))MB)"
+        fi
+      done <<< "$paths"
+    fi
+  done < <(git -C "$repo" log -"$COMMIT_AUDIT_N" --format=%h 2>/dev/null || true)
+done < <(as_repos)
 
 echo
 echo "== Done: $issues issues, $fixed auto-repaired =="

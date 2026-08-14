@@ -25,6 +25,7 @@ description: /agentspace-init 命令的内部初始化流程——在当前项�
    - 何时读取 AGENTSPACE/AGENTS.md: 对话涉及本项目的实验、代码改动、项目迭代或状态查询/变更时 → 先读 AGENTSPACE/AGENTS.md 并按其规则工作
    - 何时不必读取: 与本项目无关的问答、无状态变化的纯查询, 且用户未明确要求使用 AGENTSPACE 时
    - 硬规则: 初始化只通过显式 /agentspace-init; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写
+   - 硬规则(commit 门): 在已登记关键代码仓库(.agentspace-repos)执行 git commit 前, 必须先运行 AGENTSPACE/scripts/commit-check.sh <仓库> "<message>" 并通过; 未登记仓库先登记后提交
    <!-- /AGENTSPACE -->
    ```
 
@@ -37,7 +38,7 @@ description: /agentspace-init 命令的内部初始化流程——在当前项�
 5. **主动询问三个信息**(可用 AskUserQuestion 一次收集; 用户暂无答复的项保留占位注释, 绝不编造):
    1. **goal**: 项目主要干什么 —— 实现/维护什么功能、优化什么、达到什么效果
    2. **代码运行环境**: 用什么跑代码 —— 容器 / conda / GPU / 关键依赖与启动命令
-   3. **关键代码仓库**: 工作区常有多个代码仓库, 请用户指明与项目强相关的关键仓库, 以及其中已有的相关代码文件(这些是下一步深入分析的对象)
+   3. **关键代码仓库**: 工作区常有多个代码仓库, 请用户指明与项目强相关的关键仓库, 以及其中已有的相关代码文件(这些是下一步深入分析的对象) — **包括位于项目根目录之外的仓库**(上面的 find 只能看到项目树内, 树外仓库必须显式问路径)
 
 6. **深入分析关键代码仓库**(只针对上一步确认的仓库与文件): 读 README、目录结构、入口文件、核心模块与依赖, 弄清各关键仓库的职责、关键路径与入口; 目标是能准确写清项目背景与关键文件清单, 不需要逐行读代码。
 
@@ -45,6 +46,7 @@ description: /agentspace-init 命令的内部初始化流程——在当前项�
    - 根 AGENTS.md **新建**(来自模板): 填入 项目背景(goal)、实验环境(环境一句话, 详见 tests.md)、关键代码仓库(路径 + 职责 + 关键入口文件/目录)
    - 根 AGENTS.md **已存在**(只写经确认的追加区块, 区块之外不动): goal 与关键仓库写入 `AGENTSPACE/AGENTS.md` 的"项目简介""根仓库简介"
    - 一律更新: `AGENTSPACE/tests.md` 实验环境表(容器 / conda / GPU / 关键依赖)与 `AGENTSPACE/AGENTS.md` 项目简介 / 根仓库简介
+   - **登记关键仓库**(每次登记都必须用户显式同意 — 绝不自行登记): `bash AGENTSPACE/scripts/repos.sh --add <path>`。工作区内嵌宿主仓库时默认提议登记宿主(用户可拒绝); 树外仓库用绝对路径登记。登记状态存于 `AGENTSPACE/.agentspace-repos` — 只能 repos.sh 改写, 禁止手工编辑。汇报时注明探测到的形态: 内嵌(宿主需 .gitignore 豁免 AGENTSPACE/, 见第 8 步)或分开存放(无需豁免)
 
 8. **宿主 .gitignore**: 询问用户是否将 `AGENTSPACE/` 加入宿主仓库 .gitignore(推荐, 避免宿主 git 跟踪嵌套仓库); 同意才修改。
 

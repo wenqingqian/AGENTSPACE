@@ -28,6 +28,7 @@ description: 切换 AGENTSPACE 工作区模式(默认 hybrid / standalone), 管�
 - 大文件(≥1G)外部引用自动豁免(doctor --fix / 切换 standalone 时自动)。
 - 小文件外部引用默认必须集成; 豁免必须用户显式确认, agent 不得自行豁免。
 - 白名单条目: 相对项目根或绝对路径; 文件或目录(目录条目覆盖其下); 由 `scripts/mode.sh` 维护(原子写)。
+- 已登记关键代码仓库(`.agentspace-repos`)是工作**对象**, 不是外部依赖 — 天然豁免白名单语义(doctor [13] 对登记仓库内的引用不报违规)。
 - 违规发现与修复以 doctor [13] 为准(minor 面: 软连接 + 登记来源列; major 面: 全量路径扫描, 由 /agentspace-doctor --major 执行)。
 
 ## 备注
