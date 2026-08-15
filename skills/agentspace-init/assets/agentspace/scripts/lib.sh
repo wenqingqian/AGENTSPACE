@@ -339,6 +339,16 @@ readonly COMMIT_AUDIT_N="20"              # doctor [15]: commits scanned per rep
 readonly COMMIT_HOT_DAYS="7"              # doctor [14]: recently-active window
 readonly COMMIT_SIZE_CHECK_MAX="2000"     # doctor [15]: per-commit path cap — above it the per-file size check is skipped (cost bound)
 readonly STATUS_REPO_COMMITS="3"          # status 代码提交: commits shown per repo
+# Blank-title check — the one deterministic commit-text quality rule: a title
+# that says nothing (empty or whitespace-only first line) is never legitimate.
+# Everything else about commit-text quality (convention conformance, relevance
+# to the diff) is the agent semantic layer's judgment (agentspace-commit skill
+# rubric). Single source for commit-check.sh (block) and doctor [15] (warn).
+as_msg_title_blank() {
+  local t
+  t="$(printf '%s' "$1" | head -1 2>/dev/null || true)"
+  [ -z "$t" ] || [ -z "${t//[[:space:]]/}" ]
+}
 
 # Canonical repo root for any path: git toplevel, physical spelling (cd -P
 # resolves symlinked prefixes like /tmp → /private/tmp — the eacbeda lesson).

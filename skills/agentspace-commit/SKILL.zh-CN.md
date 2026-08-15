@@ -1,6 +1,6 @@
 ---
 name: agentspace-commit
-description: AGENTSPACE 关键代码仓库的 commit 门。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit。
+description: AGENTSPACE 关键代码仓库的 commit 门。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。
 ---
 
 # AGENTSPACE Commit 门
@@ -34,6 +34,20 @@ description: AGENTSPACE 关键代码仓库的 commit 门。在任何登记于 AG
 - 上下文特例: 业务对象就是 agentspace 的仓库(如插件开发仓库)可以合法出现 "agentspace" 字样(如 "feat: /agentspace-mode"); 记账 id 在所有仓库一律禁止。
 
 归属信息不会丢 — 它只是回家: iteration readme 记录宿主起始/结束 commit SHA(`> 宿主起始/结束 commit:`, close-iteration.sh 自动写)。工作区按 SHA 找 commit; commit 永不回指。
+
+## Commit 文本质量(语义层 — 你的判断, 两问)
+
+记账之外, 每条 commit 文本草稿都要过两问(标题 = 第一行; 正文可选)。两问都是**你的判断** — 脚本只抓空标题。
+
+1. **标题是不是对这次代码改动的一句话描述?** 必须能独立回答"这个 commit 改了什么":
+   - 合格: `add retry to driver launch` / `fix: parse NaN in metrics` — 动词短语点名改动。
+   - 拒绝: 无信息标题(`driver`、`stuff`、`update`); **实验/run 标识** — `(6-run driver launch on .42)` 是实验 run 名(run 编号 + 机器地址 + 配置标签), 读起来像日志行, 不像 commit。这些细节属于 iteration readme / `data/`, 永不进 commit。
+   - 正文(如有)解释"为什么"(动机、取舍) — 不复述"改了什么"(diff 已经说了)。与标题同一禁单: 无记账、无 run 元数据。
+   - 标题 ≤ 72 字符可读性软线, 不是门。
+
+2. **标题/正文与实际的 diff 相关吗?** 先读 `git show --stat`(暂存态: `git diff --cached --stat`)再判断。标题点名的主题必须在改动文件/内容里有落点: 标题说 "driver launch" 而 diff 只动了数据清洗 → 这是实验名穿 commit 外套 — 拒绝, 提议改写为对真实改动的描述(`fix: retry driver launcher against .42` 保留技术要点、去掉 run 记账)。
+
+处置: 任一违规 → 提交前要求重写标题/正文(代码不动), 用新文本重新过门。用户坚持原文本 → 尊重决定但明说: doctor [15] 与 `/agentspace-doctor` 会在审计窗口内持续报告这条 commit — 只报告, 但可见。
 
 ## 文件规则
 

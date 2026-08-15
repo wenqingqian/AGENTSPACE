@@ -658,6 +658,9 @@ while IFS= read -r repo; do
     if [ -n "$mhit" ]; then
       warn "$repo @$sha: commit message 含工作区记账引用 — \"${mhit#*:}\" (已落历史, 只报告: 处置由用户决定)"
     fi
+    if as_msg_title_blank "$msg"; then
+      warn "$repo @$sha: commit 标题为空或纯空白 (已落历史, 只报告: 处置由用户决定)"
+    fi
     npaths=0; paths=""
     while IFS= read -r -d '' p; do
       [ -n "$p" ] || continue

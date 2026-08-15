@@ -90,6 +90,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.6.1 | 2026-08-15 | commit 文本质量: 门 + doctor [15] 空标题规则(lib.sh 单源)+ agentspace-commit skill Commit-text Quality rubric(性质标准: 标题=一句话代码改动描述, 无实验/run 标识, 无无信息标题; 正文解释 why; 标题/正文须与 diff 相关(git show --stat); 类型前缀推荐不强制)+ agentspace-doctor Phase C Block 2 三维审计(记账变体/质量/相关性, sha+维度+建议, 只报告) |
 | v0.6.0 | 2026-08-15 | commit 规范: 关键代码仓库登记处(.agentspace-repos + repos.sh, 登记须用户确认)+ agentspace-commit skill + commit-check.sh 门(message 记账 id 禁令 / 实验输出特征 / ≥50MB blob / AGENTSPACE 路径; exit 0/1/2)+ doctor [14] 登记一致性(陈旧行 / 内嵌盾牌 git check-ignore 行为检测 / ls-files+gitlink 泄漏 / 7 天热仓库告警)+ [15] commit 事后审计(最近 20 条, 只报告)+ status 关键代码仓库分区 + 多仓库代码提交(每仓库 3 条, 空登记回退宿主)+ init 登记步骤 + 引导块铁律行 + standalone 白名单对登记仓库豁免 |
 | v0.5.3 | 2026-08-11 | status 近期动态四分区分层: 主线软槽 / 宿主仓库代码提交(每 commit stat + 按记录宿主 SHA 关联 iteration + 每 commit 概括软槽)/ 工作区事件 / 台账(分区独立 cap)+ 会话入口"最近关闭"锚点(标题/日期/宿主 SHA)+ `/agentspace-status` 版本闸门(工作区脚本漂移固定警示, 不再静默吐旧格式)+ 三方验证修复(白名单输入规范化、软告警空行、doctor [13] 小文件 note 不计数) |
 | v0.5.2 | 2026-08-07 | `/agentspace-mode` 命令: 工作区模式控制(默认 hybrid / standalone)+ 外部依赖白名单(.agentspace-whitelist, 大文件 ≥1G 自动豁免、小文件须用户显式确认)+ doctor [13] standalone 外部引用检查(minor 面, --fix 只自动白名单大文件)+ AGENTS.md 模式标记块 |

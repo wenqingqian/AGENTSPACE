@@ -79,6 +79,18 @@ done
 # variants without the canonical separator fall to the agent layer — script passes them
 OUT="$(bash "$GATE" . "plan_0013 variant")"
 assert_output_contains "$OUT" "== PASS"
+# blank title (the one deterministic quality rule): empty / whitespace-only /
+# newline-only messages always block
+for m in "" "   " $'\n\n'; do
+  set +e; OUT="$(bash "$GATE" . "$m")"; rc=$?; set -e
+  [ "$rc" -eq 1 ] || fail "blank title must block: '${m}'"
+  assert_output_contains "$OUT" "标题为空"
+done
+# a title on line 1 with body after is fine (title is what matters)
+OUT="$(bash "$GATE" . "add retry to launcher
+
+why: the .42 host drops connections")"
+assert_output_contains "$OUT" "== PASS"
 
 # --- file rules ---
 git -C "$SB" reset -q

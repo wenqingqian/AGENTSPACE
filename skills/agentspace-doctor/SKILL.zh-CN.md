@@ -51,7 +51,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 阶段 A + B 的全部, 再加**并行分发 subagent**(每块一个 — 主 agent 不做分块工作), 然后汇总各块报告。若本会话没有 subagent 工具, 串行执行各块并在报告中注明偏离。子代理指令必须包含: 只读(绝不修改工作区)、用户项目中绝不读插件开发数据、以 file:line 证据报告发现、返回结构化清单。
 
 - **块 1 — 宿主代码+git 成果核对**: 核对 iterations/notes 中的成果断言("已实现 / 已修复 / 已上线")在宿主代码与 git log 中是否有迹可循
-- **块 2 — 工作区 git 审计**: 工作区仓库提交卫生(里程碑化, 非碎片提交)、close-iteration 记录的宿主起始/结束 commit 存在且分支正确、pre-update tag 合理、`.agentspace-version.json` 的 lastUpdatedAt 未久未刷新; **另加**: 对已登记关键代码仓库(`.agentspace-repos`)最近 20 条 commit message(与 doctor [15] 同窗口)做语义阅读 — 捞 doctor.sh [15] 正则看不到的变体(`plan_0013`、"迭代 3"、任何语言形态的记账叙述)
+- **块 2 — 工作区 git 审计**: 工作区仓库提交卫生(里程碑化, 非碎片提交)、close-iteration 记录的宿主起始/结束 commit 存在且分支正确、pre-update tag 合理、`.agentspace-version.json` 的 lastUpdatedAt 未久未刷新; **另加**: 对已登记关键代码仓库(`.agentspace-repos`)最近 20 条 commit message(与 doctor [15] 同窗口)按 agentspace-commit rubric 做三维语义审计: (a) 记账引用变体 — `plan_0013`、"迭代 3"、任何语言形态的记账叙述; (b) 文本质量 — 标题必须是对真实改动的一句话描述(无实验/run 标识如 `(6-run driver launch on .42)`、无机器地址、无无信息标题); (c) 相关性 — 标题/正文主题必须落在实际 diff 里(核对 `git show --stat`)。每条违规报告: sha + 维度 + 具体建议(如拟改写的标题)。只报告。
 - **块 3 — 全历史纪律审计**: 跨全部已关闭 plan/iteration/notes 的全量纪律追溯 — 回链完整性、`plan:NNNN` / `iteration_NNNN` 引用有效性、notes 来源、索引一致性
 - **块 4 — 版本元数据断言核对**: notes/AGENTS.md/readme 中的版本与元数据声称 ↔ `.agentspace-version.json` 及实际脚本行为
 - **块 5 — 环境/脚本调用链 dry-run**: 对 `scripts/`、`utils/`、`tests/` — 顺着调用链(source 关系、依赖、模板引用)分析每个脚本能否运行、写法是否正确、意图是否与 tests.md / plan / iterations 文档一致; **不执行任何东西**

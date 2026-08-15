@@ -1,6 +1,6 @@
 ---
 name: agentspace-commit
-description: Commit gate for AGENTSPACE-managed key code repos. Activate BEFORE any git commit in a repository registered in AGENTSPACE/.agentspace-repos (or any git repo inside a project that has an AGENTSPACE/ workspace) — staged files and the draft message must pass AGENTSPACE/scripts/commit-check.sh first. Never commit in unregistered repos; bookkeeping ids (plan:NNNN / iteration_NNNN) and experiment data never enter code-repo commits.
+description: Commit gate for AGENTSPACE-managed key code repos. Activate BEFORE any git commit in a repository registered in AGENTSPACE/.agentspace-repos (or any git repo inside a project that has an AGENTSPACE/ workspace) — staged files and the draft message must pass AGENTSPACE/scripts/commit-check.sh first. Never commit in unregistered repos; bookkeeping ids (plan:NNNN / iteration_NNNN) and experiment data never enter code-repo commits; the commit text must describe the actual code change (one-line title, no experiment/run identifiers, related to the diff).
 ---
 
 # AGENTSPACE Commit Gate
@@ -34,6 +34,20 @@ The script deterministically blocks the canonical bookkeeping idioms — `plan:N
 - Context exception: a repo whose business IS agentspace (e.g. the plugin dev repo) may legitimately say "agentspace" ("feat: /agentspace-mode") — the bookkeeping ids stay banned everywhere.
 
 Attribution never dies — it lives where it belongs: the iteration readme records host start/end commit SHAs (`> 宿主起始/结束 commit:`, auto-written by close-iteration.sh). The workspace finds commits by SHA; commits never point back.
+
+## Commit-text Quality (semantic — your judgment, two questions)
+
+Beyond bookkeeping, judge every draft commit text against two questions (title = first line; body optional). Both are YOUR judgment — the script only catches a blank title.
+
+1. **Is the title a one-line description of the code change?** It must answer "what did this commit do" on its own:
+   - Good: `add retry to driver launch` / `fix: parse NaN in metrics` — a verb phrase naming the change.
+   - Reject: information-free titles (`driver`, `stuff`, `update`); experiment/run identifiers — `(6-run driver launch on .42)` is an experiment-run name (run number, machine address, config tag) and reads like a log line, not a commit. Those details belong in the iteration readme / `data/`, never in the commit.
+   - Body, if present, explains WHY (motivation, trade-offs) — not what (the diff already says what). Same ban list as the title: no bookkeeping, no run metadata.
+   - Keep the title ≤ 72 chars for readability — a soft guideline, not a gate.
+
+2. **Does the title/body relate to the actual diff?** Read `git show --stat` (staged: `git diff --cached --stat`) BEFORE judging. The theme the title names must land in the changed files/content. A title about "driver launch" over a diff that only touches data cleaning is an experiment name wearing a commit costume — reject it and propose a rewrite describing the real change (`fix: retry driver launcher against .42` keeps the technical point, drops the run bookkeeping).
+
+Action: on any violation, require the title/body rewrite before the commit proceeds (code untouched), then re-run the gate with the exact new message. If the user insists on the original text, honor the call but say it out loud: doctor [15] and `/agentspace-doctor` will report the commit while it is inside the audit window — report-only, but visible.
 
 ## File Rules
 

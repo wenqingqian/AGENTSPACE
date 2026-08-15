@@ -90,6 +90,11 @@ if [ -n "$MSG" ]; then
     done <<< "$hit"
   fi
 fi
+# ---- draft message: blank title (deterministic quality rule, single source lib.sh) ----
+if as_msg_title_blank "$MSG"; then
+  blocks=$((blocks + 1))
+  block_lines="${block_lines}  - message: 标题为空或纯空白 — 标题(第一行)必须是一句话的代码改动描述"$'\n'
+fi
 
 echo "== commit-check: $REPO =="
 echo "暂存: $staged 个文件"

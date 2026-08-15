@@ -93,6 +93,10 @@ rm -rf "$SB/wandb"
 OUT="$(bash "$WS/scripts/doctor.sh" || true)"
 # the violating commit remains in history forever — [15] keeps reporting it
 assert_output_contains "$OUT" "记账引用"
+# [15] deterministic quality rule: a blank-title commit is flagged (report-only)
+git -C "$SB" -c user.name=test -c user.email=test@test commit -q --allow-empty --allow-empty-message -m "" >/dev/null
+OUT="$(bash "$WS/scripts/doctor.sh" || true)"
+assert_output_contains "$OUT" "标题为空"
 
 # --- 6) [13] exemption: standalone + symlink into a registered repo ---
 # The link must resolve OUT of the workspace into the registered host tree:
