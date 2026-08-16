@@ -35,7 +35,7 @@ Run the scaffolding tool (repo root, dev-only — NOT part of the deployed plugi
 bash new-version.sh 0.2.11
 ```
 
-It creates `skills/agentspace-update/versions/v{NEW}/` with a CHANGELOG skeleton and an architecture.json copied from the latest version (version field bumped), and updates the version fields in `.zcode-plugin/plugin.json`, `marketplace.json` (`plugins[0].version`), and the init assets' `.agentspace-version.json` / `.agentspace-architecture.json`.
+It creates `skills/agentspace-update/versions/v{NEW}/` with a CHANGELOG skeleton and an architecture.json copied from the latest version (version field bumped), and updates the version fields in `.zcode-plugin/plugin.json`, `.codex-plugin/plugin.json`, `marketplace.json` (`plugins[0].version`), and the init assets' `.agentspace-version.json` / `.agentspace-architecture.json`.
 
 ```
 skills/agentspace-update/versions/v{NEW}/
@@ -201,11 +201,11 @@ Any mismatch means a rule exists in one language only — fix before release.
 
 Fixed gate sequence for every release (hard gates, agent-driven execution — there is no single one-command pipeline; the gates below are the template):
 
-1. `new-version.sh X.Y.Z` — 5 version markers (plugin.json, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
+1. `new-version.sh X.Y.Z` — 6 version markers (both plugin manifests, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
 2. Write `versions/vX.Y.Z/CHANGELOG.md` — every change block carries Migration instructions (8a scripts / 8b AGENTS.md text ops / 8c markers / plugin-side / dev-only); this is the upgrade chain's instruction sheet.
 3. **Rehearse the update (MUST for every new changelog)**: `bash rehearse-update.sh <old-ref> <new-version>` — sandbox built from the previous version's assets (`git archive <old-ref>`), the new changelog's Migration instructions applied (8a + 8c mechanical; 8b agent-executed per the changelog), convergence verified (markers / scripts byte-identical / doctor green / status renders). Writes the record `versions/vX.Y.Z/rehearsal.md`; a release with a new changelog but no PASSING record fails verify-release [11].
 4. `bash verify-release.sh` → [pass] (checks [0]-[11], incl. the rehearsal record).
-5. `bash self-test.sh` → all green (t01-t16, incl. t13 full-chain replay).
+5. `bash self-test.sh` → all green (all `tests/t[0-9]*.sh`, incl. t13 full-chain replay and the plugin-manifest contract).
 6. code review pipeline (major + sub-1/sub-2 + merger + executor) — 发布走 code review.
 7. Commit + push.
 8. Nested workspace dogfooding upgrade — real /agentspace-update flow (8a/8b/8c), two-phase gate (pre-commit all green except doctor [0] → milestone commit → post-commit all green).
@@ -222,4 +222,3 @@ Hard-won contracts from the 2026-08-06 risk audit (8 findings + same-pattern swe
 4. **Every `$(...)` read path is guarded** — `2>/dev/null || true` (a bare awk/grep on a missing file aborts the whole script under `set -euo pipefail` and skips remaining checks).
 5. **Read-only commands must not write** — anything declared read-only (status.sh workbench) must stay read-only; write paths belong behind explicit gates (`--fix`) or dedicated scripts.
 6. **New tools join the environment gate** — lib.sh's toolchain list must include every external command the scripts use (head, cut, wc, ...).
-

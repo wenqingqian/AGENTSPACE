@@ -3,9 +3,11 @@
 # Release gate. Read-only. Checks (exit 0 = release-ready):
 #   [0] JSON validity            [5] asset <-> architecture file inventory
 #   [1] version consistency      [6] section/column contract in assets
-#   [2] archive chain            [7] bash -n on all .sh
-#   [3] CHANGELOG quality        [8] bilingual sync (skills)
-#   [4] constants contract       [9] SKILL size budget
+#   [1b] archive marker          [7] bash -n on all .sh
+#   [1c] Codex manifest          [8] bilingual sync (skills)
+#   [2] archive chain            [9] SKILL size budget
+#   [3] CHANGELOG quality        [11] release rehearsal
+#   [4] constants contract
 # Usage: bash verify-release.sh
 set -euo pipefail
 
@@ -18,7 +20,7 @@ echo "== AGENTSPACE verify-release: $ROOT =="
 
 # --- [0] JSON validity ------------------------------------------------------
 echo "[0] JSON validity"
-JSON_FILES=( "$ROOT/.zcode-plugin/plugin.json" "$ROOT/marketplace.json" "$ASSETS/.agentspace-version.json" "$ASSETS/.agentspace-architecture.json" "$VERSIONS"/v*/architecture.json )
+JSON_FILES=( "$ROOT/.zcode-plugin/plugin.json" "$ROOT/.codex-plugin/plugin.json" "$ROOT/marketplace.json" "$ASSETS/.agentspace-version.json" "$ASSETS/.agentspace-architecture.json" "$VERSIONS"/v*/architecture.json )
 for f in "${JSON_FILES[@]}"; do
   if ! python3 -m json.tool "$f" >/dev/null 2>&1; then
     echo "  [issue] invalid JSON: ${f#$ROOT/}"
@@ -29,6 +31,7 @@ done
 # --- [1-6] metadata & contract checks (single python pass) ------------------
 echo "[1] version consistency"
 echo "[1b] archive vs deployed marker"
+echo "[1c] Codex manifest contract"
 echo "[2] archive chain"
 echo "[3] CHANGELOG quality"
 echo "[4] constants contract"
@@ -54,7 +57,8 @@ dirs.sort(key=lambda d: vkey(d[1:]))
 # [1] version consistency across markers
 latest = dirs[-1][1:] if dirs else None
 marks = {
-    "plugin.json": jget(f"{root}/.zcode-plugin/plugin.json", lambda d: d["version"]),
+    ".zcode-plugin/plugin.json": jget(f"{root}/.zcode-plugin/plugin.json", lambda d: d["version"]),
+    ".codex-plugin/plugin.json": jget(f"{root}/.codex-plugin/plugin.json", lambda d: d["version"]),
     "marketplace.json": jget(f"{root}/marketplace.json", lambda d: d["version"]),
     "marketplace.json plugins[0]": jget(f"{root}/marketplace.json", lambda d: d["plugins"][0]["version"]),
     "assets/.agentspace-version.json": jget(f"{assets}/.agentspace-version.json", lambda d: d["version"]),
@@ -63,6 +67,57 @@ marks = {
 for k, v in marks.items():
     if v != latest:
         issues.append(f"[1] version mismatch: {k}={v}, latest archive v{latest}")
+
+# [1c] Codex manifest contract: portable release-gate subset of the Codex
+# ingestion schema. The release procedure additionally runs the official Codex
+# validator; this local check prevents obvious drift on machines without it.
+codex = jget(f"{root}/.codex-plugin/plugin.json", lambda x: x)
+allowed_top = {
+    "id", "name", "version", "description", "skills", "apps", "mcpServers",
+    "interface", "author", "homepage", "repository", "license", "keywords",
+}
+if not isinstance(codex, dict):
+    issues.append("[1c] .codex-plugin/plugin.json missing or invalid")
+else:
+    unknown = sorted(set(codex) - allowed_top)
+    if unknown:
+        issues.append(f"[1c] unsupported top-level fields: {', '.join(unknown)}")
+    for field in ("name", "version", "description"):
+        if not isinstance(codex.get(field), str) or not codex[field].strip():
+            issues.append(f"[1c] required non-empty field: {field}")
+    if codex.get("name") != "agentspace":
+        issues.append(f"[1c] plugin name must be agentspace, got {codex.get('name')!r}")
+    skills_path = str(codex.get("skills", "")).rstrip("/")
+    if skills_path not in ("skills", "./skills"):
+        issues.append(f"[1c] skills path must resolve to skills, got {codex.get('skills')!r}")
+    author = codex.get("author")
+    if not isinstance(author, dict) or not isinstance(author.get("name"), str) or not author["name"].strip():
+        issues.append("[1c] author.name is required")
+    interface = codex.get("interface")
+    required_interface = (
+        "displayName", "shortDescription", "longDescription", "developerName", "category",
+    )
+    if not isinstance(interface, dict):
+        issues.append("[1c] interface object is required")
+    else:
+        for field in required_interface:
+            if not isinstance(interface.get(field), str) or not interface[field].strip():
+                issues.append(f"[1c] required non-empty interface.{field}")
+        caps = interface.get("capabilities")
+        if not isinstance(caps, list) or not all(isinstance(x, str) and x.strip() for x in caps):
+            issues.append("[1c] interface.capabilities must be an array of non-empty strings")
+        prompts = interface.get("defaultPrompt")
+        if (not isinstance(prompts, list) or not prompts or len(prompts) > 3
+                or not all(isinstance(x, str) and x.strip() and len(x) <= 128 for x in prompts)):
+            issues.append("[1c] interface.defaultPrompt must contain 1-3 non-empty strings <=128 chars")
+        for field in ("composerIcon", "logo", "logoDark"):
+            raw = interface.get(field)
+            if raw is None:
+                continue
+            if not isinstance(raw, str) or not raw.startswith("./") or ".." in raw.split("/"):
+                issues.append(f"[1c] interface.{field} must be a safe relative path")
+            elif not os.path.isfile(os.path.join(root, raw[2:])):
+                issues.append(f"[1c] interface.{field} asset missing: {raw}")
 
 # [1b] deployed marker must not drift from the latest archive (modulo version)
 if latest:
