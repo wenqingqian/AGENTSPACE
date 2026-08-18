@@ -36,7 +36,7 @@ Initialize with explicit `/agentspace-init` to create `AGENTSPACE/` (independent
 
 ## Installation
 
-Install this repository through the plugin mechanism supported by your platform, then enable it. The repository includes native manifests for both existing supported platforms; installation remains a user action.
+Install this repository through the plugin mechanism supported by your platform, then enable it. The repository includes native manifests for the supported platforms (ZCode / Codex / Kimi); installation remains a user action.
 
 ## Usage
 
@@ -67,6 +67,7 @@ One-shot session handoffs (`/agentspace-handoff-produce` / `/agentspace-handoff-
 ## Plugin Structure
 
 ```
+kimi.plugin.json                  # Kimi-compatible manifest
 .codex-plugin/plugin.json        # Codex-compatible manifest
 .zcode-plugin/plugin.json        # Existing manifest
 commands/agentspace-init.md        # /agentspace-init command
@@ -91,6 +92,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v0.6.3 | 2026-08-19 | Added the Kimi-compatible manifest (`kimi.plugin.json`) with triple-manifest version sync and release validation; shared skill descriptions, instructions, workspace assets, and command behavior unchanged |
 | v0.6.2 | 2026-08-16 | Added the Codex-required plugin manifest and release validation while leaving shared skill descriptions, instructions, workspace assets, and command behavior unchanged |
 | v0.6.1 | 2026-08-15 | commit-text quality: gate + doctor [15] blank-title rule (lib.sh single source) + agentspace-commit skill Commit-text Quality rubric (property-based standard: title = one-line description of the change, no experiment/run identifiers, no information-free titles; body explains why; title/body must relate to the actual diff via git show --stat; type prefix recommended not required) + agentspace-doctor Phase C Block 2 three-dimension audit (bookkeeping variants / quality / relevance, sha + dimension + suggestion, report-only) |
 | v0.6.0 | 2026-08-15 | commit discipline: key code-repo registry (.agentspace-repos + repos.sh, user-confirmed registration) + agentspace-commit skill + commit-check.sh gate (message bookkeeping-id ban / experiment-output signatures / ≥50MB blobs / AGENTSPACE paths; exit 0/1/2) + doctor [14] registry consistency (stale rows / nested shield via git check-ignore / ls-files+gitlink leak / 7-day hot-repo warning) + [15] ex-post commit audit (recent 20, report-only) + status 关键代码仓库 section + multi-repo 代码提交 (3/repo, empty-registry host fallback) + init registration step + guidance-block gate rule + standalone whitelist exemption for registered repos |

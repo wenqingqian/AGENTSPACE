@@ -36,7 +36,7 @@
 
 ## 安装
 
-通过所在平台支持的插件机制安装并启用本仓库。本仓库同时包含现有两个受支持平台的原生清单；安装始终由用户执行。
+通过所在平台支持的插件机制安装并启用本仓库。本仓库同时包含三个受支持平台(ZCode / Codex / Kimi)的原生清单；安装始终由用户执行。
 
 ## 使用
 
@@ -67,6 +67,7 @@ AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 ## 插件结构
 
 ```
+kimi.plugin.json                  # Kimi 兼容清单
 .codex-plugin/plugin.json        # Codex 兼容清单
 .zcode-plugin/plugin.json        # 既有清单
 commands/agentspace-init.md      # /agentspace-init 命令
@@ -91,6 +92,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.2 | 2026-08-16 | 新增 Codex 强制插件清单与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.1 | 2026-08-15 | commit 文本质量: 门 + doctor [15] 空标题规则(lib.sh 单源)+ agentspace-commit skill Commit-text Quality rubric(性质标准: 标题=一句话代码改动描述, 无实验/run 标识, 无无信息标题; 正文解释 why; 标题/正文须与 diff 相关(git show --stat); 类型前缀推荐不强制)+ agentspace-doctor Phase C Block 2 三维审计(记账变体/质量/相关性, sha+维度+建议, 只报告) |
 | v0.6.0 | 2026-08-15 | commit 规范: 关键代码仓库登记处(.agentspace-repos + repos.sh, 登记须用户确认)+ agentspace-commit skill + commit-check.sh 门(message 记账 id 禁令 / 实验输出特征 / ≥50MB blob / AGENTSPACE 路径; exit 0/1/2)+ doctor [14] 登记一致性(陈旧行 / 内嵌盾牌 git check-ignore 行为检测 / ls-files+gitlink 泄漏 / 7 天热仓库告警)+ [15] commit 事后审计(最近 20 条, 只报告)+ status 关键代码仓库分区 + 多仓库代码提交(每仓库 3 条, 空登记回退宿主)+ init 登记步骤 + 引导块铁律行 + standalone 白名单对登记仓库豁免 |

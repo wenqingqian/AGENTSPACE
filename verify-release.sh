@@ -5,8 +5,9 @@
 #   [1] version consistency      [6] section/column contract in assets
 #   [1b] archive marker          [7] bash -n on all .sh
 #   [1c] Codex manifest          [8] bilingual sync (skills)
-#   [2] archive chain            [9] SKILL size budget
-#   [3] CHANGELOG quality        [11] release rehearsal
+#   [1d] Kimi manifest           [9] SKILL size budget
+#   [2] archive chain            [11] release rehearsal
+#   [3] CHANGELOG quality
 #   [4] constants contract
 # Usage: bash verify-release.sh
 set -euo pipefail
@@ -20,7 +21,7 @@ echo "== AGENTSPACE verify-release: $ROOT =="
 
 # --- [0] JSON validity ------------------------------------------------------
 echo "[0] JSON validity"
-JSON_FILES=( "$ROOT/.zcode-plugin/plugin.json" "$ROOT/.codex-plugin/plugin.json" "$ROOT/marketplace.json" "$ASSETS/.agentspace-version.json" "$ASSETS/.agentspace-architecture.json" "$VERSIONS"/v*/architecture.json )
+JSON_FILES=( "$ROOT/.zcode-plugin/plugin.json" "$ROOT/.codex-plugin/plugin.json" "$ROOT/kimi.plugin.json" "$ROOT/marketplace.json" "$ASSETS/.agentspace-version.json" "$ASSETS/.agentspace-architecture.json" "$VERSIONS"/v*/architecture.json )
 for f in "${JSON_FILES[@]}"; do
   if ! python3 -m json.tool "$f" >/dev/null 2>&1; then
     echo "  [issue] invalid JSON: ${f#$ROOT/}"
@@ -32,6 +33,7 @@ done
 echo "[1] version consistency"
 echo "[1b] archive vs deployed marker"
 echo "[1c] Codex manifest contract"
+echo "[1d] Kimi manifest contract"
 echo "[2] archive chain"
 echo "[3] CHANGELOG quality"
 echo "[4] constants contract"
@@ -59,6 +61,7 @@ latest = dirs[-1][1:] if dirs else None
 marks = {
     ".zcode-plugin/plugin.json": jget(f"{root}/.zcode-plugin/plugin.json", lambda d: d["version"]),
     ".codex-plugin/plugin.json": jget(f"{root}/.codex-plugin/plugin.json", lambda d: d["version"]),
+    "kimi.plugin.json": jget(f"{root}/kimi.plugin.json", lambda d: d["version"]),
     "marketplace.json": jget(f"{root}/marketplace.json", lambda d: d["version"]),
     "marketplace.json plugins[0]": jget(f"{root}/marketplace.json", lambda d: d["plugins"][0]["version"]),
     "assets/.agentspace-version.json": jget(f"{assets}/.agentspace-version.json", lambda d: d["version"]),
@@ -118,6 +121,43 @@ else:
                 issues.append(f"[1c] interface.{field} must be a safe relative path")
             elif not os.path.isfile(os.path.join(root, raw[2:])):
                 issues.append(f"[1c] interface.{field} asset missing: {raw}")
+
+# [1d] Kimi manifest contract: portable release-gate subset of the Kimi
+# ingestion schema (kimi.plugin.json — name required, [a-z0-9][a-z0-9_-]{0,63}).
+# Kimi installs via /plugins install (local/zip/GitHub); no marketplace file.
+kimi = jget(f"{root}/kimi.plugin.json", lambda x: x)
+kimi_allowed_top = {
+    "name", "version", "description", "keywords", "author", "homepage",
+    "license", "interface", "skills", "agents", "commands", "mcpServers",
+    "hooks", "sessionStart", "systemPrompt", "systemPromptPath",
+}
+if not isinstance(kimi, dict):
+    issues.append("[1d] kimi.plugin.json missing or invalid")
+else:
+    unknown = sorted(set(kimi) - kimi_allowed_top)
+    if unknown:
+        issues.append(f"[1d] unsupported top-level fields: {', '.join(unknown)}")
+    for field in ("name", "version", "description"):
+        if not isinstance(kimi.get(field), str) or not kimi[field].strip():
+            issues.append(f"[1d] required non-empty field: {field}")
+    kimi_name = kimi.get("name", "")
+    if kimi_name != "agentspace":
+        issues.append(f"[1d] plugin name must be agentspace, got {kimi_name!r}")
+    elif not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", kimi_name):
+        issues.append(f"[1d] plugin name violates [a-z0-9][a-z0-9_-]{{0,63}}: {kimi_name!r}")
+    skills_path = str(kimi.get("skills", "")).rstrip("/")
+    if skills_path not in ("skills", "./skills"):
+        issues.append(f"[1d] skills path must resolve to skills, got {kimi.get('skills')!r}")
+    kimi_interface = kimi.get("interface")
+    required_interface_kimi = (
+        "displayName", "shortDescription", "longDescription", "developerName", "websiteURL",
+    )
+    if not isinstance(kimi_interface, dict):
+        issues.append("[1d] interface object is required")
+    else:
+        for field in required_interface_kimi:
+            if not isinstance(kimi_interface.get(field), str) or not kimi_interface[field].strip():
+                issues.append(f"[1d] required non-empty interface.{field}")
 
 # [1b] deployed marker must not drift from the latest archive (modulo version)
 if latest:

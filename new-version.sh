@@ -2,7 +2,8 @@
 # Dev tool — repo root only, NOT part of the deployed plugin.
 # Scaffold a new plugin version: create the versions/vX.Y.Z/ archive (CHANGELOG
 # skeleton + architecture snapshot copied from the latest version) and bump the
-# version fields in both platform manifests / marketplace.json / init assets.
+# version fields in all three platform manifests (zcode/codex/kimi) /
+# marketplace.json / init assets.
 #
 # Usage: bash new-version.sh X.Y.Z
 # After running: fill the CHANGELOG migration details (DEVELOPMENT.md quality
@@ -88,6 +89,7 @@ ver, root = sys.argv[1], sys.argv[2]
 targets = [
     (f"{root}/.zcode-plugin/plugin.json", lambda d: d.__setitem__("version", ver)),
     (f"{root}/.codex-plugin/plugin.json", lambda d: d.__setitem__("version", ver)),
+    (f"{root}/kimi.plugin.json", lambda d: d.__setitem__("version", ver)),
     # marketplace carries BOTH a top-level version and plugins[0].version —
     # one lambda per field would reload the unmodified file and the last write
     # wins, dropping the other field (drift caught by verify-release [1])
@@ -118,7 +120,7 @@ echo ""
 echo "Scaffolded v$NEW (from v$LATEST):"
 echo "  - versions/v$NEW/CHANGELOG.md      (fill in migration details)"
 echo "  - versions/v$NEW/architecture.json (adjust sections/columns/constants to the actual changes)"
-echo "  - version fields bumped in both plugin manifests / marketplace.json / init assets"
+echo "  - version fields bumped in all three plugin manifests / marketplace.json / init assets"
 echo ""
 echo "Next:"
 echo "  1. Write CHANGELOG migration steps (DEVELOPMENT.md quality requirements)"

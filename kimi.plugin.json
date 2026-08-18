@@ -7,7 +7,6 @@
     "url": "https://github.com/wenqingqian"
   },
   "homepage": "https://github.com/wenqingqian/AGENTSPACE",
-  "repository": "https://github.com/wenqingqian/AGENTSPACE",
   "license": "MIT",
   "keywords": [
     "agentspace",
@@ -23,18 +22,6 @@
     "shortDescription": "Git-managed workspace for experiment-driven projects.",
     "longDescription": "Plan and track experiment-driven work with Git-backed plans, iterations, environment records, reusable tools, and durable notes.",
     "developerName": "wenqingqian",
-    "category": "Engineering",
-    "capabilities": [
-      "Interactive",
-      "Write"
-    ],
-    "websiteURL": "https://github.com/wenqingqian/AGENTSPACE",
-    "defaultPrompt": [
-      "Initialize an AGENTSPACE workspace in this project.",
-      "Show the current AGENTSPACE project status.",
-      "Audit this AGENTSPACE workspace for consistency."
-    ],
-    "composerIcon": "./icons/icon.png",
-    "logo": "./icons/icon.png"
+    "websiteURL": "https://github.com/wenqingqian/AGENTSPACE"
   }
 }

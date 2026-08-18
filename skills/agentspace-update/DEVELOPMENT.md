@@ -35,7 +35,7 @@ Run the scaffolding tool (repo root, dev-only — NOT part of the deployed plugi
 bash new-version.sh 0.2.11
 ```
 
-It creates `skills/agentspace-update/versions/v{NEW}/` with a CHANGELOG skeleton and an architecture.json copied from the latest version (version field bumped), and updates the version fields in `.zcode-plugin/plugin.json`, `.codex-plugin/plugin.json`, `marketplace.json` (`plugins[0].version`), and the init assets' `.agentspace-version.json` / `.agentspace-architecture.json`.
+It creates `skills/agentspace-update/versions/v{NEW}/` with a CHANGELOG skeleton and an architecture.json copied from the latest version (version field bumped), and updates the version fields in `.zcode-plugin/plugin.json`, `.codex-plugin/plugin.json`, `kimi.plugin.json`, `marketplace.json` (`plugins[0].version`), and the init assets' `.agentspace-version.json` / `.agentspace-architecture.json`.
 
 ```
 skills/agentspace-update/versions/v{NEW}/
@@ -201,7 +201,7 @@ Any mismatch means a rule exists in one language only — fix before release.
 
 Fixed gate sequence for every release (hard gates, agent-driven execution — there is no single one-command pipeline; the gates below are the template):
 
-1. `new-version.sh X.Y.Z` — 6 version markers (both plugin manifests, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
+1. `new-version.sh X.Y.Z` — 7 version markers (all three plugin manifests, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
 2. Write `versions/vX.Y.Z/CHANGELOG.md` — every change block carries Migration instructions (8a scripts / 8b AGENTS.md text ops / 8c markers / plugin-side / dev-only); this is the upgrade chain's instruction sheet.
 3. **Rehearse the update (MUST for every new changelog)**: `bash rehearse-update.sh <old-ref> <new-version>` — sandbox built from the previous version's assets (`git archive <old-ref>`), the new changelog's Migration instructions applied (8a + 8c mechanical; 8b agent-executed per the changelog), convergence verified (markers / scripts byte-identical / doctor green / status renders). Writes the record `versions/vX.Y.Z/rehearsal.md`; a release with a new changelog but no PASSING record fails verify-release [11].
 4. `bash verify-release.sh` → [pass] (checks [0]-[11], incl. the rehearsal record).
