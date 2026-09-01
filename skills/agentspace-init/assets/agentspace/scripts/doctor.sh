@@ -639,13 +639,20 @@ fi
 # ---- 15. commit discipline audit (registered repos, recent COMMIT_AUDIT_N) ----
 # Ex-post net for whatever the pre-commit gate missed (manual commits, agent
 # lapses). Same rule table as commit-check.sh — regexes/constants single-
-# sourced in lib.sh. REPORT-ONLY: rewriting history (rebase/filter-repo) is
-# destructive and always the user's call; no tier touches it.
-# Cost bound: per commit one git log (%B) + one git show (paths); the
-# per-file cat-file size check runs only when the commit touches ≤
-# COMMIT_SIZE_CHECK_MAX paths — one forked git cat-file -s per file on a huge
-# commit would make every doctor run take minutes (the path-rule warnings
-# still run for every path). Window fixed at COMMIT_AUDIT_N commits.
+# sourced in lib.sh; since v0.6.4 the content ban (added lines: code comments
+# / string literals, via as_diff_added_hits) is audited too, first hit per
+# category (message / content / blank-title) so no class is subsumed by another.
+# REPORT-ONLY: rewriting history (rebase/filter-repo) is destructive and always
+# the user's call; no tier touches it.
+# Cost bound: per commit one git log (%B) + one git show (paths) + one git show
+# (-U0 patch, content); the per-file cat-file size check runs only when the
+# commit touches ≤ COMMIT_SIZE_CHECK_MAX paths, and the content scan truncates
+# past COMMIT_AUDIT_LINE_MAX added lines — unbounded patch streams on huge
+# commits would make every doctor run take minutes. Window fixed at
+# COMMIT_AUDIT_N commits. Merge commits render as combined diffs — leaks are
+# still detected but line numbers/excerpts are approximate; the report-only
+# tier accepts this (a --first-parent switch would desync from the paths walk
+# and is deliberately not taken).
 echo "[15] commit discipline audit"
 while IFS= read -r repo; do
   [ -n "$repo" ] || continue
@@ -661,6 +668,23 @@ while IFS= read -r repo; do
     if as_msg_title_blank "$msg"; then
       warn "$repo @$sha: commit 标题为空或纯空白 (已落历史, 只报告: 处置由用户决定)"
     fi
+    # content ban: added lines of the commit's own patch (same matcher as the
+    # gate; deletions/binary/pure-rename never match). First hit per commit.
+    if ! git -C "$repo" cat-file -e "$sha^{commit}" 2>/dev/null; then
+      printf '  [note] %s @%s: commit 对象不可读 — 内容扫描跳过\n' "$repo" "$sha"
+      chits=""
+    else
+    chits="$(git -C "$repo" -c diff.noprefix=false -c diff.mnemonicprefix=false show --no-ext-diff -M -U0 --diff-filter=ACMRT --format= "$sha" 2>/dev/null \
+             | AS_LINE_MAX="$COMMIT_AUDIT_LINE_MAX" as_diff_added_hits 2>/dev/null || true)"
+    chit="$(printf '%s\n' "$chits" | awk -F'\t' '$2 != "-more" && $2 != "-budget" { print; exit }' 2>/dev/null || true)"
+    if [ -n "$chit" ]; then
+      cpath="${chit%%$'\t'*}"; crest="${chit#*$'\t'}"
+      clin="${crest%%$'\t'*}"; cex="${crest#*$'\t'}"
+      warn "$repo @$sha: commit 新增内容(代码/注释)含记账引用 — $cpath:$clin \"$cex\" (已落历史, 只报告: 处置由用户决定)"
+    fi
+    printf '%s\n' "$chits" | grep -Fq $'\t-budget\t' && \
+      printf '  [note] %s @%s: 内容扫描达新增行预算 — 截断\n' "$repo" "$sha"
+    fi
     npaths=0; paths=""
     while IFS= read -r -d '' p; do
       [ -n "$p" ] || continue
@@ -675,7 +699,7 @@ while IFS= read -r repo; do
       for d in $COMMIT_SIG_DIRS; do
         [ "$top" = "$d" ] && { warn "$repo @$sha: commit 含实验输出目录 $d/ ($p)"; break; }
       done
-    done < <(git -C "$repo" show --name-only -z --format= --diff-filter=ACMT "$sha" 2>/dev/null || true)
+    done < <(git -C "$repo" show -M --name-only -z --format= --diff-filter=ACMRT "$sha" 2>/dev/null || true)
     if [ "$npaths" -gt "$COMMIT_SIZE_CHECK_MAX" ]; then
       printf '  [note] %s @%s: commit 触碰 %s 个路径(> %s) — 超大文件尺寸检查跳过\n' "$repo" "$sha" "$npaths" "$COMMIT_SIZE_CHECK_MAX"
     else

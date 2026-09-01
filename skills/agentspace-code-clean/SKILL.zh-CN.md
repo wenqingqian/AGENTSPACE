@@ -1,11 +1,11 @@
 ---
-name: agentspace-commit
-description: AGENTSPACE 关键代码仓库的 commit 门。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。
+name: agentspace-code-clean
+description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件、新增代码/注释行与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit — message 里不出现, 代码与注释里也不出现; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。
 ---
 
-# AGENTSPACE Commit 门
+# AGENTSPACE Code-Clean 提交门
 
-适用于**已登记关键代码仓库**(`AGENTSPACE/.agentspace-repos`)里的一切 `git commit`。AGENTSPACE 台账仓库自身**豁免** — 记账 id 是台账的母语, 永远不要对台账仓库运行此门。
+适用于**已登记关键代码仓库**(`AGENTSPACE/.agentspace-repos`)里的一切 `git commit`。AGENTSPACE 台账仓库自身**豁免** — 记账 id 是台账的母语, 永远不要对台账仓库运行此门。(v0.6.4 由 agentspace-commit 更名而来 — 门的范围从 commit message 扩大到提交内容; 脚本名 `commit-check.sh` 不变。)
 
 ## 门(MUST)
 
@@ -35,6 +35,18 @@ description: AGENTSPACE 关键代码仓库的 commit 门。在任何登记于 AG
 
 归属信息不会丢 — 它只是回家: iteration readme 记录宿主起始/结束 commit SHA(`> 宿主起始/结束 commit:`, close-iteration.sh 自动写)。工作区按 SHA 找 commit; commit 永不回指。
 
+## 代码与注释规则(新增行 — 确定性 + 语义层)
+
+同样的 idiom 禁止出现在 commit **新增**的内容里 — 代码注释、字符串字面量、任何文本行(v0.6.4)。脚本扫描新增 diff 行(改名只计其被编辑的 hunk; 大小写不敏感; 报告为 `文件:行号` + 摘录; 每文件至多列 5 条命中, 之后一条形如 `+N more …` 的英文尾注)。删除行永不阻断 — 清除旧泄漏永远放行; 二进制文件与纯改名没有新增行。在此之上, **你**必须语义拦截新增行里脚本看不到的形态:
+
+- 代码/注释里的变体拼写: `plan_0013`、`plan 13`、"迭代 3" — 任何形态的工作区记账引用。
+- 注释里的记账叙述("本轮迭代新增…"、"按工作区状态更新") — 注释只描述**代码本身**, 一个字都不多。
+- 注释里的实验/run 标识(`# 6-run on .42`) — 这些属于 iteration readme / `data/`。
+- Diff 形状内容 — 以 `++ `/`-- ` 开头的行(粘贴的 diff、xtrace 日志)— 描述改动本身, 永不粘贴工作区 diff。
+- 合法却仍会命中的形态(YAML `plan: 0NNN` 键、`iteration_0NNN.pt` 文件名): 把键名/常量改名为描述其角色 — 归属由 iteration readme 承担; CJK/全角变体(`：`、`０００１`)是你的语义层, 脚本只认 ASCII。
+
+确实必须引用标准 id 的内容(生成工作区引用的工具、夹具快照)归 `AGENTSPACE/utils/` 或所属 iteration 的 `data/` — 永不进代码仓库。
+
 ## Commit 文本质量(语义层 — 你的判断, 两问)
 
 记账之外, 每条 commit 文本草稿都要过两问(标题 = 第一行; 正文可选)。两问都是**你的判断** — 脚本只抓空标题。
@@ -51,21 +63,21 @@ description: AGENTSPACE 关键代码仓库的 commit 门。在任何登记于 AG
 
 ## 文件规则
 
-硬阻断(绝不落地): `AGENTSPACE/` 路径(内嵌工作区内容或 gitlink)· 实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)· 单 blob ≥ 50MB。
+硬阻断(绝不落地): `AGENTSPACE/` 路径(内嵌工作区内容或 gitlink)· 实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)· 单 blob ≥ 50MB。改名可被识别(`-M`): 改名进入阻断路径的文件(如顶层 `wandb/`)按新路径阻断。
 
 WARN(不阻断 — 由你结合仓库上下文判断): 数据/模型扩展名 ≥ 100KB(.npy/.pt/.ckpt/.h5/.parquet/.safetensors/.onnx/.log 等)· 顶层输出目录(`runs/ outputs/ checkpoints/ logs/ results/ exps/ experiments/`)。合法情形存在(测试小夹具、日志库的 `logs/` 源码目录), 但每条 WARN 都必须连同你的判断摆给用户。
 
-## 阻断后的导流(MUST, 数据类违规)
+## 阻断后的导流(MUST)
 
-实验输出不属于代码仓库 — 搬回家, 不是删掉:
-
-1. `git reset -- <path>` 取消暂存。
-2. 搬进当前 iteration: `mv <path> AGENTSPACE/iterations/iteration_NNNN/data/`(已 gitignore — 即 AGENTS.md 数据收集三策略的第 3 条)。
-3. 程序写死输出目录的, 建议把该目录加进仓库 `.gitignore` — 写宿主文件必须经用户同意, 无一例外。
-4. 重新过门。
+- **内容违规**(新增行): 改写该注释/代码行, 使其描述改动本身 — 归属信息由 iteration readme 的宿主 SHA 承担, 永不写进代码。重新暂存、重新过门。禁止把 id 变形混过正则 — 那是戴面具的泄漏。
+- **数据违规**: 实验输出不属于代码仓库 — 搬回家, 不是删掉:
+  1. `git reset -- <path>` 取消暂存。
+  2. 搬进当前 iteration: `mv <path> AGENTSPACE/iterations/iteration_NNNN/data/`(已 gitignore — 即 AGENTS.md 数据收集三策略的第 3 条)。
+  3. 程序写死输出目录的, 建议把该目录加进仓库 `.gitignore` — 写宿主文件必须经用户同意, 无一例外。
+  4. 重新过门。
 
 ## 边界
 
 - 永不给托管仓库装 git hook; 永不主动写入托管仓库(工作区对代码仓库无感)。
-- 历史违规(已提交的)由 `doctor.sh` [15] 与 `/agentspace-doctor` 报告 — 永远只报告。改写历史(rebase / filter-repo)是用户的决定与用户自己的操作。
+- 历史违规(已提交的), 无论 message 还是内容: 由 `doctor.sh` [15](内容: 近期 commit 的新增行, 每类首命中 — message / 内容 / 空标题 三类不互相遮蔽)与 `/agentspace-doctor` 报告 — 永远只报告。改写历史(rebase / filter-repo)是用户的决定与用户自己的操作。
 - 登记变更(`repos.sh --add/--remove`)每次都必须用户显式确认。

@@ -91,7 +91,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 ## 3. 纪律
 
-- **[MUST] 登记仓库 commit 门** — 在登记于 `AGENTSPACE/.agentspace-repos` 的仓库执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 且通过才可提交; 未登记仓库一律不 commit(先提议登记, 用户确认后再提交)。完整规则见 agentspace-commit skill 与 AGENTS.md "关键代码仓库"节
+- **[MUST] 登记仓库 commit 门** — 在登记于 `AGENTSPACE/.agentspace-repos` 的仓库执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 且通过才可提交; 未登记仓库一律不 commit(先提议登记, 用户确认后再提交)。完整规则见 agentspace-code-clean skill 与 AGENTS.md "关键代码仓库"节
 - `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` **只能由 scripts/ 改写** — 一律调脚本, 不手工编辑表格
 - 内容文档(plan 文档 / iteration readme / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
 - 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN`; 不用路径, 不用 latest

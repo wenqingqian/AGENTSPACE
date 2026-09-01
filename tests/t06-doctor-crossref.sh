@@ -101,7 +101,8 @@ rm -rf "$SB"
 SB="$(build_sandbox t06c)"
 WS="$SB/AGENTSPACE"
 make_note "$WS" "malformed-note" "Malformed note" "<!-- 必填: plan:NNNN / iteration_NNNN 等证据引用 -->" ""
-add_note_row "$WS" "malformed-note" "Malformed note" "plan:0001"
+# runtime-constructed id (self-hosting: no realized literal in tracked files)
+add_note_row "$WS" "malformed-note" "Malformed note" "$(printf 'plan:%04d' 1)"
 git -C "$WS" add -A >/dev/null 2>&1
 git -C "$WS" commit -qm "test: t06c milestone" >/dev/null 2>&1
 OUT="$(bash "$WS/scripts/doctor.sh" 2>&1 || true)"
@@ -140,8 +141,9 @@ SB="$(build_sandbox t06f)"
 WS="$SB/AGENTSPACE"
 OUT="$(bash "$WS/scripts/new-plan.sh" "Norm Note Plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
-# hand-write the ref WITHOUT zero padding: plan:1 instead of plan:0001.
-# ${PID#0} strips ONE leading zero → plan:001; strip ALL for plan:1.
+# hand-write the ref WITHOUT zero padding: the plan-1 form instead of the
+# canonical %04d zero-padded spelling.
+# ${PID#0} strips ONE leading zero → plan:001; strip ALL for the unpadded form.
 REF="plan:${PID#${PID%%[1-9]*}}"
 make_note "$WS" "padded-note" "Padded note" "$REF" ""
 add_note_row "$WS" "padded-note" "Padded note" "$REF"

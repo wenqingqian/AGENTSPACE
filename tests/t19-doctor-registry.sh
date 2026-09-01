@@ -76,7 +76,9 @@ assert_output_not_contains "$OUT" "近期活跃但未登记"
 # --- 5) [15] ex-post audit: a violating commit already in history ---
 mkdir -p "$SB/wandb" && echo x > "$SB/wandb/run.db"
 git -C "$SB" add wandb/run.db
-git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "plan:0013 的训练结果" >/dev/null
+# the banned message is CONSTRUCTED at runtime — no realized literal in this file
+BADMSG="$(printf 'plan:%04d 的训练结果' 13)"
+git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "$BADMSG" >/dev/null
 OUT="$(bash "$WS/scripts/doctor.sh" || true)"
 assert_output_contains "$OUT" "commit message 含工作区记账引用"
 assert_output_contains "$OUT" "commit 含实验输出目录 wandb/"
@@ -93,6 +95,26 @@ rm -rf "$SB/wandb"
 OUT="$(bash "$WS/scripts/doctor.sh" || true)"
 # the violating commit remains in history forever — [15] keeps reporting it
 assert_output_contains "$OUT" "记账引用"
+# [15] content audit (v0.6.4): a committed leaky comment is reported per commit,
+# first hit per category — content is never subsumed by message findings
+CLEAK="$(printf '# plan:%04d tuned lr here' 1)"
+printf 'x = 1\n%s\n' "$CLEAK" > "$SB/note_leak.py"
+git -C "$SB" add note_leak.py
+git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "add config" >/dev/null
+OUT="$(bash "$WS/scripts/doctor.sh" || true)"
+assert_output_contains "$OUT" "新增内容(代码/注释)含记账引用"
+assert_output_contains "$OUT" "note_leak.py:2"
+# [15] per-category non-masking: ONE commit carrying BOTH a banned message and
+# a leaking added line is reported under BOTH categories at the same @sha —
+# neither class subsumes the other. Ids CONSTRUCTED at runtime.
+printf 'x = 1\n# see %s\n' "$(printf 'plan:%04d' 2)" > "$SB/mixed.py"
+git -C "$SB" add mixed.py
+BADMSG2="$(printf 'plan:%04d mixed' 7)"
+git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "$BADMSG2" >/dev/null
+MSHA="$(git -C "$SB" rev-parse --short HEAD)"
+OUT="$(bash "$WS/scripts/doctor.sh" || true)"
+assert_output_contains "$OUT" "@$MSHA: commit message 含工作区记账引用"
+assert_output_contains "$OUT" "@$MSHA: commit 新增内容"
 # [15] deterministic quality rule: a blank-title commit is flagged (report-only)
 git -C "$SB" -c user.name=test -c user.email=test@test commit -q --allow-empty --allow-empty-message -m "" >/dev/null
 OUT="$(bash "$WS/scripts/doctor.sh" || true)"

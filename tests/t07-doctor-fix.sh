@@ -40,7 +40,7 @@ import sys
 p = sys.argv[1]
 s = open(p).read()
 s = s.replace("| --- | --- | --- | --- | --- |",
-              "| --- | --- | --- | --- | --- |\n| 8888 | plan:0001 | orphan | 2026-08-03 | [iterations/latest](iterations/latest) |", 1)
+              "| --- | --- | --- | --- | --- |\n| 8888 | plan:%04d | orphan | 2026-08-03 | [iterations/latest](iterations/latest) |" % 1, 1)
 open(p, "w").write(s)
 EOF
 git -C "$WS" add -A >/dev/null 2>&1
@@ -97,7 +97,7 @@ python3 - "$WS/notes/ro-note.md" <<'EOF'
 import sys
 p = sys.argv[1]
 s = open(p).read()
-s = s.replace("<!-- 必填: plan:NNNN / iteration_NNNN 等证据引用 -->", "plan:0001")
+s = s.replace("<!-- 必填: plan:NNNN / iteration_NNNN 等证据引用 -->", "plan:%04d" % 1)
 open(p, "w").write(s)
 EOF
 git -C "$WS" add -A >/dev/null 2>&1

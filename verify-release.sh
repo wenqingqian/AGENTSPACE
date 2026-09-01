@@ -7,10 +7,13 @@
 #   [1c] Codex manifest          [8] bilingual sync (skills)
 #   [1d] Kimi manifest           [9] SKILL size budget
 #   [2] archive chain            [11] release rehearsal
-#   [3] CHANGELOG quality
-#   [4] constants contract
+#   [3] CHANGELOG quality        [12] realized-literal guard (self-hosting)
+#   [4] constants contract (+reverse: lib.sh COMMIT_* → architecture)
 # Usage: bash verify-release.sh
 set -euo pipefail
+# Byte-exact, locale-independent semantics for the whole gate (grep/sed/python
+# included) — mirrors lib.sh's own LC_ALL=C export.
+export LC_ALL=C
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 VERSIONS="$ROOT/skills/agentspace-update/versions"
@@ -204,7 +207,10 @@ for d in dirs:
     if "**Migration" not in cl:
         issues.append(f"[3] {d}: CHANGELOG has no '**Migration' guidance")
 
-# [4] constants contract: SEC_/STATUS_ in lib.sh, RESULT_/RESUME_ in templates
+# [4] constants contract: SEC_/STATUS_ in lib.sh, RESULT_/RESUME_ in templates.
+# Reverse pass: every constant declared readonly in lib.sh must exist in the
+# architecture snapshot — the forward pass only catches arch→lib drift; a new
+# lib.sh constant shipped without its architecture record would pass silently.
 arch = jget(f"{versions}/v{latest}/architecture.json", lambda x: x) if latest else None
 if arch:
     lib_sh = open(f"{assets}/scripts/lib.sh").read()
@@ -215,6 +221,9 @@ if arch:
             issues.append(f"[4] constant {name}={val!r} (name=value pair) missing in assets/scripts/lib.sh")
         if name.startswith(("RESULT_", "RESUME_")) and val not in tmpls:
             issues.append(f"[4] constant {name}={val!r} missing in assets/templates/*.md")
+    for m in re.finditer(r'readonly ([A-Z][A-Z0-9_]+)=', lib_sh):
+        if m.group(1) not in arch.get("constants", {}):
+            issues.append(f"[4] lib.sh constant {m.group(1)} missing from architecture constants (reverse pass)")
 
 # [5] file inventory: every architecture file exists in assets, and vice versa
 if arch:
@@ -322,20 +331,23 @@ bilingual "$ROOT/skills/agentspace"
 bilingual "$ROOT/skills/agentspace-update"
 bilingual "$ROOT/skills/agentspace-doctor"
 bilingual "$ROOT/skills/agentspace-status"
-bilingual "$ROOT/skills/agentspace-commit"
+bilingual "$ROOT/skills/agentspace-code-clean"
 bilingual "$ROOT/skills/agentspace-init"
 bilingual "$ROOT/skills/agentspace-mode"
 # mechanism-parity spot checks: load-bearing upgrade rules must exist in BOTH
 # languages — heading/token parity cannot catch a missing rule paragraph
-# (e.g. the skip-missing-archive rule once existed only in SKILL.md)
-for pair in "skip to the next existing archive|跳过缺失的中间档案"; do
-  en="${pair%%|*}"; zh="${pair##*|}"
-  grep -Fq -- "$en" "$ROOT/skills/agentspace-update/SKILL.md" || {
-    echo "  [issue] agentspace-update SKILL.md missing mechanism phrase: $en"
+# (e.g. the skip-missing-archive rule once existed only in SKILL.md).
+# Each pair belongs to ONE skill; grep that skill's two files.
+for pair in "skills/agentspace-update|skip to the next existing archive|跳过缺失的中间档案" \
+            "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身"; do
+  skill="${pair%%|*}"; rest="${pair#*|}"
+  en="${rest%%|*}"; zh="${rest#*|}"
+  grep -Fq -- "$en" "$ROOT/$skill/SKILL.md" || {
+    echo "  [issue] ${skill##*/} SKILL.md missing mechanism phrase: $en"
     issues=$((issues+1))
   }
-  grep -Fq -- "$zh" "$ROOT/skills/agentspace-update/SKILL.zh-CN.md" || {
-    echo "  [issue] agentspace-update SKILL.zh-CN.md missing mechanism phrase: $zh"
+  grep -Fq -- "$zh" "$ROOT/$skill/SKILL.zh-CN.md" || {
+    echo "  [issue] ${skill##*/} SKILL.zh-CN.md missing mechanism phrase: $zh"
     issues=$((issues+1))
   }
 done
@@ -385,6 +397,32 @@ if [ -n "$LATEST" ]; then
     echo "  [issue] v${LATEST#v} 缺 PASS 演练留痕 — 新增 changelog 必须先演练: bash rehearse-update.sh <old-ref> ${LATEST#v}"
     issues=$((issues+1))
   fi
+fi
+
+# --- [12] realized-literal guard (self-hosting) ------------------------------
+# The plugin repo is itself a registered key repo under its own gate: a
+# REALIZED canonical bookkeeping id in the working tree would (a) block every
+# future edit of that very line at the valveless commit gate and (b) be
+# reported by doctor [15] forever. The walk is find-based and covers untracked
+# files too, by design — mirrors gate semantics. Prose uses plan:NNNN
+# placeholder forms; test fixtures construct ids at runtime (printf %04d).
+# Frozen version archives, the nested ledger and local client state are out
+# of scope.
+echo "[12] realized-literal guard"
+# derived from lib.sh — single source with the gate (a regex tightening there
+# must not silently desync this guard); -i mirrors the gate's case-insensitive
+# message scan.
+LIT_RE="$(sed -n 's/^readonly COMMIT_BAN_PLAN_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_ITER_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")"
+lit_hits="$(find "$ROOT" -type f \
+  -not -path "$ROOT/.git/*" \
+  -not -path "$ROOT/AGENTSPACE/*" \
+  -not -path "$ROOT/.agents/*" \
+  -not -path "$ROOT/.zcode/*" \
+  -not -path "$ROOT/skills/agentspace-update/versions/*" \
+  -exec grep -IinE "$LIT_RE" {} + 2>/dev/null || true)"
+if [ -n "$lit_hits" ]; then
+  printf '%s\n' "$lit_hits" | sed 's/^/  [issue] realized bookkeeping id: /'
+  issues=$((issues+1))
 fi
 
 # --- summary ----------------------------------------------------------------

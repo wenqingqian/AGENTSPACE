@@ -1,11 +1,11 @@
 ---
-name: agentspace-commit
-description: Commit gate for AGENTSPACE-managed key code repos. Activate BEFORE any git commit in a repository registered in AGENTSPACE/.agentspace-repos (or any git repo inside a project that has an AGENTSPACE/ workspace) — staged files and the draft message must pass AGENTSPACE/scripts/commit-check.sh first. Never commit in unregistered repos; bookkeeping ids (plan:NNNN / iteration_NNNN) and experiment data never enter code-repo commits; the commit text must describe the actual code change (one-line title, no experiment/run identifiers, related to the diff).
+name: agentspace-code-clean
+description: Commit gate and code/comment hygiene for AGENTSPACE-managed key code repos. Activate BEFORE any git commit in a repository registered in AGENTSPACE/.agentspace-repos (or any git repo inside a project that has an AGENTSPACE/ workspace) — staged files, ADDED code/comment lines, and the draft message must all pass AGENTSPACE/scripts/commit-check.sh first. Never commit in unregistered repos; bookkeeping ids (plan:NNNN / iteration_NNNN) and experiment data never enter code-repo commits — not in the message, not in code or comments; the commit text must describe the actual code change (one-line title, no experiment/run identifiers, related to the diff).
 ---
 
-# AGENTSPACE Commit Gate
+# AGENTSPACE Code-Clean Commit Gate
 
-Applies to every `git commit` in a **registered key code repo** (`AGENTSPACE/.agentspace-repos`). The AGENTSPACE ledger repo itself is EXEMPT — bookkeeping ids are its native language; never run this gate on it.
+Applies to every `git commit` in a **registered key code repo** (`AGENTSPACE/.agentspace-repos`). The AGENTSPACE ledger repo itself is EXEMPT — bookkeeping ids are its native language; never run this gate on it. (Renamed from agentspace-commit in v0.6.4 when the gate's scope grew from the commit message to the committed content; the script name `commit-check.sh` is unchanged.)
 
 ## The Gate (MUST)
 
@@ -35,6 +35,18 @@ The script deterministically blocks the canonical bookkeeping idioms — `plan:N
 
 Attribution never dies — it lives where it belongs: the iteration readme records host start/end commit SHAs (`> 宿主起始/结束 commit:`, auto-written by close-iteration.sh). The workspace finds commits by SHA; commits never point back.
 
+## Code & Comment Rules (added lines — deterministic + semantic)
+
+The same idioms are banned in what the commit ADDS — code comments, string literals, any text line (v0.6.4). The script scans ADDED diff lines (renames count only for their edited hunks; case-insensitive; reported as `file:line` + excerpt; at most 5 hits listed per file, then a `+N more` tail). Deletions never block — removing an old leak always passes; binary files and pure renames carry no added lines. On top of that, YOU must semantically reject in added lines:
+
+- Variant spellings in code/comments: `plan_0013`, `plan 13`, "迭代 3" — any workspace-bookkeeping reference in ANY form.
+- Bookkeeping narrative in comments ("本轮迭代新增…", "updated per workspace state") — a comment describes the CODE, nothing else.
+- Run/experiment identifiers in comments (`# 6-run on .42`) — they belong in the iteration readme / `data/`.
+- Diff-shaped content — lines starting `++ `/`-- ` (pasted diffs, xtrace logs) — describe the change, never paste workspace diffs.
+- Known-legit shapes that still match (YAML `plan: 0NNN` keys, `iteration_0NNN.pt` file names): rename the key/constant to describe its role — attribution belongs in the iteration readme, and CJK/full-width variants (`：`, `０００１`) are YOUR layer, the script only sees ASCII.
+
+Content that must legitimately reference canonical ids (tooling that generates workspace references, fixture snapshots) belongs in `AGENTSPACE/utils/` or the iteration's `data/` — never in the code repo.
+
 ## Commit-text Quality (semantic — your judgment, two questions)
 
 Beyond bookkeeping, judge every draft commit text against two questions (title = first line; body optional). Both are YOUR judgment — the script only catches a blank title.
@@ -51,21 +63,21 @@ Action: on any violation, require the title/body rewrite before the commit proce
 
 ## File Rules
 
-Hard blocks (must never land): `AGENTSPACE/` paths (nested workspace content or gitlink) · experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`) · any single blob ≥ 50MB.
+Hard blocks (must never land): `AGENTSPACE/` paths (nested workspace content or gitlink) · experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`) · any single blob ≥ 50MB. Renames are detected (`-M`): a file renamed into a blocked path (e.g. top-level `wandb/`) is blocked under its new name.
 
 WARN (not blocking — judgment is yours, with repo context): data/model extensions ≥ 100KB (.npy/.pt/.ckpt/.h5/.parquet/.safetensors/.onnx/.log …) · top-level output dirs (`runs/ outputs/ checkpoints/ logs/ results/ exps/ experiments/`). Legitimate cases exist (small test fixtures, a logging library's `logs/` source dir) — but every WARN must be shown to the user with your judgment.
 
-## Remediation (MUST when blocked by data)
+## Remediation (MUST when blocked)
 
-Experiment output does not belong in code repos — move it home instead of deleting:
-
-1. `git reset -- <path>` (unstage).
-2. Move the payload into the current iteration: `mv <path> AGENTSPACE/iterations/iteration_NNNN/data/` (gitignored — the third of the three collection strategies in AGENTS.md).
-3. If the program hard-codes its output dir, suggest adding that dir to the repo's `.gitignore` — writing host files requires the user's consent, always.
-4. Re-run the gate.
+- **Content violations** (added lines): rewrite the comment/code line so it describes the change itself — attribution lives in the iteration readme host SHAs, never in the code. Restage and re-run the gate. Never obfuscate an id to slip it past the regex — that is a leak wearing a mask.
+- **Data violations**: experiment output does not belong in code repos — move it home instead of deleting:
+  1. `git reset -- <path>` (unstage).
+  2. Move the payload into the current iteration: `mv <path> AGENTSPACE/iterations/iteration_NNNN/data/` (gitignored — the third of the three collection strategies in AGENTS.md).
+  3. If the program hard-codes its output dir, suggest adding that dir to the repo's `.gitignore` — writing host files requires the user's consent, always.
+  4. Re-run the gate.
 
 ## Boundaries
 
 - Never install git hooks into managed repos; never write anything into them on your own initiative (the workspace stays invisible to the code repo — 无感).
-- Historical violations (already committed): reported by `doctor.sh` [15] and `/agentspace-doctor` — report-only, forever. Rewriting history (rebase / filter-repo) is the user's decision and the user's action.
+- Historical violations (already committed), message or content: reported by `doctor.sh` [15] (content: added lines of recent commits, first hit per category — message / content / blank-title) and `/agentspace-doctor` — report-only, forever. Rewriting history (rebase / filter-repo) is the user's decision and the user's action.
 - Registration changes (`repos.sh --add/--remove`) require explicit user confirmation, every time.

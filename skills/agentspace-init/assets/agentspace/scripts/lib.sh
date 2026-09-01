@@ -315,15 +315,18 @@ as_external_refs() {
 # external repos absolute; spelling is physical (cd -P) and git-toplevel
 # normalized at write time. `#` comments. Written ONLY by scripts/repos.sh;
 # consumed by commit-check.sh (gate), doctor.sh ([14]/[15]) and status.sh.
-# Message ban — canonical bookkeeping-id forms only (the workspace idiom,
-# AGENTS.md 相互引用 rule): canonical ids are as_norm_id %04d zero-padded, so
+# Message AND content ban — canonical bookkeeping-id forms only (the workspace
+# idiom, AGENTS.md 相互引用 rule): canonical ids are as_norm_id %04d zero-padded, so
 # the leading 0 anchors the match and spares natural text like
 # "test plan: 3 phases" and year mentions like "roadmap plan: 2026". Ids past
 # 0999 (no leading zero) and non-canonical variants (plan_0013, 迭代 3) are the
-# agent semantic layer's job, not the script's. Single source for
+# agent semantic layer's job, not the script's. Since v0.6.4 the SAME pair
+# bans ids on ADDED diff lines (code comments, string literals) — an id that
+# may not be said in the message may not be smuggled in through content;
+# both sides share as_diff_added_hits so they cannot drift. Single source for
 # commit-check.sh and doctor [15] — the pre-commit gate and the ex-post audit
-# must never drift apart. [15] 为报告型子集: 只查硬阻断规则, message 只报首个
-# 命中行; WARN 级(数据扩展名/输出目录)属 agent 语义层, 不在事后扫描内。
+# must never drift apart. [15] 为报告型子集: 只查硬阻断规则, message 与 content
+# 各报首个命中行; WARN 级(数据扩展名/输出目录)属 agent 语义层, 不在事后扫描内。
 readonly COMMIT_BAN_PLAN_RE="plan:[[:space:]]*0[0-9]{3,}"
 readonly COMMIT_BAN_ITER_RE="iteration_0[0-9]{3,}"
 # Staged-file hard blocks: workspace paths, experiment-output signatures
@@ -338,16 +341,82 @@ readonly COMMIT_DATA_EXTS="npy npz pt pth ckpt h5 hdf5 parquet safetensors onnx 
 readonly COMMIT_AUDIT_N="20"              # doctor [15]: commits scanned per repo
 readonly COMMIT_HOT_DAYS="7"              # doctor [14]: recently-active window
 readonly COMMIT_SIZE_CHECK_MAX="2000"     # doctor [15]: per-commit path cap — above it the per-file size check is skipped (cost bound)
+readonly COMMIT_EXCERPT_CAP="80"          # content hit report: excerpt chars kept per line
+readonly COMMIT_FILE_HITS_CAP="5"         # gate: content hits listed per file, then one "+N more" tail
+readonly COMMIT_AUDIT_LINE_MAX="100000"   # doctor [15]: added-lines budget per commit — content scan truncates past it (cost bound)
 readonly STATUS_REPO_COMMITS="3"          # status 代码提交: commits shown per repo
 # Blank-title check — the one deterministic commit-text quality rule: a title
 # that says nothing (empty or whitespace-only first line) is never legitimate.
 # Everything else about commit-text quality (convention conformance, relevance
-# to the diff) is the agent semantic layer's judgment (agentspace-commit skill
-# rubric). Single source for commit-check.sh (block) and doctor [15] (warn).
+# to the diff) is the agent semantic layer's judgment (agentspace-code-clean
+# skill rubric). Single source for commit-check.sh (block) and doctor [15] (warn).
 as_msg_title_blank() {
   local t
   t="$(printf '%s' "$1" | head -1 2>/dev/null || true)"
   [ -z "$t" ] || [ -z "${t//[[:space:]]/}" ]
+}
+
+# Unified-diff added-line matcher — the single content-side detector shared by
+# the pre-commit gate (commit-check.sh: staged diff) and the ex-post audit
+# (doctor.sh [15]: committed patches). Reads a `git diff`/`git show` `-U0`
+# stream on stdin; for every ADDED line matching the ban regexes it emits
+#   <path> TAB <new-file line no> TAB <excerpt, AS_EXCERPT_CAP chars>
+# plus one `<path> TAB -more TAB +N …` tail per file past AS_FILE_HITS_CAP
+# hits, and a `TAB -budget TAB …` line when the AS_LINE_MAX added-line budget
+# (doctor cost bound) truncates the scan. Knobs arrive via ENVIRON (never
+# awk -v — pattern discipline #1); matching lowercases both sides (BSD awk has
+# no IGNORECASE). Deletions, context, binary files and pure renames emit
+# nothing by construction: only '+' content lines are tested. One stream, one
+# awk — no per-file forks (the fork-per-path cost shape is why doctor caps
+# per-file checks at COMMIT_SIZE_CHECK_MAX). Hunk counting (remaining new-side
+# lines from the @@ header) disambiguates a real `+++ b/<path>` header from an
+# ADDED line whose text starts with `++ ` — a spoofed header inside a hunk is
+# scanned as content, never eaten as a file switch. The counting is exact only
+# because all call sites use -U0 (no context lines); a future -U<n> call site
+# must revisit it.
+as_diff_added_hits() {
+  (
+    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE}"
+    export AS_EXCERPT_CAP="${AS_EXCERPT_CAP:-$COMMIT_EXCERPT_CAP}"
+    export AS_FILE_HITS_CAP="${AS_FILE_HITS_CAP:-$COMMIT_FILE_HITS_CAP}"
+    export AS_LINE_MAX="${AS_LINE_MAX:-0}"
+    awk '
+      function flush_more() {
+        if (pending > 0) { printf "%s\t-more\t+%d more hit(s) suppressed\n", f, pending; pending = 0 }
+      }
+      function body(line) {
+        if (rem_new > 0) rem_new--
+        added++
+        if (lmax > 0 && added > lmax) {
+          if (!budget_note) { printf "%s\t-budget\tadded-line budget (%d) reached — scan truncated\n", f, lmax; budget_note = 1 }
+          pending = 0; exit 0
+        }
+        if (tolower(line) ~ re) {
+          fhits++
+          if (fcap > 0 && fhits > fcap) { pending++; lineno++; return }
+          printf "%s\t%d\t%s\n", f, lineno, substr(line, 1, ecap)
+        }
+        lineno++
+      }
+      BEGIN { re = tolower(ENVIRON["AS_BAN_RE"]); ecap = ENVIRON["AS_EXCERPT_CAP"] + 0
+              fcap = ENVIRON["AS_FILE_HITS_CAP"] + 0; lmax = ENVIRON["AS_LINE_MAX"] + 0
+              f = ""; fhits = 0; pending = 0; added = 0; budget_note = 0; rem_new = 0 }
+      /^diff --git/  { rem_new = 0; next }
+      /^index |^similarity|^dissimilarity|^rename |^copy |^old mode|^new mode|^Binary files|^\\/ { next }
+      /^@@/          { if (match($0, /\+[0-9]+(,[0-9]+)? @@/)) {
+                         n = substr($0, RSTART + 1, RLENGTH - 4); cnt = n
+                         sub(/^[0-9]+,?/, "", cnt); sub(/,.*/, "", n)
+                         lineno = n + 0; rem_new = (cnt == "" ? 1 : cnt + 0)
+                       } else rem_new = 0
+                       next }
+      /^--- /        { next }
+      /^\+\+\+ /     { if (rem_new == 0) { flush_more(); f = substr($0, 7); fhits = 0 } else body(substr($0, 2)); next }
+      /^\+/          { body(substr($0, 2)); next }
+      /^-/           { next }
+                     { if (rem_new > 0) rem_new--; lineno++ }
+      END            { flush_more() }
+    ' 2>/dev/null
+  )
 }
 
 # Canonical repo root for any path: git toplevel, physical spelling (cd -P

@@ -227,6 +227,13 @@ edit(A, "- 只在 AGENTSPACE/ 内做 git 操作; 宿主仓库代码状态用 com
         "- agentspace 记账的 git 操作只在 AGENTSPACE/ 内; 代码仓库的 commit 受 commit 门约束(见 关键代码仓库 节), 代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/",
         "v0.6.0", "AGENTS.md 纪律: git 操作行")
 
+# --- v0.6.4: gate scope grew to committed content; the rubric skill renamed
+#     (agentspace-commit → agentspace-code-clean). The script name
+#     commit-check.sh is unchanged; the AGENTS.md bullet only delegates, so the
+#     sole text op is the trailing skill reference swap. ---
+edit(A, "完整规则见 agentspace-commit skill。", "完整规则见 agentspace-code-clean skill。",
+     "v0.6.4", "AGENTS.md commit 门行: skill 引用更名")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -254,6 +261,8 @@ assert_contains "$WS/AGENTS.md" "## agentspace mode"
 assert_contains "$WS/AGENTS.md" "hybrid"
 assert_contains "$WS/AGENTS.md" "## 关键代码仓库"
 assert_contains "$WS/AGENTS.md" "commit 检查门(commit-check.sh)"
+assert_contains "$WS/AGENTS.md" "agentspace-code-clean skill"        # v0.6.4 rename swap
+assert_not_contains "$WS/AGENTS.md" "agentspace-commit"              # v0.6.4: no stale reference survives
 [ -f "$WS/.agentspace-repos" ] || fail ".agentspace-repos seed missing after v0.6.0 replay"
 [ -f "$WS/scripts/repos.sh" ] && [ -f "$WS/scripts/commit-check.sh" ] \
   || fail "v0.6.0 scripts missing after 8a"

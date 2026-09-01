@@ -92,6 +92,7 @@ skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不�
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v0.6.4 | 2026-09-01 | commit 门记账 id 禁令扩展到新增 diff 行(代码注释/字符串字面量; 同一 lib.sh 单源正则与前导零锚定, 删除行永不阻断, rename+edit hunk 经 -M ACMRT 照扫)+ doctor [15] 内容事后审计(按类首命中: message/内容/空标题 三类互不遮蔽, 新增行预算封顶)+ rubric skill 更名 agentspace-commit → agentspace-code-clean(脚本名 commit-check.sh 不变)+ 发布工具自食防护(verify-release [4] 反向 + [12] 已实现字面量守卫) |
 | v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.2 | 2026-08-16 | 新增 Codex 强制插件清单与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.1 | 2026-08-15 | commit 文本质量: 门 + doctor [15] 空标题规则(lib.sh 单源)+ agentspace-commit skill Commit-text Quality rubric(性质标准: 标题=一句话代码改动描述, 无实验/run 标识, 无无信息标题; 正文解释 why; 标题/正文须与 diff 相关(git show --stat); 类型前缀推荐不强制)+ agentspace-doctor Phase C Block 2 三维审计(记账变体/质量/相关性, sha+维度+建议, 只报告) |

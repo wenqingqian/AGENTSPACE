@@ -2,7 +2,11 @@
 # t18: key code-repo registry (repos.sh) + commit gate (commit-check.sh).
 # repos.sh: list/add idempotent/toplevel normalization/refuse AS_ROOT/refuse
 # non-git/remove spellings. commit-check.sh: exit 2 unregistered, PASS clean,
-# message idiom bans (case-insensitive, body lines, leading-zero anchor), hard
+# message idiom bans (case-insensitive, body lines, leading-zero anchor),
+# content bans on ADDED lines (comment/literal hit, natural-text pass,
+# deletion pass, pure rename pass, rename+edit block, spoofed ++ header
+# attribution, uppercase id, per-file cap "+N more" tail, ext-diff driver
+# blinding negative, matcher budget sentinel unit pin, binary pass), hard
 # blocks (tfevents / wandb dir / ≥50MB / AGENTSPACE gitlink), WARN non-blocking.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
@@ -60,16 +64,24 @@ git -C "$SB" add a.txt
 OUT="$(bash "$GATE" . "add a.txt")"
 assert_output_contains "$OUT" "== PASS"
 
-# message bans: canonical idioms, case-insensitive, anywhere in the message
-for m in "plan:0013 完成" "PLAN: 0014 done" "iteration_0009 修复" "ITERATION_0001 x"; do
+# message bans: canonical idioms, case-insensitive, anywhere in the message.
+# Fixtures are CONSTRUCTED at runtime (printf %04d), never spelled out as
+# literals — this file is tracked content in the plugin repo and must stay
+# clean under its own gate + verify-release [12] (self-hosting discipline).
+MSG1="$(printf 'plan:%04d 完成' 13)"
+MSG2="$(printf 'PLAN: %04d done' 14)"
+MSG3="$(printf 'iteration_%04d 修复' 9)"
+MSG4="$(printf 'ITERATION_%04d x' 1)"
+for m in "$MSG1" "$MSG2" "$MSG3" "$MSG4"; do
   set +e; OUT="$(bash "$GATE" . "$m")"; rc=$?; set -e
   [ "$rc" -eq 1 ] || fail "message '$m' must be blocked"
   assert_output_contains "$OUT" "BLOCK"
 done
-# multi-line body hit
+# multi-line body hit (constructed the same way — no realized literal here)
+BODYID="$(printf 'plan:%04d' 7)"
 set +e; OUT="$(bash "$GATE" . "subject line
 
-body refers to plan:0007 here")"; rc=$?; set -e
+body refers to $BODYID here")"; rc=$?; set -e
 [ "$rc" -eq 1 ] || fail "body-line id must be blocked"
 # natural text must pass (4-digit floor + tight idioms)
 for m in "test plan: 3 phases" "refactor iteration logic" "agentspace: bump version" "roadmap plan: 2026"; do
@@ -125,6 +137,104 @@ OUT="$(bash "$GATE" . "metrics")"
 assert_output_contains "$OUT" "== PASS"
 assert_output_contains "$OUT" "WARN (1)"
 assert_output_contains "$OUT" "顶层输出目录 runs/"
+git -C "$SB" reset -q
+
+# --- content rules (v0.6.4): ADDED lines carry the same idiom ban ---
+LEAK="$(printf '# plan:%04d implements this' 1)"
+ITAG="$(printf 'iteration_%04d' 3)"
+printf '# header\nx = 1\n' > "$SB/c.py"
+git -C "$SB" add c.py
+git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "add c" >/dev/null 2>&1 || true
+# staged comment + string literal with canonical ids → BLOCK with file:line
+printf '# header\nx = 2\n%s\ntag = "%s"\n' "$LEAK" "$ITAG" > "$SB/c.py"
+git -C "$SB" add c.py
+set +e; OUT="$(bash "$GATE" . "tune lr")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "added-line id in comment must block"
+assert_output_contains "$OUT" "content:"
+assert_output_contains "$OUT" "c.py:3"
+assert_output_contains "$OUT" "c.py:4"
+# natural comment text passes — the leading-zero anchor holds on content too
+printf '# header\nx = 3\n# test plan: 3 phases\n' > "$SB/c.py"
+git -C "$SB" add c.py
+OUT="$(bash "$GATE" . "bump x")"
+assert_output_contains "$OUT" "== PASS"
+# deleting an old leak never blocks (fix-forward always passes)
+printf '# header\nx = 4\n' > "$SB/c.py"
+git -C "$SB" add c.py
+OUT="$(bash "$GATE" . "drop comment")"
+assert_output_contains "$OUT" "== PASS"
+git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "drop comment" >/dev/null 2>&1 || true
+# pure rename: no added lines, nothing blocked (pathspec-scoped staging —
+# earlier negative cases left untracked leftovers the gate must not see)
+mv "$SB/c.py" "$SB/d.py"; git -C "$SB" add -A -- c.py d.py
+OUT="$(bash "$GATE" . "rename file")"
+assert_output_contains "$OUT" "== PASS"
+# rename + edited hunk carrying a leak → BLOCK (R is not a content bypass)
+printf '# header\nx = 5\n%s\n' "$LEAK" >> "$SB/d.py"
+git -C "$SB" add -- d.py
+set +e; OUT="$(bash "$GATE" . "extend file")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "rename+edit added-line id must block"
+assert_output_contains "$OUT" "content:"
+git -C "$SB" reset -q
+# spoofed `+++ ` header: an ADDED line whose text starts `++ ` must be scanned
+# as content (hunk counting), never eaten as a file header — attribution stays
+# on the real file:line for BOTH the spoof line and the line after it.
+# Ids CONSTRUCTED at runtime (self-hosting discipline).
+ID5="$(printf 'plan:%04d' 5)"
+ID5B="$(printf 'plan:%04d' 8)"
+printf 's = 0\n' > "$SB/s.py"
+git -C "$SB" add s.py
+git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "add s" >/dev/null 2>&1 || true
+printf 's = 0\n++ echo %s\n# note %s\n' "$ID5" "$ID5B" > "$SB/s.py"
+git -C "$SB" add s.py
+set +e; OUT="$(bash "$GATE" . "spoof scan")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "spoofed +++ content line must block"
+assert_output_contains "$OUT" "content:"
+assert_output_contains "$OUT" "s.py:2"
+assert_output_contains "$OUT" "s.py:3"
+git -C "$SB" reset -q
+# uppercase canonical id in an added line → BLOCK (content scan is case-insensitive)
+printf '# PLAN: %04d upper\n' 13 > "$SB/u.py"
+git -C "$SB" add u.py
+set +e; OUT="$(bash "$GATE" . "upper case")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "uppercase content id must block"
+assert_output_contains "$OUT" "content:"
+git -C "$SB" reset -q
+# per-file hits cap: 7 leaky lines in ONE staged file → exactly the first
+# COMMIT_FILE_HITS_CAP(=5) listed + one "+N more hit(s) suppressed" tail
+: > "$SB/cap.py"
+for i in 1 2 3 4 5 6 7; do
+  printf '# leak %s here\n' "$(printf 'plan:%04d' "$i")" >> "$SB/cap.py"
+done
+git -C "$SB" add cap.py
+set +e; OUT="$(bash "$GATE" . "cap file")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "multi-hit leak file must block"
+assert_output_contains "$OUT" "+2 more hit(s) suppressed"
+assert_output_contains "$OUT" "cap.py:1"
+assert_output_contains "$OUT" "cap.py:5"
+assert_output_not_contains "$OUT" "cap.py:6"
+git -C "$SB" reset -q
+# repo-local diff driver blinding: diff.<driver>.command + worktree
+# .gitattributes must NOT blind the scan (--no-ext-diff pins it)
+git -C "$SB" config diff.blind.command /usr/bin/true
+printf '*.py diff=blind\n' > "$SB/.gitattributes"
+printf 'x = 1\n# see %s\n' "$(printf 'plan:%04d' 4)" > "$SB/blind.py"
+git -C "$SB" add blind.py
+set +e; OUT="$(bash "$GATE" . "blind driver")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "ext-diff driver must not blind the content scan"
+assert_output_contains "$OUT" "content:"
+git -C "$SB" config --unset diff.blind.command
+rm -f "$SB/.gitattributes"
+git -C "$SB" reset -q
+# matcher unit pin: the -budget sentinel fires at AS_LINE_MAX and output past
+# the budget is suppressed (ids only inside printf format strings, never realized)
+UNIT_OUT="$(bash -c 'source "'"$REPO"'/skills/agentspace-init/assets/agentspace/scripts/lib.sh"; { printf "diff --git a/u.py b/u.py\n--- a/u.py\n+++ b/u.py\n@@ -0,0 +1,9 @@\n"; for i in 1 2 3 4 5 6 7 8 9; do printf "+line %d\n" "$i"; done; printf "+leak plan:%04d end\n" 9; } | AS_LINE_MAX=5 as_diff_added_hits')"
+assert_output_contains "$UNIT_OUT" "-budget"
+assert_output_not_contains "$UNIT_OUT" "leak"
+# binary staged: no text hunks, no crash
+head -c 2048 /dev/urandom > "$SB/b.bin"; git -C "$SB" add b.bin
+OUT="$(bash "$GATE" . "add binary asset")"
+assert_output_contains "$OUT" "== PASS"
 git -C "$SB" reset -q
 
 # AGENTSPACE gitlink staged (shield removed first — sandbox host gitignores /AGENTSPACE/).

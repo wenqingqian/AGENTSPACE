@@ -7,6 +7,9 @@
 # the user first; on confirmation: repos.sh --add <path>);
 # exit 3 = usage/precondition error (missing draft-message / not inside a git
 # worktree) — fails closed, never a silent PASS.
+# Checks: staged file paths · staged diff ADDED lines (code/comments/string
+# literals — bookkeeping-id ban, same lib.sh single source as the message ban;
+# deletions, binary files and pure renames never match) · draft message.
 # READ-ONLY: never touches the repo, its index, or the workspace. No --force
 # valve by design — a blocked commit is rewritten, not forced through.
 set -euo pipefail
@@ -34,7 +37,10 @@ fi
 
 blocks=0; warns=0; block_lines=""; warn_lines=""
 
-# ---- staged files (added/copied/modified/type-changed) ----
+# ---- staged files (added/copied/modified/renamed/type-changed; -M + R in the
+# filter so a rename is one record — a file renamed INTO a blocked path (e.g.
+# top-level wandb/) is path-checked under its new name, and rename+edit hunks
+# reach the content scan below) ----
 staged=0
 while IFS= read -r -d '' p; do
   [ -n "$p" ] || continue
@@ -77,7 +83,7 @@ while IFS= read -r -d '' p; do
   if [ -n "$w" ]; then
     warns=$((warns + 1)); warn_lines="${warn_lines}  - $p — $w"$'\n'
   fi
-done < <(git -C "$REPO" diff --cached --name-only -z --diff-filter=ACMT 2>/dev/null || true)
+done < <(git -C "$REPO" diff --cached -M --name-only -z --diff-filter=ACMRT 2>/dev/null || true)
 
 # ---- draft message: canonical bookkeeping-id ban (whole message, case-insensitive) ----
 if [ -n "$MSG" ]; then
@@ -94,6 +100,35 @@ fi
 if as_msg_title_blank "$MSG"; then
   blocks=$((blocks + 1))
   block_lines="${block_lines}  - message: 标题为空或纯空白 — 标题(第一行)必须是一句话的代码改动描述"$'\n'
+fi
+
+# ---- staged diff content: bookkeeping-id ban on ADDED lines (code + comments) ----
+# Same single-source regexes as the message ban (lib.sh, via as_diff_added_hits):
+# what may not be said in the message may not be smuggled in through a comment
+# or a string literal. Only ADDED lines are tested — deleting an old leak never
+# blocks. Binary files emit no hunks; pure renames carry no added lines. The
+# diff runs with --no-ext-diff and pinned prefixes so a repo-local diff driver
+# or prefix config cannot blind or mangle the scan; a failed diff read fails
+# CLOSED (exit 3) — an unreadable staged diff must never look like "no hits";
+# matcher knobs are pinned at the call (ambient AS_* env cannot weaken the
+# gate scan).
+_d="$(mktemp)"
+if ! git -C "$REPO" -c diff.noprefix=false -c diff.mnemonicprefix=false diff --cached --no-ext-diff -M -U0 --diff-filter=ACMRT >"$_d" 2>/dev/null; then
+  rm -f "$_d"; printf 'error: staged diff unreadable — fails closed\n' >&2; exit 3
+fi
+content_hits="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" AS_LINE_MAX=0 as_diff_added_hits <"$_d" 2>/dev/null || true)"
+rm -f "$_d"
+if [ -n "$content_hits" ]; then
+  blocks=$((blocks + 1))
+  block_lines="${block_lines}  - content: 新增行(代码/注释)含工作区记账引用(plan:NNNN / iteration_NNNN) — 代码与注释描述改动本身, 归属由 iteration readme 的宿主 SHA 承担:"$'\n'
+  while IFS=$'\t' read -r hp hl hx; do
+    [ -n "$hp" ] || continue
+    if [ "$hl" = "-more" ]; then
+      block_lines="${block_lines}      $hp — $hx"$'\n'
+    else
+      block_lines="${block_lines}      $hp:$hl — $hx"$'\n'
+    fi
+  done <<< "$content_hits"
 fi
 
 echo "== commit-check: $REPO =="

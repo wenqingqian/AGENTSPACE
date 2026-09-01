@@ -91,7 +91,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 
 ## 3. Discipline
 
-- **[MUST] Commit gate for registered key repos** — before any `git commit` in a repo registered in `AGENTSPACE/.agentspace-repos`, run `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commit only on PASS; never commit in unregistered repos (propose registration, user confirms, then commit). Full rules: the agentspace-commit skill and AGENTS.md "关键代码仓库"
+- **[MUST] Commit gate for registered key repos** — before any `git commit` in a repo registered in `AGENTSPACE/.agentspace-repos`, run `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commit only on PASS; never commit in unregistered repos (propose registration, user confirms, then commit). Full rules: the agentspace-code-clean skill and AGENTS.md "关键代码仓库"
 - `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` **may only be modified by scripts** — always call scripts, never hand-edit tables
 - Content documents (plan docs / iteration readmes / notes / utils / tests) are written directly by you, using `templates/` templates
 - Cross-references always use ids: `plan:NNNN` / `iteration_NNNN`; never paths, never latest (latest flips)

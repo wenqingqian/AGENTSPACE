@@ -111,11 +111,8 @@ mc
 # --- 5) notes_insert_row pipe topic (doctor [7] --fix path): the inserted
 # notes row keeps the escaped pipe (ENVIRON, not -v)
 mkdir -p "$WS/notes"
-cat > "$WS/notes/pipe-topic.md" <<'EOF'
-# 主题 | 带管道
-> 创建: 2026-08-06
-> 来源: plan:0001
-EOF
+# runtime-constructed 来源 id (self-hosting: no realized literal here)
+printf '# 主题 | 带管道\n> 创建: 2026-08-06\n> 来源: plan:%04d\n' 1 > "$WS/notes/pipe-topic.md"
 OUT="$(bash "$DOC" --fix 2>&1 || true)"
 assert_contains "$WS/notes.md" "主题 \\| 带管道"
 mc
