@@ -2,7 +2,7 @@
 
 面向实验/迭代型项目的 **git 管理 agent 工作区** 跨平台插件。
 
-通过显式 `/agentspace-init` 在项目根目录初始化 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
+全部功能以 agent skill 交付 — 三个受支持平台(ZCode / Codex / Kimi)都从 `skills/` 加载; 支持斜杠命令的平台(ZCode)额外获得委托给 skill 的轻量 `/agentspace-*` 命令包装。通过显式初始化(ZCode: `/agentspace-init`; 其他平台: 让 agent 运行 `agentspace-init` skill)在项目根目录创建 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
 
 ## 核心概念
 
@@ -10,6 +10,7 @@
 - **入口是视图, 文件系统是真源**: `plan.md`/`iterations.md` 只维护 Todo + 最近 10 条 Done; 完整历史在 `plan/index.md`/`iterations/index.md`; 所有索引由 `AGENTSPACE/scripts/` 下的脚本改写, agent 不手编表格
 - **内容文档由 agent 撰写**: plan 文档、iteration readme、notes 等使用 `templates/` 模板直接生成
 - **实验产物全量本地保存**: `iteration_NNNN/data/` 已 gitignore, 不入 git
+- **关键代码仓库 commit 规范**: 关键仓库登记在 `.agentspace-repos`(登记须用户确认); 每次 commit 前必须先通过 `commit-check.sh` 门 — 记账 id 与实验产物永不泄漏进代码仓库(见下文"关键代码仓库与 commit 规范")
 
 ## 工作区结构
 
@@ -31,6 +32,8 @@
     ├── handoff/               # 一次性会话交接(index.md 入 git; handoff_*.md 一次性, gitignore)
     ├── .agentspace-version.json       # 工作区版本追踪
     ├── .agentspace-architecture.json  # 当前架构快照
+    ├── .agentspace-repos              # 关键代码仓库登记处(只能由 scripts/repos.sh 改写)
+    ├── .agentspace-whitelist          # 外部依赖白名单(standalone 模式)
     ├── templates/  scripts/  .gitignore
 ```
 
@@ -40,13 +43,33 @@
 
 ## 使用
 
+### Skill(全平台)
+
+Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注"仅显式"的功能只在用户点名时触发(在 ZCode 上也可用下方命令), 绝不自动触发。
+
+| Skill | 触发方式 | 功能 |
+| --- | --- | --- |
+| `agentspace` | 自动(带守卫) | 涉及实验/代码改动/迭代的会话中的日常管理; 项目无关会话不介入 |
+| `agentspace-init` | 仅显式 | 初始化工作区 — 唯一入口, 幂等; 分析工作区后询问 goal/运行环境/关键代码仓库 |
+| `agentspace-update` | 仅显式 | 把工作区迁移到当前插件版本; 默认保守, `--force` 激进 |
+| `agentspace-doctor` | 仅显式 | 深度健康检查: 确定性一致性 + `--minor` 逐文件审查 + `--major` 跨历史审计 + `--fix` 分级修复; 绝不自动触发 |
+| `agentspace-status` | 仅显式 | 状态工作台: 项目总览 + 现状 + 软告警(现状快照, 无"下一步"叙述) |
+| `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理外部依赖白名单 |
+| `agentspace-handoff` | 仅显式 | 一次性会话交接: 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
+| `agentspace-code-clean` | 场景触发 — 登记仓库每次 commit 前 | commit 门与卫生规范: 暂存文件、新增代码/注释行与 message 草稿都必须先过 `AGENTSPACE/scripts/commit-check.sh`; 记账 id 与实验产物永不进入代码仓库 |
+
+### 命令(ZCode 便捷入口)
+
+ZCode 上每个显式 skill 另有斜杠命令, 经命令前置 `skills:` 字段委托给对应 skill; 无斜杠命令的平台直接让 agent 运行对应 skill — 如"用 --minor 跑 agentspace-doctor"。
+
 ```text
-/agentspace-init              # 显式初始化(唯一入口, 幂等; 分析工作区后询问 goal/运行环境/关键代码仓库)
-/agentspace-update [--force]  # 更新工作区至插件版本(默认保守, --force 激进)
-/agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查(仅显式命令触发, 绝不自动触发)
-/agentspace-handoff-produce [--name <名>] [--description <说明>]  # 会话收尾: 写入一次性上下文快照
-/agentspace-handoff-consume [--name <名>] [--keep]  # 会话开始: 读取 handoff, 读后删除
-/agentspace-status          # 状态工作台: 项目总览 + 现状 + 软告警(现状快照, 无"下一步"叙述)
+/agentspace-init                                # 初始化            (skill agentspace-init)
+/agentspace-update [--force]                    # 迁移工作区        (skill agentspace-update)
+/agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查      (skill agentspace-doctor)
+/agentspace-status                              # 状态工作台        (skill agentspace-status)
+/agentspace-mode                                # 模式控制          (skill agentspace-mode)
+/agentspace-handoff-produce [--name <名>] [--description <说明>]  # 会话收尾(skill agentspace-handoff)
+/agentspace-handoff-consume [--name <名>] [--keep]                # 会话开始(skill agentspace-handoff)
 ```
 
 之后日常对话中(agent 自动判断, 项目无关会话不介入):
@@ -64,22 +87,39 @@ AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 
 一次性会话交接(`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): 会话收尾时 produce 把上下文快照写入 `AGENTSPACE/handoff/`(语义命名必需——冲突会拒绝, 绝不自动改名); 下个会话 consume 读取后删除。任何会话都可产生, 不要求有进行中 plan。doctor 已覆盖该模块 — [10] 残留一致性(死行/孤儿文件/重复行)与 [11] 过时审核(>7 天未消费; 报告该 handoff 要干什么 — 绝不自动删除或 consume); `AGENTSPACE/scripts/status.sh` 列出待消费 handoff 并带过时标记。
 
+## 关键代码仓库与 commit 规范
+
+实验型项目通常在台账之外还有若干关键代码仓库。AGENTSPACE 让代码仓库保持干净, 记账全部留在工作区:
+
+- **登记处**: 关键仓库登记在 `AGENTSPACE/.agentspace-repos`(一行一路径; 登记/出册始终须用户显式确认, 只能由 `scripts/repos.sh` 改写)
+- **commit 门(MUST)**: 在登记仓库执行任何 `git commit` 前, agent 先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"`, 仅 PASS 才提交。阻断项: message **与新增代码/注释行**中的记账 id(`plan:NNNN` / `iteration_NNNN` 及变体拼写)、实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)、≥50MB blob、任何 `AGENTSPACE/` 内容泄漏进代码仓库。被阻断的实验产物移入本轮 iteration 的 `data/` 而非删除
+- **commit 文本质量**: 标题=对实际改动的一句话描述 — 无实验/run 标识、无记账叙述; 归属由 iteration readme 的宿主起始/结束 commit SHA 承担, 永不进入代码仓库
+- **事后审计**: `scripts/doctor.sh` [14](登记一致性)与 [15](近期 commit 内容审计), 加上 `/agentspace-doctor`, 报告违规 — 只报告, 绝不自动改写历史
+
 ## 插件结构
 
 ```
-kimi.plugin.json                  # Kimi 兼容清单
-.codex-plugin/plugin.json        # Codex 兼容清单
-.zcode-plugin/plugin.json        # 既有清单
-commands/agentspace-init.md      # /agentspace-init 命令
-commands/agentspace-update.md    # /agentspace-update 命令
-commands/agentspace-doctor.md    # /agentspace-doctor 命令(深度健康检查)
-commands/agentspace-handoff-produce.md  # /agentspace-handoff-produce 命令(会话收尾)
-commands/agentspace-handoff-consume.md  # /agentspace-handoff-consume 命令(会话开始)
-skills/agentspace-init/          # 初始化 skill(仅命令显式触发) + init 脚本 + 全部模板 assets
-skills/agentspace-update/        # 更新 skill + 版本档案 + 更新脚本
-skills/agentspace/               # 日常管理 skill(自动触发, 带守卫)
-skills/agentspace-doctor/        # 深度审计 skill(仅显式命令触发, 绝不自动触发)
-skills/agentspace-handoff/       # handoff skill(仅显式命令触发, 绝不自动触发)
+.zcode-plugin/plugin.json         # ZCode 清单
+.codex-plugin/plugin.json         # Codex 清单
+kimi.plugin.json                  # Kimi 清单
+marketplace.json                  # 市场清单
+commands/                         # ZCode 斜杠命令(轻量包装, 经 skills: 前置字段委托给 skill)
+├── agentspace-init.md
+├── agentspace-update.md
+├── agentspace-doctor.md
+├── agentspace-status.md
+├── agentspace-mode.md
+├── agentspace-handoff-produce.md
+└── agentspace-handoff-consume.md
+skills/                           # 功能交付单元 — 跨平台可移植
+├── agentspace/                   # 日常管理(自动触发, 带守卫)
+├── agentspace-init/              # 初始化(仅显式)+ init 脚本 + 全部模板 assets
+├── agentspace-update/            # 更新/迁移(仅显式)+ 版本档案 + DEVELOPMENT.md
+├── agentspace-doctor/            # 深度审计(仅显式)
+├── agentspace-status/            # 状态工作台(仅显式)
+├── agentspace-mode/              # 模式控制(仅显式)
+├── agentspace-handoff/           # 会话交接(仅显式)
+└── agentspace-code-clean/        # 登记关键仓库的 commit 门与卫生规范(场景触发, 无命令包装)
 ```
 
 ## 版本管理

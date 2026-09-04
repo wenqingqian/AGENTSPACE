@@ -2,7 +2,7 @@
 
 A cross-platform plugin providing git-managed agent workspaces for experiment/iteration-driven projects.
 
-Initialize with explicit `/agentspace-init` to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
+All functionality ships as agent skills — every supported platform (ZCode / Codex / Kimi) loads them from `skills/`; platforms with slash commands (ZCode) additionally get thin `/agentspace-*` command wrappers that delegate to the skills. Initialize explicitly (ZCode: `/agentspace-init`; elsewhere: ask the agent to run the `agentspace-init` skill) to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
 
 ## Core Concepts
 
@@ -10,6 +10,7 @@ Initialize with explicit `/agentspace-init` to create `AGENTSPACE/` (independent
 - **Entry files are views, filesystem is source of truth**: `plan.md`/`iterations.md` maintain only Todo + latest 10 Done; full history in `plan/index.md`/`iterations/index.md`; all indexes written exclusively by `AGENTSPACE/scripts/`
 - **Content documents authored by agent**: plan docs, iteration readmes, notes use `templates/` scaffolds
 - **Experiment data saved locally, excluded from git**: `iteration_NNNN/data/` is gitignored regardless of size
+- **Commit discipline for key code repos**: key repos are registered in `.agentspace-repos` (user-confirmed); every commit must first pass the `commit-check.sh` gate — bookkeeping ids and experiment artifacts never leak into code repos (see "Key Code Repos & Commit Discipline" below)
 
 ## Workspace Structure
 
@@ -31,6 +32,8 @@ Initialize with explicit `/agentspace-init` to create `AGENTSPACE/` (independent
     ├── handoff/               # One-shot session handoffs (index.md committed; handoff_*.md disposable, gitignored)
     ├── .agentspace-version.json       # Workspace version tracking
     ├── .agentspace-architecture.json  # Current architecture snapshot
+    ├── .agentspace-repos              # Key code-repo registry (written only by scripts/repos.sh)
+    ├── .agentspace-whitelist          # External-dependency whitelist (standalone mode)
     ├── templates/  scripts/  .gitignore
 ```
 
@@ -40,13 +43,33 @@ Install this repository through the plugin mechanism supported by your platform,
 
 ## Usage
 
+### Skills (all platforms)
+
+Skills are the functional delivery unit — they behave identically on every supported platform. Features marked *explicit* trigger only when the user asks for them by name (or via the ZCode command below); nothing explicit ever auto-triggers.
+
+| Skill | Trigger | What it does |
+| --- | --- | --- |
+| `agentspace` | Automatic (guarded) | Daily workspace management in sessions involving experiments, code changes, or iteration; stays out of project-unrelated chat |
+| `agentspace-init` | Explicit only | Initialize the workspace — the only entry, idempotent; analyzes the project, asks for goal / experiment env / key code repos |
+| `agentspace-update` | Explicit only | Migrate the workspace to the current plugin version; conservative by default, `--force` for aggressive |
+| `agentspace-doctor` | Explicit only | Deep health check: deterministic consistency, `--minor` per-file review, `--major` cross-history audit, `--fix` tiered repairs; never auto-triggered |
+| `agentspace-status` | Explicit only | Status workbench: project overview + current state + soft alerts (a snapshot — never a "next steps" narrative) |
+| `agentspace-mode` | Explicit only | Switch workspace mode (hybrid default / standalone); manage the external-dependency whitelist |
+| `agentspace-handoff` | Explicit only | One-shot session handoffs: produce a context snapshot at session close, consume it (read, then delete) at the next session start |
+| `agentspace-code-clean` | Situational — before every commit in a registered key repo | Commit gate and hygiene: staged files, ADDED code/comment lines, and the draft message must all pass `AGENTSPACE/scripts/commit-check.sh`; bookkeeping ids and experiment data never enter code repos |
+
+### Commands (ZCode convenience)
+
+On ZCode, each explicit skill also has a slash command that delegates to it via the command's `skills:` frontmatter. On platforms without slash commands, ask the agent directly — e.g. "run the agentspace-doctor skill with --minor".
+
 ```text
-/agentspace-init              # Explicit initialization (only entry, idempotent; analyzes workspace, asks goal/env/key repos)
-/agentspace-update [--force]  # Update workspace to match plugin version (conservative by default, --force for aggressive)
-/agentspace-doctor [--minor | --major] [--fix]  # Deep health check (explicit command only, never auto-triggered)
-/agentspace-handoff-produce [--name <name>] [--description <text>]  # Session close: write a one-shot context snapshot
-/agentspace-handoff-consume [--name <name>] [--keep]  # Session start: read a handoff, then delete it
-/agentspace-status          # Status workbench: project overview + current state + soft alerts (current-state snapshot, no next-step narrative)
+/agentspace-init                                # initialize          (skill agentspace-init)
+/agentspace-update [--force]                    # migrate workspace   (skill agentspace-update)
+/agentspace-doctor [--minor | --major] [--fix]  # deep health check   (skill agentspace-doctor)
+/agentspace-status                              # status workbench    (skill agentspace-status)
+/agentspace-mode                                # mode control        (skill agentspace-mode)
+/agentspace-handoff-produce [--name <name>] [--description <text>]  # session close (skill agentspace-handoff)
+/agentspace-handoff-consume [--name <name>] [--keep]                # session start (skill agentspace-handoff)
 ```
 
 After initialization, the agent auto-manages the workspace in relevant sessions (project-unrelated chat does not interfere):
@@ -64,22 +87,39 @@ For deeper audits — per-file content review (`--minor`), cross-cutting history
 
 One-shot session handoffs (`/agentspace-handoff-produce` / `/agentspace-handoff-consume`): at session close, produce writes a disposable context snapshot into `AGENTSPACE/handoff/` (semantic name required — conflicts are refused, never auto-renamed); the next session consumes it (reads, then deletes). Any session can produce one, with or without in-progress plans. Doctor covers the module — [10] residue consistency (dangling rows / orphan files / duplicates) and [11] staleness (unconsumed > 7 days; reported with what the handoff is for — never auto-deleted or auto-consumed); `AGENTSPACE/scripts/status.sh` lists pending handoffs with a staleness marker.
 
+## Key Code Repos & Commit Discipline
+
+Experiment projects typically have one or more key code repos alongside the workspace. AGENTSPACE keeps the code repos clean while all bookkeeping stays in the workspace:
+
+- **Registry**: key repos are registered in `AGENTSPACE/.agentspace-repos` (one path per line; registration/removal always requires explicit user confirmation, written only by `scripts/repos.sh`)
+- **Commit gate (MUST)**: before any `git commit` in a registered repo, the agent runs `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commits only on PASS. Blocked: bookkeeping ids (`plan:NNNN` / `iteration_NNNN` and variant spellings) in the message **and in ADDED code/comment lines**, experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`), blobs ≥ 50MB, and any `AGENTSPACE/` content leaking into the code repo. Blocked experiment output is moved into the iteration's `data/` instead of deleted
+- **Commit-text quality**: the title is a one-line description of the actual change — no experiment/run identifiers, no bookkeeping narrative; attribution lives in the iteration readme (host start/end commit SHAs), never in the code repo
+- **Ex-post audit**: `scripts/doctor.sh` [14] (registry consistency) and [15] (recent-commit content audit), plus `/agentspace-doctor`, report violations — report-only; history is never rewritten automatically
+
 ## Plugin Structure
 
 ```
-kimi.plugin.json                  # Kimi-compatible manifest
-.codex-plugin/plugin.json        # Codex-compatible manifest
-.zcode-plugin/plugin.json        # Existing manifest
-commands/agentspace-init.md        # /agentspace-init command
-commands/agentspace-update.md      # /agentspace-update command
-commands/agentspace-doctor.md      # /agentspace-doctor command (deep health check)
-commands/agentspace-handoff-produce.md  # /agentspace-handoff-produce command (session close)
-commands/agentspace-handoff-consume.md  # /agentspace-handoff-consume command (session start)
-skills/agentspace-init/          # Init skill (explicit command only) + init script + all template assets
-skills/agentspace-update/        # Update skill + version archives + update scripts
-skills/agentspace/               # Daily management skill (auto-triggered, with guards)
-skills/agentspace-doctor/        # Deep audit skill (explicit command only, never auto-triggered)
-skills/agentspace-handoff/       # Handoff skill (explicit commands only, never auto-triggered)
+.zcode-plugin/plugin.json         # ZCode manifest
+.codex-plugin/plugin.json         # Codex manifest
+kimi.plugin.json                  # Kimi manifest
+marketplace.json                  # Marketplace listing
+commands/                         # ZCode slash commands (thin wrappers delegating via skills: frontmatter)
+├── agentspace-init.md
+├── agentspace-update.md
+├── agentspace-doctor.md
+├── agentspace-status.md
+├── agentspace-mode.md
+├── agentspace-handoff-produce.md
+└── agentspace-handoff-consume.md
+skills/                           # The functional unit — portable across platforms
+├── agentspace/                   # Daily management (automatic, guarded)
+├── agentspace-init/              # Initialization (explicit only) + init script + all template assets
+├── agentspace-update/            # Update/migration (explicit only) + version archives + DEVELOPMENT.md
+├── agentspace-doctor/            # Deep audit (explicit only)
+├── agentspace-status/            # Status workbench (explicit only)
+├── agentspace-mode/              # Mode control (explicit only)
+├── agentspace-handoff/           # Session handoffs (explicit only)
+└── agentspace-code-clean/        # Commit gate & hygiene for registered key repos (situational; no command wrapper)
 ```
 
 ## Version Management
