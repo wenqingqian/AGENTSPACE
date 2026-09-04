@@ -43,7 +43,7 @@ Upgrade from v0.6.4. Date: 2026-09-05
 ### [Addition] AGENTS.md 纪律"并行工作区约定"铁律行(8b 精确文本)
 - **What**: `AGENTSPACE/AGENTS.md` `## 纪律` 节新增一条 MUST — 固定位置与锁目录在项目根、内嵌形态 .gitignore 前置豁免、并行期台账写锁与 add 纪律。
 - **Why**: 锁 owner 文件含记账 id 字面量, 内嵌形态下被宿主 `git add -A` 扫入会触发 commit 门甚至把泳道整体卷进宿主; 并行期台账 `add -A` 会把别家泳道的未暂存内容卷入自家里程碑提交。
-- **Migration** (step 8b — agent action, 逐字执行): 在 `AGENTSPACE/AGENTS.md` 的 `## 纪律` 节中, 找到 `- **[MUST] commit 门**:` 开头的那一行, 在其后插入一行(完整文本, 逐字):
+- **AGENTS.md (step 8b — agent action, exact insertion)**(逐字执行): 在 `AGENTSPACE/AGENTS.md` 的 `## 纪律` 节中, 找到 `- **[MUST] commit 门**:` 开头的那一行, 在其后插入一行(完整文本, 逐字):
 
   ```markdown
   - **[MUST] 并行工作区约定**: 多 plan 并行开发走 agentspace-parallel skill(PR-like 本地泳道)。固定位置 `worktrees/<plan-id>/<仓库名>/` 与锁目录 `.locks/` 在**项目根**(非 AGENTSPACE/ 内); 内嵌形态下宿主仓库必须先经 .gitignore 豁免这两个路径(锁 owner 文件含记账 id 字面量, 被 `git add -A` 扫入会触发 commit 门)。并行期台账写操作: 脚本自带锁, 内容文档写前取 `.locks/ledger/`; 永不 `git -C AGENTSPACE add -A` 一把梭(逐路径 add)

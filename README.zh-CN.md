@@ -57,6 +57,7 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理外部依赖白名单 |
 | `agentspace-handoff` | 仅显式 | 一次性会话交接: 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
 | `agentspace-code-clean` | 场景触发 — 登记仓库每次 commit 前 | commit 门与卫生规范: 暂存文件、新增代码/注释行与 message 草稿都必须先过 `AGENTSPACE/scripts/commit-check.sh`; 记账 id 与实验产物永不进入代码仓库 |
+| `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区: 固定泳道(`worktrees/<plan-id>/<仓库名>/`, 分支 `plan-<id>`)从记录在案的主线基点切出; 实施 + 单测 + e2e 全部在泳道内按预先写定的验收层级完成; 用户确认后 CAS squash 合回 — 主线恰好落一个 PR 名 commit(泳道内部 commit 不进主线; 主线已推进则先 absorb 进泳道重测再合); 纯本地, push 仍是用户显式动作 |
 
 ### 命令(ZCode 便捷入口)
 
@@ -119,7 +120,8 @@ skills/                           # 功能交付单元 — 跨平台可移植
 ├── agentspace-status/            # 状态工作台(仅显式)
 ├── agentspace-mode/              # 模式控制(仅显式)
 ├── agentspace-handoff/           # 会话交接(仅显式)
-└── agentspace-code-clean/        # 登记关键仓库的 commit 门与卫生规范(场景触发, 无命令包装)
+├── agentspace-code-clean/        # 登记关键仓库的 commit 门与卫生规范(场景触发, 无命令包装)
+└── agentspace-parallel/          # 本地 PR-like 并行工作区(场景触发, 无命令包装)
 ```
 
 ## 版本管理
@@ -132,6 +134,7 @@ skills/                           # 功能交付单元 — 跨平台可移植
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.0.0 | 2026-09-05 | 新 skill `agentspace-parallel`: 本地 PR-like 并行工作区(固定泳道形态、泳道内 T0-T3 验收分层、CAS squash 合回 — 主线恰好落一个 PR 名 commit, 主线已推进则 absorb 重测后再合, 纯本地)+ 并发竞态修复(plan/iteration 创建脚本锁先于 id 分配, 由新增并发回归测试当场抓获)+ doctor [14] 常规位泳道扫描与 [15] 武装式并行审计(主线 merge commit + 连字符形泳道标识报告, 传统工作流仓库零新增告警)+ status 泳道去重 + plan 模板改动面声明节与 iteration 模板 PR 簿记指引 |
 | v0.6.4 | 2026-09-01 | commit 门记账 id 禁令扩展到新增 diff 行(代码注释/字符串字面量; 同一 lib.sh 单源正则与前导零锚定, 删除行永不阻断, rename+edit hunk 经 -M ACMRT 照扫)+ doctor [15] 内容事后审计(按类首命中: message/内容/空标题 三类互不遮蔽, 新增行预算封顶)+ rubric skill 更名 agentspace-commit → agentspace-code-clean(脚本名 commit-check.sh 不变)+ 发布工具自食防护(verify-release [4] 反向 + [12] 已实现字面量守卫) |
 | v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.2 | 2026-08-16 | 新增 Codex 强制插件清单与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |

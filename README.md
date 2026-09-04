@@ -57,6 +57,7 @@ Skills are the functional delivery unit — they behave identically on every sup
 | `agentspace-mode` | Explicit only | Switch workspace mode (hybrid default / standalone); manage the external-dependency whitelist |
 | `agentspace-handoff` | Explicit only | One-shot session handoffs: produce a context snapshot at session close, consume it (read, then delete) at the next session start |
 | `agentspace-code-clean` | Situational — before every commit in a registered key repo | Commit gate and hygiene: staged files, ADDED code/comment lines, and the draft message must all pass `AGENTSPACE/scripts/commit-check.sh`; bookkeeping ids and experiment data never enter code repos |
+| `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces: fixed per-plan lanes (`worktrees/<plan-id>/<repo>/`, branch `plan-<id>`) fork from a recorded mainline base; implementation + unit + e2e all run inside the lane at a pre-declared verification tier; after user confirmation, a CAS squash merge lands exactly one PR-named commit on mainline (lane-internal commits stay off it; moved mainline is absorbed into the lane and retested first); purely local — push stays user-gated |
 
 ### Commands (ZCode convenience)
 
@@ -119,7 +120,8 @@ skills/                           # The functional unit — portable across plat
 ├── agentspace-status/            # Status workbench (explicit only)
 ├── agentspace-mode/              # Mode control (explicit only)
 ├── agentspace-handoff/           # Session handoffs (explicit only)
-└── agentspace-code-clean/        # Commit gate & hygiene for registered key repos (situational; no command wrapper)
+├── agentspace-code-clean/        # Commit gate & hygiene for registered key repos (situational; no command wrapper)
+└── agentspace-parallel/          # Local PR-like parallel workspaces (situational; no command wrapper)
 ```
 
 ## Version Management
@@ -132,6 +134,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.0.0 | 2026-09-05 | New skill `agentspace-parallel`: local PR-like parallel workspaces (fixed per-plan worktree lanes, in-lane T0-T3 verification tiers, CAS squash merge-back — exactly one PR-named commit per lane on mainline, absorb-retest when mainline moved, purely local) + concurrency race fix (lock before id allocation in plan/iteration creators, caught by the new concurrency regression test) + doctor [14] conventional-lane worktree scan and [15] armed parallel audits (mainline merge-commit + dash-form lane-id reports, silent for conventional repos) + status lane dedupe + plan-template change-surface section and iteration-readme PR bookkeeping guidance |
 | v0.6.4 | 2026-09-01 | Commit gate extends the bookkeeping-id ban to ADDED diff lines (code comments / string literals; same lib.sh single-source regexes and leading-zero anchor, deletions never block, rename+edit hunks scanned via -M ACMRT) + doctor [15] content audit (first hit per category: message / content / blank-title, added-lines budget) + rubric skill renamed agentspace-commit → agentspace-code-clean (script name commit-check.sh unchanged) + release-tooling self-hosting guard (verify-release [4] reverse pass + [12] realized-literal guard) |
 | v0.6.3 | 2026-08-19 | Added the Kimi-compatible manifest (`kimi.plugin.json`) with triple-manifest version sync and release validation; shared skill descriptions, instructions, workspace assets, and command behavior unchanged |
 | v0.6.2 | 2026-08-16 | Added the Codex-required plugin manifest and release validation while leaving shared skill descriptions, instructions, workspace assets, and command behavior unchanged |
