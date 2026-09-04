@@ -8,6 +8,11 @@ source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 TITLE="${1:-}"
 [ -n "$TITLE" ] || as_die "Usage: new-plan.sh \"Plan title\""
 
+# Lock BEFORE id allocation (t21): as_next_plan_id reads the index — computing
+# it pre-lock let every concurrent creator read the same "next id" and collide
+# on the same plan/todo/NNNN file. The lock covers the whole read-compute-write.
+as_lock
+
 ID="$(as_next_plan_id)"
 DATE="$(as_today)"
 CELL="$(as_cell "$TITLE")"
@@ -20,8 +25,6 @@ command -v python3 >/dev/null 2>&1 || as_die "new-plan.sh needs python3 (CJK-awa
 SLUG="$(printf '%s' "$TITLE" | tr '\n\r\t' '   ' | tr -s ' ' | tr ' ' '-' | tr -d '/\\?*":<>|()[]#!' | PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:40])")"
 [ -n "$SLUG" ] || SLUG="plan"
 FILE="plan/todo/${ID}-${SLUG}.md"
-
-as_lock
 
 PH_ID="$ID" PH_TITLE="$TITLE" PH_DATE="$DATE" \
   as_fill_template "$AS_ROOT/templates/plan.md" "$AS_ROOT/$FILE"

@@ -329,6 +329,14 @@ as_external_refs() {
 # 各报首个命中行; WARN 级(数据扩展名/输出目录)属 agent 语义层, 不在事后扫描内。
 readonly COMMIT_BAN_PLAN_RE="plan:[[:space:]]*0[0-9]{3,}"
 readonly COMMIT_BAN_ITER_RE="iteration_0[0-9]{3,}"
+# Dash form `plan-NNNN` — the lane branch-name shape (agentspace-parallel). It
+# never belongs in commit TEXT (absorb messages included); the branch name
+# itself is a ref, not text, and stays legal. Report-only heuristic in doctor
+# [15]'s parallel audit: armed only with parallel-flow evidence (plan-*
+# branches present or the scanned path being a linked worktree), so repos on a
+# conventional merge workflow stay silent. Same leading-zero anchor as the
+# colon form — natural text like "roadmap plan-2026" is spared.
+readonly COMMIT_BAN_PLAN_DASH_RE="plan-0[0-9]{3,}"
 # Staged-file hard blocks: workspace paths, experiment-output signatures
 # (top-level dirs / tfevents basename), and any single blob at/above
 # COMMIT_BLOCK_BYTES. Warn level: data extensions at/above COMMIT_WARN_BYTES
@@ -448,6 +456,34 @@ as_repos() {
       *)  printf '%s/%s\n' "$base" "$line" ;;
     esac
   done < "$AS_ROOT/.agentspace-repos"
+}
+
+# as_repo_main_worktree <path>: canonical path of the MAIN worktree of the repo
+# containing <path>. Linked worktree checkouts share one git common dir and
+# `git worktree list --porcelain` always lists the main worktree first. Used to
+# tell a lane checkout (agentspace-parallel) apart from the main checkout:
+# mainline-only audits (doctor [15] merge-commit check) and status lane dedupe
+# both key off this. Prints nothing and returns 1 when not determinable.
+as_repo_main_worktree() {
+  local wt
+  wt="$(git -C "$1" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')" || return 1
+  [ -n "$wt" ] || return 1
+  (cd -P "$wt" 2>/dev/null && pwd -P) || return 1
+}
+
+# as_parallel_evidence <path>: 0 when the repo containing <path> shows signs of
+# the agentspace-parallel flow — plan-* branches in its namespace (lane
+# branches live in the shared namespace, visible from the main checkout too)
+# or <path> itself being a linked worktree. Arms doctor [15]'s parallel
+# audits; without evidence a repo on a conventional merge workflow must stay
+# silent (report-only red-forever noise teaches ignoring red).
+as_parallel_evidence() {
+  local br mw
+  br="$(git -C "$1" branch --list 'plan-[0-9]*' 2>/dev/null | head -1 || true)"
+  [ -n "$br" ] && return 0
+  mw="$(as_repo_main_worktree "$1" 2>/dev/null || true)"
+  [ -n "$mw" ] && [ "$mw" != "$1" ] && return 0
+  return 1
 }
 
 # as_repo_registered <path>: 0 when the canonical toplevel containing <path>

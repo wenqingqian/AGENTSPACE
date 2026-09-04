@@ -11,6 +11,12 @@ PLAN_ARG="${1:-}"
 TITLE="${2:-}"
 [ -n "$PLAN_ARG" ] && [ -n "$TITLE" ] || as_die "Usage: new-iteration.sh <plan-id> \"iteration content\""
 
+# Lock BEFORE any workspace-state read (t21): the plan-todo glob and the id
+# allocation must sit in the same critical section as the writes — computing
+# the id pre-lock let every concurrent creator read the same "next id" and
+# collide on the same iteration_NNNN.
+as_lock
+
 PLAN_ID="$(as_norm_id "$PLAN_ARG")"
 PLAN_FILE=""
 # Only allow creating iterations for plans in todo (not completed)
@@ -23,8 +29,6 @@ ID="$(as_next_iteration_id)"
 DATE="$(as_today)"
 CELL="$(as_cell "$TITLE")"
 DIR="iterations/iteration_$ID"
-
-as_lock
 
 mkdir -p "$AS_ROOT/$DIR/data"
 PH_ID="$ID" PH_PLAN_ID="$PLAN_ID" PH_TITLE="$TITLE" PH_DATE="$DATE" \

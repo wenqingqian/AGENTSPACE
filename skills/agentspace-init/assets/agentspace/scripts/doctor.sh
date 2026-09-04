@@ -596,9 +596,11 @@ while IFS= read -r repo; do
 done <<< "$repos_snapshot"
 # hot unregistered repos (project-root anchored; repos living outside the
 # project tree are invisible to this scan — stated boundary). Armed only with
-# a non-empty registry (see section header).
-if [ -n "$repos_snapshot" ]; then
+# a non-empty registry (see section header). `base` is computed once for BOTH
+# this scan and the conventional-lane scan below (which runs regardless of
+# registry state).
 base="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+if [ -n "$repos_snapshot" ]; then
 while IFS= read -r gd; do
   [ -n "$gd" ] || continue
   rd="$(cd -P "$(dirname "$gd")" 2>/dev/null && pwd -P || true)"
@@ -636,6 +638,32 @@ else
   echo "  (登记处为空 — 热仓库扫描未启用; init/update 会询问登记, 软提示见 status 代码提交区)"
 fi
 
+# Conventional-lane scan (agentspace-parallel): every git checkout under the
+# fixed worktree location <root>/worktrees/<plan-id>/<repo>/ MUST be registered
+# — the commit gate fails closed there (exit 2) and an unregistered lane is
+# either a discipline lapse or a stray directory, both worth surfacing. The
+# generic hot scan above (maxdepth 2) cannot see these (depth 3). `_anchor-*`
+# plan dirs are the §12 carve-out (pinned-SHA A/B anchors: no registration, no
+# merge protocol). Armed unconditionally — the location only arises from
+# deliberate skill use, and the report is accurate either way.
+if [ -d "$base/worktrees" ]; then
+  while IFS= read -r gd; do
+    [ -n "$gd" ] || continue
+    case "$(basename "$(dirname "$(dirname "$gd")")")" in
+      _anchor-*) continue ;;
+    esac
+    rd="$(cd -P "$(dirname "$gd")" 2>/dev/null && pwd -P || true)"
+    [ -n "$rd" ] || continue
+    reg=0
+    while IFS= read -r row; do
+      [ -n "$row" ] || continue
+      [ "$rd" = "$row" ] && { reg=1; break; }
+    done <<< "$repos_snapshot"
+    [ "$reg" -eq 1 ] && continue
+    warn "固定位置的 worktree 未登记: $rd (worktrees/<plan-id>/<repo>/ 内的检出必须登记, 否则 commit 门不识别 — 用户确认后 repos.sh --add; 锚 worktree 请置于 _anchor-<name>/ 下)"
+  done < <(find "$base/worktrees" -mindepth 3 -maxdepth 3 -name .git 2>/dev/null || true)
+fi
+
 # ---- 15. commit discipline audit (registered repos, recent COMMIT_AUDIT_N) ----
 # Ex-post net for whatever the pre-commit gate missed (manual commits, agent
 # lapses). Same rule table as commit-check.sh — regexes/constants single-
@@ -658,12 +686,35 @@ while IFS= read -r repo; do
   [ -n "$repo" ] || continue
   [ -d "$repo" ] || continue  # stale rows already reported by [14]
   git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+  # Parallel-flow audits (agentspace-parallel): armed per repo only on evidence
+  # (plan-* branches in the shared namespace, or this path being a linked
+  # worktree) — a repo on a conventional merge workflow must stay silent. The
+  # merge-commit check fires only on the MAIN worktree's log: absorb merges on
+  # lane branches are legal there by design.
+  par=0; is_main_wt=1
+  if as_parallel_evidence "$repo"; then
+    par=1
+    mwt="$(as_repo_main_worktree "$repo" 2>/dev/null || true)"
+    [ -n "$mwt" ] && [ "$mwt" != "$repo" ] && is_main_wt=0
+  fi
   while IFS= read -r sha; do
     [ -n "$sha" ] || continue
     msg="$(git -C "$repo" log -1 --format=%B "$sha" 2>/dev/null || true)"
     mhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" 2>/dev/null | head -1 || true)"
     if [ -n "$mhit" ]; then
       warn "$repo @$sha: commit message 含工作区记账引用 — \"${mhit#*:}\" (已落历史, 只报告: 处置由用户决定)"
+    fi
+    if [ "$par" -eq 1 ]; then
+      dhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_DASH_RE" 2>/dev/null | head -1 || true)"
+      if [ -n "$dhit" ]; then
+        warn "$repo @$sha: commit message 含连字符形泳道标识 — \"${dhit#*:}\" (plan-NNNN 是分支名, 不属 commit 文本; 只报告)"
+      fi
+      if [ "$is_main_wt" -eq 1 ]; then
+        npar="$(git -C "$repo" rev-list --parents -n 1 "$sha" 2>/dev/null | awk '{print NF-1}')"
+        if [ "${npar:-0}" -gt 1 ]; then
+          warn "$repo @$sha: 主线窗口含 merge commit (${npar} parents) — squash 纪律: 每个被接受的 merge 恰一个 PR 名 commit (agentspace-parallel §8.1; 只报告)"
+        fi
+      fi
     fi
     if as_msg_title_blank "$msg"; then
       warn "$repo @$sha: commit 标题为空或纯空白 (已落历史, 只报告: 处置由用户决定)"

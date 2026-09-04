@@ -83,11 +83,47 @@ echo
 
 # --- 关键代码仓库: 登记处驱动(每仓库一行机械事实: 分支/脏数/最新提交/上下游)。
 # 登记处为空 = 合法状态(用户可拒绝登记), 显示空态, 不告警。
+# 泳道去重(agentspace-parallel): 登记检出若是另一仓库的 linked worktree, 它是
+# plan 泳道而非独立仓库 — 并入主检出行(泳道状态由台账承担, 不是仓库级事实)。
+# 主检出未登记的泳道保留自身行(加后缀), 否则该泳道会从 status 里整个消失。
+repos_rows="$(as_repos)"
+lanes=""
+while IFS= read -r repo; do
+  [ -n "$repo" ] && [ -d "$repo" ] || continue
+  mwt="$(as_repo_main_worktree "$repo" 2>/dev/null || true)"
+  [ -n "$mwt" ] && [ "$mwt" != "$repo" ] || continue
+  lbr="$(git -C "$repo" symbolic-ref --short -q HEAD 2>/dev/null || true)"
+  lanes="$lanes$mwt|$repo|${lbr:-—}"$'\n'
+done <<< "$repos_rows"
+lane_main_registered() { printf '%s\n' "$repos_rows" | grep -Fqx -- "$1" 2>/dev/null; }
+is_collapsed_lane() {  # $1 = repo path: a lane whose main checkout is registered
+  local lm lp lb
+  while IFS='|' read -r lm lp lb; do
+    [ -n "$lm" ] || continue
+    if [ "$lp" = "$1" ] && lane_main_registered "$lm"; then return 0; fi
+  done <<< "$lanes"
+  return 1
+}
+is_any_lane() { printf '%s' "$lanes" | cut -d'|' -f2 | grep -Fqx -- "$1" 2>/dev/null; }
+lane_note() {  # $1 = main repo path → " · 泳道: plan-0001@<项目相对路径>, ..." or ""
+  local out="" lm lp lb rel pbase
+  pbase="$(cd -P "$AS_ROOT/.." 2>/dev/null && pwd -P || echo "$AS_ROOT/..")"
+  while IFS='|' read -r lm lp lb; do
+    [ -n "$lm" ] || continue
+    [ "$lm" = "$1" ] || continue
+    lane_main_registered "$lm" || continue
+    rel="${lp#"$pbase"/}"
+    out="$out, $lb@$rel"
+  done <<< "$lanes"
+  [ -n "$out" ] && printf ' · 泳道: %s' "${out#, }"
+  return 0
+}
 echo "### 关键代码仓库"
 repos_found=0
 while IFS= read -r repo; do
   [ -n "$repo" ] || continue
   repos_found=1
+  if is_collapsed_lane "$repo"; then continue; fi
   if [ ! -d "$repo" ]; then
     echo "- (登记路径缺失: $repo — 见 doctor [14])"
     continue
@@ -100,8 +136,10 @@ while IFS= read -r repo; do
   if [ -n "$rab" ]; then
     rab_str=" ↑$(printf '%s' "$rab" | cut -f2)/↓$(printf '%s' "$rab" | cut -f1)"
   fi
-  echo "- $(basename "$repo") ($repo) · ${rbr:-—} · 脏 ${rdirty:-?} · 最新: $(trunc "${rlast:-—}" 50)$rab_str"
-done < <(as_repos)
+  lane_suffix=""
+  if is_any_lane "$repo"; then lane_suffix=" · (泳道检出 — 其主检出未登记)"; fi
+  echo "- $(basename "$repo") ($repo) · ${rbr:-—} · 脏 ${rdirty:-?} · 最新: $(trunc "${rlast:-—}" 50)$rab_str$(lane_note "$repo")$lane_suffix"
+done <<< "$repos_rows"
 [ "$repos_found" -eq 0 ] && echo "  (无登记仓库)"
 echo
 
@@ -274,8 +312,9 @@ while IFS= read -r repo; do
   [ -n "$repo" ] || continue
   repos_seen=$((repos_seen + 1))
   [ -d "$repo" ] || continue
+  if is_collapsed_lane "$repo"; then continue; fi
   repos_any=1
-  block="#### $(basename "$repo") ($repo)"$'\n'
+  block="#### $(basename "$repo") ($repo)$(lane_note "$repo")"$'\n'
   case "$AS_ROOT" in
     "$repo"/*)
       commits="$(git -C "$repo" log -"$STATUS_REPO_COMMITS" --format="%h%x1f%ad%x1f%s" --date=short -- . ":(exclude)${AS_ROOT#"$repo"/}" 2>/dev/null || true)" ;;
@@ -291,7 +330,7 @@ while IFS= read -r repo; do
     block="$block  (无提交)"$'\n'
   fi
   repos_out="$repos_out$block"
-done < <(as_repos)
+done <<< "$repos_rows"
 if [ "$repos_any" -eq 1 ]; then
   echo "### 代码提交 (关键代码仓库 · 每仓库最近 $STATUS_REPO_COMMITS 条)"
   printf '%s' "$repos_out"
