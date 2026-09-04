@@ -234,6 +234,15 @@ edit(A, "- 只在 AGENTSPACE/ 内做 git 操作; 宿主仓库代码状态用 com
 edit(A, "完整规则见 agentspace-commit skill。", "完整规则见 agentspace-code-clean skill。",
      "v0.6.4", "AGENTS.md commit 门行: skill 引用更名")
 
+# --- v1.0.0: AGENTS.md 纪律 gains the parallel-workspace bullet (8b). The bullet
+#     text is read from the canonical asset at replay time — inlining a copy here
+#     would be a second source of truth that can silently drift. ---
+PAR_BULLET = [l for l in open(f"{ASSET}/AGENTS.md").read().splitlines()
+              if l.startswith("- **[MUST] 并行工作区约定**")][0]
+GATE_LINE = '- **[MUST] commit 门**: 登记仓库 commit 前必过 `scripts/commit-check.sh <仓库> "<message>"`(见 关键代码仓库 节); 未登记仓库先登记后提交; 登记/出册必须用户显式确认'
+edit(A, GATE_LINE, GATE_LINE + "\n" + PAR_BULLET,
+     "v1.0.0", "AGENTS.md 纪律: 并行工作区约定行")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -263,6 +272,7 @@ assert_contains "$WS/AGENTS.md" "## 关键代码仓库"
 assert_contains "$WS/AGENTS.md" "commit 检查门(commit-check.sh)"
 assert_contains "$WS/AGENTS.md" "agentspace-code-clean skill"        # v0.6.4 rename swap
 assert_not_contains "$WS/AGENTS.md" "agentspace-commit"              # v0.6.4: no stale reference survives
+assert_contains "$WS/AGENTS.md" "并行工作区约定"                        # v1.0.0: 纪律 bullet (8b)
 [ -f "$WS/.agentspace-repos" ] || fail ".agentspace-repos seed missing after v0.6.0 replay"
 [ -f "$WS/scripts/repos.sh" ] && [ -f "$WS/scripts/commit-check.sh" ] \
   || fail "v0.6.0 scripts missing after 8a"

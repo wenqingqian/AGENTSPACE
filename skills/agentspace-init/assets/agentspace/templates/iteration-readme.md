@@ -27,11 +27,15 @@
 
 <!-- 引用 tests.md 的环境条目。
      宿主起始/结束 commit 由脚本自动记录(创建时/关闭时各一行)。
-     宿主有未提交改动时, 把 diff 存到 data/: git -C <宿主> diff > data/code.diff -->
+     宿主有未提交改动时, 把 diff 存到 data/: git -C <宿主> diff > data/code.diff
+     并行轮次(agentspace-parallel)在本节登记 PR 簿记永久锚点:
+     每仓库一行 <repo> plan-<id>:<base-sha>(创建泳道时的主线基点, 主线永远可达)。 -->
 
 ## 结果
 
 <!-- 指标 / 结论; 关闭 iteration 前必填 -->
+<!-- 并行轮次追加: 验收层级(T0-T3)与理由在执行前写定于本节;
+     合并后登记每仓库 squash SHA(永久锚点), 空净差合并记 no-op。 -->
 
 ## data 产物清单
 
@@ -40,5 +44,6 @@
 
 ## 日志
 
-<!-- append-only: 每次工作追加一行, 不修改历史行 -->
+<!-- append-only: 每次工作追加一行, 不修改历史行。
+     并行轮次的临时锚点(泳道分支 HEAD / absorb 基点)记本节, 合并清理后即失效。 -->
 - {{DATE}} 创建
