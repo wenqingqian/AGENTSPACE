@@ -134,6 +134,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.0.1 | 2026-09-05 | agentspace-parallel 行为修正: 改动面交集(文件级或语义级)不再阻塞准入 — §2 交集扫描降级为纯信息动作; 唯一阻塞点钉死在合回(§7h: 冲突 hunk / 退役面命中 / 结构性 absorb / 重测失败任一 → 冻结 merge, 与用户讨论处理计划后泳道内更新重测) |
 | v1.0.0 | 2026-09-05 | 新 skill `agentspace-parallel` — 本地 PR-like 并行工作区(按 plan 一条泳道、泳道内验证、CAS squash 合回主线恰好一个 commit, 纯本地)+ plan/iteration 创建脚本锁先于 id 分配的竞态修复 + doctor 并行工作区审计覆盖 + status 泳道去重 + plan 模板改动面声明节与 iteration 模板 PR 簿记指引 |
 | v0.6.4 | 2026-09-01 | commit 门记账 id 禁令扩展到新增 diff 行(代码注释/字符串字面量; 删除行永不阻断)+ doctor 新增行内容事后审计 + rubric skill 更名 agentspace-commit → agentspace-code-clean(脚本名 commit-check.sh 不变)+ 发布工具自食防护(verify-release 常量反向校验与已实现字面量守卫) |
 | v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |

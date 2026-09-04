@@ -18,7 +18,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 4. **AGENTSPACE 台账单实例共享**: 索引/登记状态只经 `scripts/` 写入(自锁); 其余写路径走台账锁(§6)。**泳道活跃期间台账仓库禁止 `git add -A`**——会把其他会话的在途改动卷进你的提交。
 5. **验证先量定再执行**(§8.0), 且**在 worktree 内、merge 之前**运行; 禁止沉默跳过。
 6. **merge-back 只有一个合法形式**(§8.1): 主线锁 → 复查基准 → `merge --squash` → commit 门 → commit → diff 为空证明 → 放锁。不 fast-forward、不普通 merge、主线无 merge commit、无 "Merge branch xxx" 标题——每个被接受的 merge 恰好一个 commit, 标题读起来像 PR 名。
-7. **改动面相交的 plan 不并行**——按仓库, 文件级或语义级(§2)。worktree 隔离工作区, 不隔离语义冲突。
+7. **改动面相交绝不阻塞开发**——文件级或语义级。泳道是属主会话的沙盒: 自由开发。唯一阻塞点在合回——§7 absorb 发现冲突(文本 hunk / 退役面命中 / 结构性 absorb / 重测失败)即冻结本次 merge, 与用户讨论处理计划后在泳道内更新(§7h)。worktree 隔离工作目录; 交集在主线的进入口解决, 不在入场处。
 
 ## 1. 项目发现(先把项目参数化, 再开始任何操作)
 
@@ -30,7 +30,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 | 登记仓库清单 | `AGENTSPACE/.agentspace-repos` + `scripts/repos.sh --list` | worktree 候选集; commit 门适用范围 |
 | 各仓库主分支 | 各主检出 `git branch --show-current` | worktree 分支的基线 |
 | 验证资产 | `AGENTSPACE/tests.md`(测试脚本索引) | §8.0 量定的依据; **项目可能没有长跑门**(只有单测, 或两者皆无) |
-| 活跃 plan/iteration 及**改动面声明** | `plan.md` todo 表 + `iterations.md` 进行中表 + 各 plan 文档 | §2 交集判定的对手方 |
+| 活跃 plan/iteration 及**改动面声明** | `plan.md` todo 表 + `iterations.md` 进行中表 + 各 plan 文档 | §2 信息性交集扫描的输入(§7a 差距预判) |
 | 依赖接线方式 | 各仓库环境脚本(env.sh 类)与 AGENTS.md | §3 步骤 2 的依赖重定向 |
 | scripts 并发安全 | `grep -n 'as_lock' AGENTSPACE/scripts/lib.sh` | §6.1 前提; 若无则台账锁范围扩大到脚本调用 |
 | 资源工具 | `AGENTSPACE/utils.md` | §9 节点/资源管理工具(若有) |
@@ -48,7 +48,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 
 ## 2. 适用性检查(动命令之前)
 
-- **改动面交集**: 目标 plan 文档的改动面声明(仓库清单 + 文件/语义面——plan 文档缺该声明时先由属主会话补上) vs 主线 plan 与其他活跃并行 plan, **按仓库逐一比对**。文件级(两侧都改的文件)与语义级(本 plan 消费的接口面被对方重构)任一相交 → 停下, **点名冲突方 plan**, 报告用户, 排队。改动面不相交的 plan 改同一仓库完全合法(git 原生支持同仓库多 worktree, 分支名不同)。
+- **改动面交集(纯信息——绝不当闸门)**: 目标 plan 文档的改动面声明(仓库清单 + 文件/语义面——plan 文档缺该声明时先由属主会话补上) vs 主线 plan 与其他活跃并行 plan, **按仓库逐一比对**。发现交集 → 点名对方 plan 并记入 iteration readme, 仅此而已。入场绝不因交集停下或排队(铁律 7)——该扫描只为 §7a 差距分析提供预判, 因为一切交集都在合回时显形并处理(§7/§8)。多个泳道改同一仓库完全合法, 相交与否皆是(git 原生支持同仓库多 worktree, 分支名不同)。
 - **对主检出未提交改动的依赖**: worktree 分支从主检出 HEAD 切, **不携带工作区未提交内容**; 有依赖先等其 commit。
 - 报告动作清单(worktree 路径 + 分支名 + repos.sh 登记行)取得用户一次确认——该确认同时满足 AGENTSPACE "登记须用户显式确认"的纪律, 之后不再逐步询问。
 
@@ -128,7 +128,7 @@ d. **零冲突也查退役面**: 交集非空时 grep 主线 diff 中删掉的�
 e. **code review 触发(满足任一)**: ① 解决过任何 conflict hunk; ② 语义交集非空(即使零文本冲突); ③ 主线差距属结构性大改且在本 plan 辐射范围。时机 = absorb 后单测绿、进入 §8.1 锁之前; 对象 = absorb 结果(merge commit 对两侧 parent 的差异 + absorb 后本 plan 改动最终形态); 重点 = 移植丢语义 / 引用退役面 / 主线重构引入的不变式合并后是否仍立。评审报告归档进 iteration data/。
 f. **记录**: absorb merge commit 的消息是有意义的一行——absorb 点 + 差距一句话(如 `merge: absorb mainline <sha> — <那边改了什么的一句话>`)。**禁止**默认 `Merge branch/commit ...` 模板, **禁止**任何拼写的记账 id(`plan:NNNN` 与 `plan-NNNN` 都算), `# Conflicts:` 注释行必须剥掉(git commit 默认 cleanup 会剥; 永不用 `--cleanup=verbatim`)。差距画像本体进 readme 日志节——过程叙述归台账, 不归 commit 文本。
 g. **absorb 后重测档位**: 文件+语义交集皆空 → T1 快测即可; 任一非空 → 重跑 §8.0 原档位。拿不准就高。
-h. **二次确认边界**: 重测失败或结构性 absorb → 回到用户; 例行 absorb + 全绿不再重复请示, 按原确认("绿了就合")继续。
+h. **阻塞点(本 skill 唯一)**: 满足任一——冲突 hunk / 语义交集命中(即使零文本冲突, 如 d 的退役面命中)/ 结构性 absorb / 重测失败——即**冻结本次 merge**: 停下, 向用户出示差距画像与处理计划, 按共识在泳道内更新, 重测, 再进 §8.1。只有零交集 absorb + 全绿才按原确认("绿了就合")不再重复请示。
 
 ## 8. merge 回主线: CAS squash(唯一合法序列)
 

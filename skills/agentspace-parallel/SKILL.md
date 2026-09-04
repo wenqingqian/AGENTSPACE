@@ -28,8 +28,11 @@ description: Parallel development on AGENTSPACE-managed projects — per-plan gi
    `merge --squash` → commit gate → commit → diff-empty proof → unlock. No fast-forward, no plain
    merge, no merge commits on the mainline, no "Merge branch xxx" titles — each accepted merge is
    exactly ONE commit whose title reads like a PR name.
-7. **Plans whose change surfaces intersect do not run in parallel** — per repo, at file level or
-   semantic level (§2). Worktrees isolate working directories, not semantic conflicts.
+7. **Intersecting change surfaces never block development** — file-level or semantic. A lane is
+   its owner session's sandbox: develop freely. The ONLY blocking point is merge-back — a conflict
+   surfaced by §7 absorb (text hunk / retired-surface hit / structural absorb / retest failure)
+   freezes the merge and is settled with the user before the lane updates (§7h). Worktrees isolate
+   working directories; intersections are resolved at the mainline's entry point, not at admission.
 
 ## 1. Project discovery (parameterize before any operation)
 
@@ -41,7 +44,7 @@ A parallel session **assumes nothing** about the project. Read each row:
 | Registered repos | `AGENTSPACE/.agentspace-repos` + `scripts/repos.sh --list` | worktree candidate set; commit-gate scope |
 | Mainline branch per repo | `git -C <repo> branch --show-current` on each main checkout | branch baseline |
 | Verification assets | `AGENTSPACE/tests.md` (test-script index) | basis for §8.0 tiering; **a project may have no long gate** (unit tests only, or neither) |
-| Active plans / iterations + **change-surface declarations** | `plan.md` todo table + `iterations.md` in-progress table + each plan doc | the opponents of §2's intersection verdict |
+| Active plans / iterations + **change-surface declarations** | `plan.md` todo table + `iterations.md` in-progress table + each plan doc | input to §2's informational intersection scan (the §7a gap preview) |
 | Dependency wiring | each repo's env scripts (env.sh-style) and AGENTS.md | §3 step 2 redirection |
 | Scripts self-lock | `grep -n 'as_lock' AGENTSPACE/scripts/lib.sh` | §6.1 precondition; if absent, the ledger lock also covers script calls |
 | Resource tools | `AGENTSPACE/utils.md` | §9 node/resource tooling (if any) |
@@ -62,13 +65,14 @@ takeover to the user — never silently break a lock.
 
 ## 2. Applicability check (before touching any command)
 
-- **Change-surface intersection**: the target plan doc's change-surface declaration (repo list +
-  file/semantic surface — if the plan doc lacks one, the owner session writes it first) vs the
-  mainline plan and every other active parallel plan, **per repo**. File-level (a file both sides
-  touch) or semantic-level (an interface surface this plan consumes gets refactored by the other
-  side) — any intersection → stop, **name the conflicting plan explicitly**, report to the user,
-  queue. Plans touching disjoint surfaces of the SAME repo are legal (git supports multiple
-  worktrees per repo; branch names differ).
+- **Change-surface intersection (informational — never a gate)**: the target plan doc's
+  change-surface declaration (repo list + file/semantic surface — if the plan doc lacks one, the
+  owner session writes it first) vs the mainline plan and every other active parallel plan, per
+  repo. Name any intersecting plan explicitly and record the finding in the iteration readme —
+  that is all. Admission never stops or queues on an intersection (iron rule 7); the scan exists
+  to give §7a's gap analysis a preview, because every intersection materializes and is handled at
+  merge-back (§7/§8). Multiple lanes touching the SAME repo are legal, intersecting or not (git
+  supports multiple worktrees per repo; branch names differ).
 - **Dependency on uncommitted main-checkout changes**: a worktree branch forks from the mainline
   HEAD and does NOT carry uncommitted content; wait for that commit first.
 - Report the action list (worktree paths + branch names + repos.sh registration rows) and get the
@@ -210,9 +214,12 @@ f. **Record**: the absorb merge commit's message is a meaningful one-liner — a
    section — process narration belongs in the ledger, not in commit text.
 g. **Retest tier after absorb**: file AND semantic intersections both empty → T1 quick pass is
    enough; either non-empty → rerun the ORIGINAL §8.0 tier. When in doubt, round up.
-h. **Re-confirmation boundary**: a retest failure or a structural absorb goes back to the user;
-   a routine absorb with green tests proceeds under the original "merge when green" confirmation
-   without re-asking.
+h. **The blocking point (the only one in this skill)**: ANY of — a conflict hunk, a semantic
+   intersection finding (even at zero text conflicts, e.g. a retired-surface hit in d), a
+   structural absorb, a retest failure — FREEZES the merge: stop, present the gap profile and a
+   handling plan to the user, update the lane per the agreed plan, retest, then re-enter §8.1.
+   Only a zero-intersection absorb with green tests proceeds under the original "merge when green"
+   confirmation without re-asking.
 
 ## 8. Merge-back: CAS squash (the only legal sequence)
 
