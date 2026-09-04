@@ -2,11 +2,11 @@
 
 ## 项目背景
 
-<!-- 一句话: 这个项目做什么; 关键目录 / 入口 -->
+AGENTSPACE — 跨平台插件, 为实验/迭代型项目提供 git 管理的 agent 工作区; 源码在 `skills/` 与 `commands/`, 入口文档 `README.md` / `README.zh-CN.md`, 开发台账在 `AGENTSPACE/`。
 
 ## 实验环境
 
-<!-- 容器 / conda / GPU 等一句话; 详情见 AGENTSPACE/tests.md -->
+无容器/conda/GPU — 纯 bash + python3 脚本项目; 发布验证走 `self-test.sh` 与 `verify-release.sh`(详见 AGENTSPACE/tests.md)。
 
 ## AGENTSPACE
 
