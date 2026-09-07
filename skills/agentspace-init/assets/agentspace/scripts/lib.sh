@@ -49,6 +49,26 @@ readonly STALE_DAYS="7"
 # datasets); smaller external refs must be integrated or explicitly exempted
 # by the user (mode.sh / doctor.sh [13]).
 readonly WHITELIST_LARGE_BYTES="1073741824"
+# ---- Lock knobs (lib.sh mkdir spinlock; see as_lock) ----
+# Acquire-wait ceiling (seconds): the critical sections are sub-second, so a
+# live holder outlasting this bound is a stuck writer — the waiter reports
+# the holder pid and exits non-zero instead of spinning forever. Stale-lock
+# takeover is never subject to this bound. Pre-settable in the environment
+# (a short value makes the bound testable); a non-numeric value falls back
+# to the default.
+AS_LOCK_TIMEOUT_SECONDS="${AS_LOCK_TIMEOUT_SECONDS:-120}"
+case "$AS_LOCK_TIMEOUT_SECONDS" in ''|*[!0-9]*) AS_LOCK_TIMEOUT_SECONDS="120" ;; esac
+readonly AS_LOCK_TIMEOUT_SECONDS
+# Second-level stale grace (hours) for parseable-pid locks: pid liveness
+# alone cannot catch pid reuse — a dead owner's pid may be recycled by an
+# unrelated process, so `ps` would report a live holder forever. The lock's
+# mtime equals its acquisition time (the pid file is written once, never
+# refreshed during a hold), so a lock outliving this bound is stale even
+# when the pid answers. Pre-settable in the environment, same rules as
+# AS_LOCK_TIMEOUT_SECONDS.
+AS_LOCK_STALE_HOURS="${AS_LOCK_STALE_HOURS:-6}"
+case "$AS_LOCK_STALE_HOURS" in ''|*[!0-9]*) AS_LOCK_STALE_HOURS="6" ;; esac
+readonly AS_LOCK_STALE_HOURS
 # ---- Placeholder constants (must match template comments exactly; doctor [5] checks drift) ----
 # Gate: close-iteration refuses while present. Template: iteration-readme.md "结果"
 readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
@@ -832,15 +852,29 @@ as_append_to_section() {
 # (crash between mkdir and pid write, or a partial write) also falls back to
 # the mtime grace path — never spin forever on it (fail-open). Liveness is
 # checked with `ps -p PID -o pid=` (empty output = no such process), which
-# answers across users where `kill -0` would fail with EPERM.
+# answers across users where `kill -0` would fail with EPERM. Two bounds
+# cap the residual risks: a live pid on a lock older than
+# AS_LOCK_STALE_HOURS is a recycled pid, not a writer (the mtime is the
+# acquisition time and never refreshes during a hold) — stale; and the
+# acquire wait itself is capped at AS_LOCK_TIMEOUT_SECONDS, after which the
+# waiter exits non-zero naming the holder pid and lock path instead of
+# spinning forever. Only the wait is capped — a stale takeover runs
+# whenever staleness says so.
 as_lock() {
-  local owner stale pidtmp
+  local owner stale pidtmp wait_start
+  wait_start="${SECONDS:-0}"
   while ! mkdir "$AS_ROOT/.scripts.lock" 2>/dev/null; do
     owner="$(cat "$AS_ROOT/.scripts.lock/pid" 2>/dev/null || true)"
     stale=""
     if [ -n "$owner" ] && [[ "$owner" =~ ^[0-9]+$ ]]; then
-      # parseable owner PID: stale iff the process no longer exists
-      [ -n "$(ps -p "$owner" -o pid= 2>/dev/null)" ] || stale=1
+      # parseable owner PID: stale iff the process no longer exists — or,
+      # pid-reuse guard, the process lives but the lock predates the
+      # stale-hours threshold (a lock is never refreshed during a hold)
+      if [ -n "$(ps -p "$owner" -o pid= 2>/dev/null)" ]; then
+        [ -n "$(find "$AS_ROOT/.scripts.lock" -mmin +$((AS_LOCK_STALE_HOURS * 60)) 2>/dev/null | head -1)" ] && stale=1
+      else
+        stale=1
+      fi
     elif [ -n "$(find "$AS_ROOT/.scripts.lock" -mmin +5 2>/dev/null | head -1)" ]; then
       # pid file missing / empty / unreadable / non-numeric → mtime grace path
       stale=1
@@ -849,16 +883,29 @@ as_lock() {
       # Atomic claim: mv IS the claim — exactly one waiter wins it; losers
       # find the source gone, re-loop, and see the new holder's live lock.
       # Never `rm -rf` the lock in place: a concurrent claimant could then
-      # delete a freshly re-acquired live lock.
+      # delete a freshly re-acquired live lock. Unconditional — the acquire
+      # timeout below bounds only waiting on a live holder.
       if mv "$AS_ROOT/.scripts.lock" "$AS_ROOT/.scripts.lock.stale.$$" 2>/dev/null; then
         rm -rf "$AS_ROOT/.scripts.lock.stale.$$"
       fi
       continue
     fi
+    # Live-holder wait is bounded: a holder alive this long is a stuck
+    # writer, not a critical section — name it and give up rather than
+    # spin forever.
+    if (( ${SECONDS:-0} - wait_start >= AS_LOCK_TIMEOUT_SECONDS )); then
+      as_die "as_lock: timed out after ${AS_LOCK_TIMEOUT_SECONDS}s waiting for $AS_ROOT/.scripts.lock (held by pid ${owner:-unknown})"
+    fi
     sleep 0.2
   done
-  # Write the owner PID atomically (tmp + mv): a crash mid-write can never
-  # leave an empty or half-written pid file behind.
+  # Placeholder pid FIRST, written directly (a single tiny write —
+  # effectively atomic in practice, though not guaranteed): between mkdir
+  # success and the trap installation a TERM/KILL would otherwise leave a
+  # pid-less lock. With the pid on disk the next writer liveness-checks
+  # this shell and takes the lock over as stale.
+  printf '%s' "$$" > "$AS_ROOT/.scripts.lock/pid"
+  # Refine the owner PID atomically (tmp + mv) over the placeholder: a
+  # crash mid-write can never leave an empty or half-written pid file.
   pidtmp="$(mktemp "$AS_ROOT/.scripts.lock/pid.XXXXXXXX")"
   printf '%s' "$$" > "$pidtmp"
   mv -f "$pidtmp" "$AS_ROOT/.scripts.lock/pid"
