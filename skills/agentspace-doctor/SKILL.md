@@ -14,9 +14,10 @@ Proceed ONLY when the user explicitly executes `/agentspace-doctor`. Never trigg
 ## 1. Flags and Modes
 
 - `--minor` (default when no flag is given): structure + per-file content review (Phase A + B)
-- `--major`: everything in minor, plus the cross-cutting audit (Phase C); minor ⊂ major
+- `--major`: everything in minor, plus the cross-cutting audit (Phase C); minor ⊂ major. MUST run as the session's sole main task — never in a session that also carries code changes, experiments, or other ledger work; if the current session has work in progress, first suggest running `--major` in a fresh session and continue only after the user explicitly insists. `--minor` is unaffected (still fine to run at session wrap-up)
 - `--fix`: enable repairs — tier-1 script auto-fixes plus tier-2 confirmed semantic fixes (§5); composes with either mode
 - Unknown flags: say so and ask the user; never guess
+- No `--force` valve exists and none is provided — the MUST constraints of this skill (report-only audit findings, plan-document immutability, `--major` as a standalone session) have no override flag
 
 ## 2. Phase A — Deterministic Core
 
@@ -57,6 +58,10 @@ Everything in Phase A + B, plus dispatch **parallel subagents** (one per block �
 - **Block 3 — 全历史纪律审计**: full-history discipline trace across ALL closed plans/iterations/notes — 回链 completeness, `plan:NNNN` / `iteration_NNNN` reference validity, notes 来源, index consistency
 - **Block 4 — 版本元数据断言核对**: version/metadata claims in notes/AGENTS.md/readmes vs `.agentspace-version.json` and actual script behavior
 - **Block 5 — 环境/脚本调用链 dry-run**: for `scripts/`, `utils/`, `tests/` — trace the call chain (source relations, dependencies, template references), judge whether each script can run and whether its intent matches what tests.md / plan / iterations claim; do NOT execute anything
+- **Block 6 — notes 内容质量审核**: scope = the `notes.md` index plus every `notes/*.md` file. Two judgment categories: **outdated** (superseded by facts the workspace has since updated) and **wrong** (falsified by evidence). Method: note-vs-note cross-review plus notes × plan × commit × iteration cross-validation (evidence-chain checks). Each finding reports: note identifier, judgment category, evidence chain (`plan:NNNN` / `iteration_NNNN` / host commit), and a suggested action (delete / rewrite / keep with awareness). Report-only forever (§5)
+- **Block 7 — 跨 plan 冲突审核** (pre-code review: intercept conflicts at the plan source; NOT a code-quality review): **report conflicts only — duplication / overlap is explicitly not a finding**. Two dimensions: (a) plan-vs-plan contradictions (mutually exclusive goals, scope, or conclusions); (b) plan-vs-knowledge conflicts (a plan's approach contradicts notes conclusions or iteration-verified facts)
+
+Blocks 6 and 7 each get their own subagent, dispatched in parallel with Blocks 1-5 in the same pattern; when the data volume is large, a block may batch internally. The main agent only slices, synthesizes, and presents — never review large volumes of notes or plan full texts in the main context.
 
 **Auto-memory (main agent only)**: subagents do not share your context — cross-check your loaded auto-memory entries against workspace notes (read-only). Contradictory or stale memory entries are reported to the user as 黄; never modify auto-memory.
 
@@ -66,10 +71,12 @@ Synthesize: dedupe findings, merge into the three-tier report, note per-block co
 
 - **Tier 1 — script layer (automatic)**: run `doctor.sh --fix` — repairs the broken latest symlink, removes orphan table rows (orphan rows only, never completed rows — full history stays in `plan/index.md`), backfills missing notes.md rows. Results are [script] fixes, reported as such
 - **Tier 2 — semantic layer (agent, user-confirmed)**: for each 红/黄 agent finding, propose a concrete repair (exact file + exact change), get the user's confirmation (per item or as one batch), then execute:
-  - Content documents (plan docs, readmes, notes, examples, templates): edit directly
+  - Content documents (readmes, notes, examples, templates): edit directly — plan documents are never edited (any mode, any tier; see below)
   - Tables (`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): scripts only, or the one-time user-confirmed manual exception
 - **Optimization (蓝)**: list as suggestions; never execute without an explicit user request
 - **[14]/[15] findings**: [14] repairs (removing stale registry rows via repos.sh, writing the host shield into .gitignore / .git/info/exclude) are always tier-2 — user-confirmed, never automatic. [15] findings (bookkeeping ids / experiment data already in a code repo's HISTORY) are report-only forever — no tier rewrites git history; rebase/filter-repo is the user's decision and the user's action
+- **Block 6 / Block 7 findings** (notes content-quality judgments, cross-plan conflicts): report-only forever, same level as [15] — no tier auto-repairs them, and doctor must not fix them in place during the run even when the right action gets incidentally confirmed along the way; disposition is user-driven, separate work after the report
+- **Plan documents are user-owned — all modes, all tiers**: doctor never modifies plan document content (`plan/todo/*.md` and other plan prose), with or without `--fix`; findings involving plan are report-only, and any plan revision is the user's own separate work. The scripts-only structural hygiene of view rows (tier-1 orphan-row cleanup in `plan.md` via `doctor.sh --fix`) is unchanged — it is index hygiene on a scripts-only view, not plan-document editing
 - **Never**: modify in-progress plan/iteration state fields, `data/` payload, host project files (host root AGENTS.md only with explicit user approval), auto-memory
 
 ## 6. Report

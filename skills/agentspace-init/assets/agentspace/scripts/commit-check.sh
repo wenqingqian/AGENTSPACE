@@ -10,6 +10,11 @@
 # Checks: staged file paths · staged diff ADDED lines (code/comments/string
 # literals — bookkeeping-id ban, same lib.sh single source as the message ban;
 # deletions, binary files and pure renames never match) · draft message.
+# Plus a report-only wide-net CANDIDATE layer (plan/iteration word adjacent to
+# digits, any separator — lib.sh COMMIT_CANDIDATE_*_RE): candidates are listed
+# for explicit agent adjudication and NEVER alter the exit code — hard hits
+# stay hard hits (exit 1), and the candidate list rides along either way for
+# full attribution.
 # READ-ONLY: never touches the repo, its index, or the workspace. No --force
 # valve by design — a blocked commit is rewritten, not forced through.
 set -euo pipefail
@@ -86,6 +91,7 @@ while IFS= read -r -d '' p; do
 done < <(git -C "$REPO" diff --cached -M --name-only -z --diff-filter=ACMRT 2>/dev/null || true)
 
 # ---- draft message: canonical bookkeeping-id ban (whole message, case-insensitive) ----
+msg_cands=""
 if [ -n "$MSG" ]; then
   hit="$(printf '%s' "$MSG" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" 2>/dev/null || true)"
   if [ -n "$hit" ]; then
@@ -94,6 +100,21 @@ if [ -n "$MSG" ]; then
     while IFS= read -r h; do
       block_lines="${block_lines}      第 ${h%%:*} 行: ${h#*:}"$'\n'
     done <<< "$hit"
+  fi
+  # ---- draft message: wide-net candidates (report-only — never block) ----
+  # Same surface as the ban scan, wider net (COMMIT_CANDIDATE_*_RE). Positional
+  # dedup: a line already hard-hit by the canonical pair is owned by the ban
+  # scan and filtered out here, so it is never listed twice.
+  msg_cands="$(printf '%s' "$MSG" | grep -inE "$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE" 2>/dev/null || true)"
+  if [ -n "$msg_cands" ] && [ -n "$hit" ]; then
+    _banned=" $(printf '%s\n' "$hit" | cut -d: -f1 | tr '\n' ' ')"
+    _kept=""
+    while IFS= read -r _c; do
+      [ -n "$_c" ] || continue
+      case "$_banned" in *" ${_c%%:*} "*) continue ;; esac
+      _kept="${_kept}${_c}"$'\n'
+    done <<< "$msg_cands"
+    msg_cands="$(printf '%s' "$_kept")"
   fi
 fi
 # ---- draft message: blank title (deterministic quality rule, single source lib.sh) ----
@@ -117,6 +138,12 @@ if ! git -C "$REPO" -c diff.noprefix=false -c diff.mnemonicprefix=false diff --c
   rm -f "$_d"; printf 'error: staged diff unreadable — fails closed\n' >&2; exit 3
 fi
 content_hits="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" AS_LINE_MAX=0 as_diff_added_hits <"$_d" 2>/dev/null || true)"
+# Wide-net candidates on the SAME staged diff, knobs pinned at the call like
+# the ban scan. The candidate layer can never fail the gate (no exit-code
+# voice), so its read fails open to an empty list; dedup vs the canonical pair
+# is enforced inside as_diff_added_candidates — a canonical-hit line is never
+# re-listed here.
+content_cands="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" AS_CAND_RE="$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE" AS_LINE_MAX=0 as_diff_added_candidates <"$_d" 2>/dev/null || true)"
 rm -f "$_d"
 if [ -n "$content_hits" ]; then
   blocks=$((blocks + 1))
@@ -131,6 +158,27 @@ if [ -n "$content_hits" ]; then
   done <<< "$content_hits"
 fi
 
+# ---- candidate assembly (report-only — candidates have no exit-code voice) ----
+cands=0; cand_lines=""
+if [ -n "$msg_cands" ]; then
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    cands=$((cands + 1))
+    cand_lines="${cand_lines}  - message 第 ${c%%:*} 行: ${c#*:}"$'\n'
+  done <<< "$msg_cands"
+fi
+if [ -n "$content_cands" ]; then
+  while IFS=$'\t' read -r chp chl chx; do
+    [ -n "$chp" ] || continue
+    if [ "$chl" = "-more" ]; then
+      cand_lines="${cand_lines}      $chp — $chx"$'\n'
+    else
+      cands=$((cands + 1))
+      cand_lines="${cand_lines}  - content $chp:$chl — $chx"$'\n'
+    fi
+  done <<< "$content_cands"
+fi
+
 echo "== commit-check: $REPO =="
 echo "暂存: $staged 个文件"
 if [ "$blocks" -gt 0 ]; then
@@ -141,9 +189,18 @@ if [ "$warns" -gt 0 ]; then
   echo; echo "WARN ($warns) — 不阻断, 但必须展示给用户并由 agent 结合仓库上下文判断:"
   printf '%s' "$warn_lines"
 fi
+if [ "$cands" -gt 0 ]; then
+  echo; echo "CANDIDATES ($cands) — candidates for agent adjudication (报告层, 永不影响 exit code):"
+  printf '%s' "$cand_lines"
+  echo "  → agent 语义层必须对以上每个候选逐条显式裁决; 裁决结论(放行/否决)与理由由 agent 向用户陈述 — 脚本不代替判定。放行必须给出理由; 否决则改写文本后重新过门。"
+fi
 echo
 if [ "$blocks" -gt 0 ]; then
   echo "== BLOCKED: $blocks 项阻断 — 修复后重新过门; 门无放行阀门 =="
   exit 1
 fi
-echo "== PASS ($warns 项提醒) =="
+if [ "$cands" -gt 0 ]; then
+  echo "== PASS ($warns 项提醒; $cands 个候选已列上方 — 由 agent 裁决, 不阻断) =="
+else
+  echo "== PASS ($warns 项提醒) =="
+fi

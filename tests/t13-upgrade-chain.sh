@@ -243,6 +243,35 @@ GATE_LINE = '- **[MUST] commit 门**: 登记仓库 commit 前必过 `scripts/com
 edit(A, GATE_LINE, GATE_LINE + "\n" + PAR_BULLET,
      "v1.0.0", "AGENTS.md 纪律: 并行工作区约定行")
 
+# --- v1.1.0: AGENTS.md 用户规则 split (8b). Exact line text is read from the
+#     canonical asset at replay time — inlining a copy here would be a second
+#     source of truth that can silently drift. The replayed 纪律 section holds
+#     only built-in lines (every earlier op inserted asset text), so per
+#     changelog Step 3 the split migration has nothing to move. ---
+al = open(f"{ASSET}/AGENTS.md").read().splitlines()
+guard = [l for l in open(A, encoding="utf-8").read().splitlines()
+         if l.startswith("- **[MUST] 脚本报错恢复**")][0]
+m1 = [l for l in al if l.startswith("- **[MUST] 用户规则守护**")][0]
+m2 = [l for l in al if l.startswith("- **[MUST] 注释卫生**")][0]
+edit(A, guard, guard + "\n" + m1 + "\n" + m2,
+     "v1.1.0", "AGENTS.md 纪律: 用户规则守护/注释卫生行")
+# milestone trigger token: the changelog pins the substring swap
+wl = open(A, encoding="utf-8").read().splitlines()
+ms_old = [l for l in wl if l.startswith("- **里程碑 git 提交**")][0]
+ms_new = ms_old.replace("examples/data 登记 · update 应用",
+                        "examples/data 登记 · 用户规则写入 · update 应用")
+if ms_new == ms_old:
+    log("v1.1.0", "AGENTS.md 里程碑行: 用户规则写入触发词", "FAILED", "substring not found")
+    sys.exit(1)
+edit(A, ms_old, ms_new, "v1.1.0", "AGENTS.md 里程碑行: 用户规则写入触发词")
+# append the user-owned section verbatim (asset heading to EOF, placeholder
+# intact) after the current last line — per changelog Step 4
+uidx = al.index("## 用户规则")
+USER_SEC = "\n".join(al[uidx:])
+wl = open(A, encoding="utf-8").read().splitlines()
+edit(A, wl[-1], wl[-1] + "\n\n" + USER_SEC,
+     "v1.1.0", "AGENTS.md: 用户规则节追加")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -273,6 +302,8 @@ assert_contains "$WS/AGENTS.md" "commit 检查门(commit-check.sh)"
 assert_contains "$WS/AGENTS.md" "agentspace-code-clean skill"        # v0.6.4 rename swap
 assert_not_contains "$WS/AGENTS.md" "agentspace-commit"              # v0.6.4: no stale reference survives
 assert_contains "$WS/AGENTS.md" "并行工作区约定"                        # v1.0.0: 纪律 bullet (8b)
+assert_contains "$WS/AGENTS.md" "用户规则守护"                          # v1.1.0: 纪律 MUST (8b)
+assert_contains "$WS/AGENTS.md" "## 用户规则"                          # v1.1.0: user-owned section (8b)
 [ -f "$WS/.agentspace-repos" ] || fail ".agentspace-repos seed missing after v0.6.0 replay"
 [ -f "$WS/scripts/repos.sh" ] && [ -f "$WS/scripts/commit-check.sh" ] \
   || fail "v0.6.0 scripts missing after 8a"

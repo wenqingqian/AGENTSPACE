@@ -20,7 +20,11 @@ SB="$(build_sandbox t25)"; SB="$(cd -P "$SB" && pwd -P)"   # canonicalize (macOS
 WS="$SB/AGENTSPACE"
 cd "$SB"
 mc() { git -C "$WS" add -A >/dev/null 2>&1; git -C "$WS" commit -qm "test: t25 milestone" >/dev/null 2>&1 || true; }
-gc() { git -c user.name=test -c user.email=test@test -C "$1" "${@:2}"; }
+SEQ=0
+# monotonic commit dates: identical tree+message+parent inside one second would
+# collide into the same sha, making a squashed lane tip "merged" for branch -d
+gc() { SEQ=$((SEQ+1)); GIT_AUTHOR_DATE="@$SEQ +0000" GIT_COMMITTER_DATE="@$SEQ +0000" \
+  git -c user.name=test -c user.email=test@test -C "$1" "${@:2}"; }
 P1="$(printf '%04d' 1)"; P2="$(printf '%04d' 2)"
 BR1="$(printf 'plan-%04d' 1)"; BR2="$(printf 'plan-%04d' 2)"
 IT1="iteration_$(printf '%04d' 1)"; IT2="iteration_$(printf '%04d' 2)"

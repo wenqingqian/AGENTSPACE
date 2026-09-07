@@ -12,7 +12,11 @@ SB="$(build_sandbox t24)"
 WS="$SB/AGENTSPACE"
 cd "$SB"
 mc() { git -C "$WS" add -A >/dev/null 2>&1; git -C "$WS" commit -qm "test: t24 milestone" >/dev/null 2>&1 || true; }
-gc() { git -c user.name=test -c user.email=test@test -C "$1" "${@:2}"; }
+SEQ=0
+# monotonic commit dates: identical tree+message+parent inside one second would
+# collide into the same sha, making a squashed lane tip "merged" for branch -d
+gc() { SEQ=$((SEQ+1)); GIT_AUTHOR_DATE="@$SEQ +0000" GIT_COMMITTER_DATE="@$SEQ +0000" \
+  git -c user.name=test -c user.email=test@test -C "$1" "${@:2}"; }
 
 BRA="$(printf 'plan-%04d' 1)"
 BRB="$(printf 'plan-%04d' 2)"

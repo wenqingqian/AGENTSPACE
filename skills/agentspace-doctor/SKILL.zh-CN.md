@@ -14,9 +14,10 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 ## 1. 参数与模式
 
 - `--minor`(无参数时的默认): 结构 + 逐文件内容审查(阶段 A + B)
-- `--major`: minor 的全部 + 跨目录深度审计(阶段 C); minor ⊂ major
+- `--major`: minor 的全部 + 跨目录深度审计(阶段 C); minor ⊂ major。必须(MUST)作为本会话唯一主任务运行 — 绝不在同时承载代码改动、实验或其他台账工作的会话中进行; 当前会话已有工作进行时, 先建议在全新会话中运行 `--major`, 仅当用户显式坚持后才继续。`--minor` 不受影响(仍可在会话收尾时运行)
 - `--fix`: 开启修复 — 一级脚本自动修复 + 二级经确认的语义修复(§5); 可与任一模式组合
 - 未知参数: 说明并询问用户, 绝不猜测
+- 不存在 `--force` 阀门, 也不提供 — 本 skill 的 MUST 约束(审计发现只报告、plan 文档不可改、`--major` 独立会话运行)没有覆盖开关
 
 ## 2. 阶段 A — 确定性核心
 
@@ -55,6 +56,10 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 - **块 3 — 全历史纪律审计**: 跨全部已关闭 plan/iteration/notes 的全量纪律追溯 — 回链完整性、`plan:NNNN` / `iteration_NNNN` 引用有效性、notes 来源、索引一致性
 - **块 4 — 版本元数据断言核对**: notes/AGENTS.md/readme 中的版本与元数据声称 ↔ `.agentspace-version.json` 及实际脚本行为
 - **块 5 — 环境/脚本调用链 dry-run**: 对 `scripts/`、`utils/`、`tests/` — 顺着调用链(source 关系、依赖、模板引用)分析每个脚本能否运行、写法是否正确、意图是否与 tests.md / plan / iterations 文档一致; **不执行任何东西**
+- **块 6 — notes 内容质量审核**: 范围 = `notes.md` 索引加每个 `notes/*.md` 文件。两类判定: **outdated(过时)**(已被工作区此后更新的事实取代)与 **wrong(错误)**(被证据证伪)。方法: note 之间互审 + notes × plan × commit × iteration 四源交叉验证(证据链核对)。每条发现报告: note 标识、判定类别、证据链(`plan:NNNN` / `iteration_NNNN` / 宿主 commit)与建议动作(删除 / 重写 / 知情保留)。永久只报告(§5)
+- **块 7 — 跨 plan 冲突审核**(pre-code review: 在 plan 源头拦截冲突; 不是代码质量审查): **只报冲突 — 重复/交叠明确不算发现**。两个维度: (a) plan×plan 矛盾(目标、范围或结论互斥); (b) plan×知识冲突(某 plan 的做法与 notes 结论或 iteration 已验证事实矛盾)
+
+块 6 与块 7 各自独占一个 subagent, 与块 1-5 按同一模式并行分发; 数据量大时单个块可在块内分批。主 agent 只做切分、汇总与呈现 — 绝不在主上下文里审读大体量 notes 或 plan 全文。
 
 **Auto-memory(仅主 agent)**: 子代理不共享你的上下文 — 把你上下文中加载的 auto-memory 条目与工作区 notes 做只读交叉核对。矛盾/过时的记忆条目以黄级报告给用户; 绝不修改 auto-memory。
 
@@ -64,10 +69,12 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 
 - **一级 — 脚本层(自动)**: 运行 `doctor.sh --fix` — 修复断链 latest 软链、清除 orphan 表行(仅 orphan 行, 绝不碰已完成行 — 全量历史保留在 `plan/index.md`)、回填缺失的 notes.md 行。结果为 [script] 修复, 如实报告
 - **二级 — 语义层(agent, 需用户确认)**: 对每条红/黄 agent 发现, 提出具体修复方案(精确文件 + 精确改动), 获得用户确认(逐项或一次批量), 然后执行:
-  - 内容文档(plan 文档、readme、notes、examples、templates): 直接编辑
+  - 内容文档(readme、notes、examples、templates): 直接编辑 — plan 文档永不编辑(任何模式、任何 tier; 见下)
   - 表格(`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): 只能走脚本, 或用户明确确认的一次性手工例外
 - **优化(蓝)**: 只列建议; 未经用户明确要求绝不执行
 - **[14]/[15] 发现**: [14] 的修复(repos.sh 摘除陈旧登记行、往宿主 .gitignore / .git/info/exclude 补盾牌)一律二级 — 必须用户确认, 绝不自动; [15] 的发现(已落入代码仓库**历史**的记账 id / 实验数据)永远只报告 — 任何 tier 都不改写 git 历史, rebase/filter-repo 是用户的决定与用户自己的操作
+- **块 6 / 块 7 发现**(notes 内容质量判定、跨 plan 冲突): 永远只报告, 与 [15] 同级 — 任何 tier 都不自动修复, doctor 在本轮运行中即使顺带确认了正确处置也不得就地修复; 处置由用户驱动, 是报告之后的独立工作
+- **plan 文档用户所有 — 所有模式、所有 tier**: doctor 绝不修改 plan 文档内容(`plan/todo/*.md` 与其他 plan 正文), 有无 `--fix` 皆然; 涉及 plan 的发现只报告, 任何 plan 修订都是用户自己的独立工作。视图行的脚本层结构卫生不变(tier-1 经 `doctor.sh --fix` 清理 `plan.md` 的 orphan 行)— 那是脚本独占视图上的索引卫生, 不是 plan 文档编辑
 - **绝不**: 修改进行中 plan/iteration 的状态字段、`data/` 载荷、宿主项目文件(宿主根 AGENTS.md 仅在用户明确批准时)、auto-memory
 
 ## 6. 报告

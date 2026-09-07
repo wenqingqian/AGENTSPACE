@@ -337,6 +337,29 @@ readonly COMMIT_BAN_ITER_RE="iteration_0[0-9]{3,}"
 # conventional merge workflow stay silent. Same leading-zero anchor as the
 # colon form — natural text like "roadmap plan-2026" is spared.
 readonly COMMIT_BAN_PLAN_DASH_RE="plan-0[0-9]{3,}"
+# ---- Wide-net candidate layer (report-only — candidates never affect any
+# exit code) ----
+# The canonical ban pair above is deliberately narrow (leading-0 anchor, one
+# separator shape): zero false positives, but variant spellings (`plan-12`,
+# `plan_12`, "plan 13", `ITERATION_34`, `iteration:34`, ids past 0999 like
+# `plan:1234`) escape it entirely. The candidate layer nets wider: plan/
+# iteration word + any separator (- _ : space, or none) + digits,
+# case-insensitive. English phrases like "plan 2 phases" or "roadmap plan
+# 2026" land here TOO — by design: a candidate is printed for explicit agent
+# adjudication (release with a stated reason, or rewrite); the script never
+# decides. The shape stays "word tight against digits" — a left word boundary
+# (`^` or non-alnum/underscore) plus a separator class — so isolated words
+# ("plan", "iteration") and mid-word fragments ("replan 3", preceded by a
+# letter) never match. Dedup is positional: a line already matching the
+# canonical ban pair is owned by the ban scan and is never re-listed as a
+# candidate (as_diff_added_candidates enforces it on the diff side;
+# commit-check.sh on the message side). Same two scan surfaces as the ban
+# layer (whole message + staged-diff ADDED lines), so the pre-commit gate and
+# any future auditor cannot drift apart. Dash-form note: COMMIT_BAN_PLAN_DASH_RE
+# is a doctor report-only heuristic, NOT a commit-check hard rule — `plan-0013`
+# in commit text therefore surfaces here as a candidate, not a block.
+readonly COMMIT_CANDIDATE_PLAN_RE="(^|[^[:alnum:]_])plan[[:space:]_:-]*[0-9]"
+readonly COMMIT_CANDIDATE_ITER_RE="(^|[^[:alnum:]_])iteration[[:space:]_:-]*[0-9]"
 # Staged-file hard blocks: workspace paths, experiment-output signatures
 # (top-level dirs / tfevents basename), and any single blob at/above
 # COMMIT_BLOCK_BYTES. Warn level: data extensions at/above COMMIT_WARN_BYTES
@@ -407,6 +430,64 @@ as_diff_added_hits() {
         lineno++
       }
       BEGIN { re = tolower(ENVIRON["AS_BAN_RE"]); ecap = ENVIRON["AS_EXCERPT_CAP"] + 0
+              fcap = ENVIRON["AS_FILE_HITS_CAP"] + 0; lmax = ENVIRON["AS_LINE_MAX"] + 0
+              f = ""; fhits = 0; pending = 0; added = 0; budget_note = 0; rem_new = 0 }
+      /^diff --git/  { rem_new = 0; next }
+      /^index |^similarity|^dissimilarity|^rename |^copy |^old mode|^new mode|^Binary files|^\\/ { next }
+      /^@@/          { if (match($0, /\+[0-9]+(,[0-9]+)? @@/)) {
+                         n = substr($0, RSTART + 1, RLENGTH - 4); cnt = n
+                         sub(/^[0-9]+,?/, "", cnt); sub(/,.*/, "", n)
+                         lineno = n + 0; rem_new = (cnt == "" ? 1 : cnt + 0)
+                       } else rem_new = 0
+                       next }
+      /^--- /        { next }
+      /^\+\+\+ /     { if (rem_new == 0) { flush_more(); f = substr($0, 7); fhits = 0 } else body(substr($0, 2)); next }
+      /^\+/          { body(substr($0, 2)); next }
+      /^-/           { next }
+                     { if (rem_new > 0) rem_new--; lineno++ }
+      END            { flush_more() }
+    ' 2>/dev/null
+  )
+}
+
+# Candidate-layer twin of as_diff_added_hits: same -U0 stream contract, same
+# ENVIRON knob discipline (callers pin AS_* at the call; ambient env cannot
+# weaken a gate scan), same output shape (<path> TAB <line> TAB <excerpt>,
+# `-more` / `-budget` tails, AS_FILE_HITS_CAP per file) — but it matches the
+# WIDE COMMIT_CANDIDATE_*_RE pair and SKIPS every line already matching the
+# canonical ban pair (AS_BAN_RE): a hard hit is reported once by
+# as_diff_added_hits and is never re-listed as a candidate. Everything the
+# function emits is a candidate for agent adjudication — the caller must keep
+# it out of every blocking path (it has no exit-code voice).
+as_diff_added_candidates() {
+  (
+    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE}"
+    export AS_CAND_RE="${AS_CAND_RE:-$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE}"
+    export AS_EXCERPT_CAP="${AS_EXCERPT_CAP:-$COMMIT_EXCERPT_CAP}"
+    export AS_FILE_HITS_CAP="${AS_FILE_HITS_CAP:-$COMMIT_FILE_HITS_CAP}"
+    export AS_LINE_MAX="${AS_LINE_MAX:-0}"
+    awk '
+      function flush_more() {
+        if (pending > 0) { printf "%s\t-more\t+%d more candidate(s) suppressed\n", f, pending; pending = 0 }
+      }
+      function body(line,   t) {
+        if (rem_new > 0) rem_new--
+        added++
+        if (lmax > 0 && added > lmax) {
+          if (!budget_note) { printf "%s\t-budget\tadded-line budget (%d) reached — scan truncated\n", f, lmax; budget_note = 1 }
+          pending = 0; exit 0
+        }
+        t = tolower(line)
+        if (t ~ ban) { lineno++; return }
+        if (t ~ cand) {
+          fhits++
+          if (fcap > 0 && fhits > fcap) { pending++; lineno++; return }
+          printf "%s\t%d\t%s\n", f, lineno, substr(line, 1, ecap)
+        }
+        lineno++
+      }
+      BEGIN { ban = tolower(ENVIRON["AS_BAN_RE"]); cand = tolower(ENVIRON["AS_CAND_RE"])
+              ecap = ENVIRON["AS_EXCERPT_CAP"] + 0
               fcap = ENVIRON["AS_FILE_HITS_CAP"] + 0; lmax = ENVIRON["AS_LINE_MAX"] + 0
               f = ""; fhits = 0; pending = 0; added = 0; budget_note = 0; rem_new = 0 }
       /^diff --git/  { rem_new = 0; next }

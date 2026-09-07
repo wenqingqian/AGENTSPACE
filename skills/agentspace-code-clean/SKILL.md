@@ -1,6 +1,6 @@
 ---
 name: agentspace-code-clean
-description: Commit gate and code/comment hygiene for AGENTSPACE-managed key code repos. Activate BEFORE any git commit in a repository registered in AGENTSPACE/.agentspace-repos (or any git repo inside a project that has an AGENTSPACE/ workspace) — staged files, ADDED code/comment lines, and the draft message must all pass AGENTSPACE/scripts/commit-check.sh first. Never commit in unregistered repos; bookkeeping ids (plan:NNNN / iteration_NNNN) and experiment data never enter code-repo commits — not in the message, not in code or comments; the commit text must describe the actual code change (one-line title, no experiment/run identifiers, related to the diff).
+description: Commit gate and code/comment hygiene for AGENTSPACE-managed key code repos. Activate BEFORE any git commit in a repository registered in AGENTSPACE/.agentspace-repos (or any git repo inside a project that has an AGENTSPACE/ workspace) — staged files, ADDED code/comment lines, and the draft message must all pass AGENTSPACE/scripts/commit-check.sh first. Never commit in unregistered repos; bookkeeping ids (plan:NNNN / iteration_NNNN) and experiment data never enter code-repo commits — not in the message, not in code or comments; the commit text must describe the actual code change (one-line title, no experiment/run identifiers, related to the diff). The gate also prints report-only wide-net candidates (plan/iteration word adjacent to digits, any separator — `plan-12`, `plan_12`, `plan 13`): they never block; the agent must adjudicate every candidate explicitly and state the verdict with a reason. A batch comment review (whole-file, multi-subagent, report-only) over the files this session's commits touched exists — it runs ONLY on the user's explicit request, never automatically.
 ---
 
 # AGENTSPACE Code-Clean Commit Gate
@@ -18,8 +18,8 @@ Before any commit in a registered repo, in order:
    AGENTSPACE/scripts/commit-check.sh <repo-path> "<draft message>"
    ```
 4. Exit codes:
-   - **0 PASS** — commit with the EXACT message just checked (never check message A and commit message B).
-   - **1 BLOCKED** — do NOT commit. Show the violation list to the user verbatim, fix, re-run the gate.
+   - **0 PASS** — commit with the EXACT message just checked (never check message A and commit message B). A **CANDIDATES** list may ride along (report-only): it is never a reason to block or delay — adjudicate every candidate explicitly and state the verdict (a release needs a stated reason). The verdict is yours to declare; the script only nets the shapes.
+   - **1 BLOCKED** — do NOT commit. Show the violation list to the user verbatim, fix, re-run the gate. The CANDIDATES list may be printed alongside the blocks (for full attribution) — candidates alone never block.
    - **2 NOT REGISTERED** — do NOT commit. Propose registration to the user; only after their explicit confirmation: `AGENTSPACE/scripts/repos.sh --add <path>`, then re-run the gate. **Never commit in an unregistered repo under the project root** — registration comes first.
    - **3 USAGE ERROR** — the gate was invoked wrong (draft message missing, or path not inside a git worktree). Re-invoke with BOTH arguments: `AGENTSPACE/scripts/commit-check.sh <repo-path> "<draft message>"`. An omitted message never silently passes — the gate fails closed.
 
@@ -44,6 +44,7 @@ The same idioms are banned in what the commit ADDS — code comments, string lit
 - Run/experiment identifiers in comments (`# 6-run on .42`) — they belong in the iteration readme / `data/`.
 - Diff-shaped content — lines starting `++ `/`-- ` (pasted diffs, xtrace logs) — describe the change, never paste workspace diffs.
 - Known-legit shapes that still match (YAML `plan: 0NNN` keys, `iteration_0NNN.pt` file names): rename the key/constant to describe its role — attribution belongs in the iteration readme, and CJK/full-width variants (`：`, `０００１`) are YOUR layer, the script only sees ASCII.
+- Process-narrative comments (WARN candidates — YOU adjudicate, never a hard block): comments narrating the editing session rather than the code — (a) date narration, "when it was written" (`# 2026-09-07 修改`, `// added on 2026-09-07`); (b) tool/skill provenance, "what it was based on" (`# based on X skill`). Non-process date uses that state a fact about the code are legitimate and pass (`# since 2026-01: API v2`) — that call is yours: give a verdict per candidate, with the reason, out loud to the user.
 
 Content that must legitimately reference canonical ids (tooling that generates workspace references, fixture snapshots) belongs in `AGENTSPACE/utils/` or the iteration's `data/` — never in the code repo.
 
@@ -75,6 +76,16 @@ WARN (not blocking — judgment is yours, with repo context): data/model extensi
   2. Move the payload into the current iteration: `mv <path> AGENTSPACE/iterations/iteration_NNNN/data/` (gitignored — the third of the three collection strategies in AGENTS.md).
   3. If the program hard-codes its output dir, suggest adding that dir to the repo's `.gitignore` — writing host files requires the user's consent, always.
   4. Re-run the gate.
+
+## Batch Comment Review (explicit trigger only — report-only)
+
+A deep review mode, separate from the per-commit gate. It runs ONLY when the user explicitly asks for it (e.g. "对本轮改动做一次批量注释审查") — never automatically, never as a side effect of the gate, and never as a whole-repo sweep.
+
+- **Scope (iron rule):** only the files touched by THIS session's commits, or the exact commit range the user explicitly gives (`git diff --name-only <base>..<head>` over that range). Never widen it to the rest of the repository on your own initiative — no automatic whole-repo scan, ever.
+- **Whole-file comments:** each in-scope file is reviewed in FULL — every comment in the file, not just lines added this round — so stock narration the added-line gate cannot see (old date stamps, old provenance notes) is caught too.
+- **Multi-subagent:** partition the in-scope files across parallel subagents. Each subagent reads its assigned files and returns findings only (file:line · excerpt · which dimension · suggested direction) — it never edits. Findings aggregate to you, and you present one consolidated report to the user.
+- **Dimensions:** everything the semantic layer polices in added lines (bookkeeping references in any spelling, run/experiment identifiers, diff-shaped pastes) plus the process-narrative dimensions (date narration, tool/skill provenance) — evaluated across the whole file, stock comments included.
+- **Report-only:** the report ends the mode. Fixing is a SEPARATE, user-driven commit — propose the fix batch and wait for the user's go-ahead; never fold fixes into an in-flight commit unasked.
 
 ## Boundaries
 

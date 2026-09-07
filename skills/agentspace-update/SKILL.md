@@ -150,6 +150,7 @@ Note: the source is `skills/agentspace-init/assets/agentspace/` (the canonical a
 - **AGENTS.md changes** → smart merge:
   - Insert new sections at specified positions
   - Preserve user-filled sections (项目简介, 根仓库简介) verbatim
+  - Preserve the 用户规则 section verbatim — same tier as 项目简介/根仓库简介: this section is owned by the user, and update NEVER rewrites, reorders, or prunes its entries (only the user creates/edits/deletes rules there); managed sections keep their existing rules unchanged (结构 tree and module list are still updated to the target architecture, 纪律 is still updated per changelog text ops)
   - Update structural sections (结构 tree, module list) to reflect new architecture
   - Update 纪律 section if constants changed
   - When re-applying a previously refused insertion, the anchor area may carry residual blank lines left by the earlier skip — after inserting, collapse consecutive blank lines to one (verify against the canonical asset `skills/agentspace-init/assets/agentspace/AGENTS.md`)

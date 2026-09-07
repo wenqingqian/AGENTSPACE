@@ -3,6 +3,7 @@
 # Release gate. Read-only. Checks (exit 0 = release-ready):
 #   [0] JSON validity            [5] asset <-> architecture file inventory
 #   [1] version consistency      [6] section/column contract in assets
+#                                (+[6b] reverse AGENTS.md sections)
 #   [1b] archive marker          [7] bash -n on all .sh
 #   [1c] Codex manifest          [8] bilingual sync (skills)
 #   [1d] Kimi manifest           [9] SKILL size budget
@@ -206,6 +207,14 @@ for d in dirs:
         issues.append(f"[3] {d}: CHANGELOG has no '### [Tag]' change blocks")
     if "**Migration" not in cl:
         issues.append(f"[3] {d}: CHANGELOG has no '**Migration' guidance")
+    # Chinese-language policy (DEVELOPMENT.md: CHANGELOG.md is Chinese;
+    # historical English archives are not retro-fitted — the consistently
+    # Chinese era starts at v0.4.1). Robust heuristic: the ## Summary section
+    # must carry CJK characters.
+    if vkey(d[1:]) >= (0, 4, 1):
+        sec = re.search(r"## Summary\n(.*?)(?:\n## |\Z)", cl, re.S)
+        if not sec or not re.search(r"[\u4e00-\u9fff]", sec.group(1)):
+            issues.append(f"[3] {d}: Summary section has no CJK characters (CHANGELOG.md must be Chinese per DEVELOPMENT.md)")
 
 # [4] constants contract: SEC_/STATUS_ in lib.sh, RESULT_/RESUME_ in templates.
 # Reverse pass: every constant declared readonly in lib.sh must exist in the
@@ -265,6 +274,29 @@ if arch:
             for name in secs:
                 if f"## {name}" not in text:
                     issues.append(f"[6] {path}: section '## {name}' missing in asset")
+
+# [6b] reverse section alignment (AGENTS.md): [6] only walks archive→asset,
+# so a section added to the ASSET AGENTS.md without its architecture record
+# would pass silently (the constants analog is the [4] reverse pass). A
+# heading inside a fenced code block is not a section. NOTE: this heredoc
+# body must stay free of backticks, dollar-paren, and unpaired quotes —
+# the bash 3.2 scanner tracks them even here (macOS system bash).
+if arch:
+    ag_secs = arch.get("files", {}).get("AGENTS.md", {}).get("sections", {})
+    if isinstance(ag_secs, dict):
+        # fence marker built via chr(96): a literal backtick inside this
+        # heredoc derails the bash 3.2 parser (macOS system bash)
+        fence = chr(96) * 3
+        in_fence = False
+        for line in open(f"{assets}/AGENTS.md"):
+            s = line.rstrip("\n")
+            if s.startswith(fence):
+                in_fence = not in_fence
+                continue
+            if not in_fence and s.startswith("## "):
+                name = s[3:].strip()
+                if name not in ag_secs:
+                    issues.append(f"[6b] asset AGENTS.md section '## {name}' missing from architecture AGENTS.md sections")
 
 print("latest: v" + (latest or "?"))
 for msg in issues:

@@ -1,6 +1,6 @@
 ---
 name: agentspace-code-clean
-description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件、新增代码/注释行与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit — message 里不出现, 代码与注释里也不出现; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。
+description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件、新增代码/注释行与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit — message 里不出现, 代码与注释里也不出现; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。门还会打印只报告(report-only)的扩网候选(plan/iteration 词与数字相邻、任意分隔符 — `plan-12`、`plan_12`、`plan 13`): 候选永不阻断; agent 必须逐条显式裁决并给出带理由的结论。另有针对本会话 commit 触及文件的批量注释审查(全文件、多 subagent、只报告)— 仅在用户显式要求时运行, 绝不自动。
 ---
 
 # AGENTSPACE Code-Clean 提交门
@@ -18,8 +18,8 @@ description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生�
    AGENTSPACE/scripts/commit-check.sh <仓库路径> "<message 草稿>"
    ```
 4. 退出码:
-   - **0 PASS** — 用**刚才送检的原 message** 提交(禁止检查 A 提交 B)。
-   - **1 BLOCKED** — 禁止提交。违规清单原样摆给用户, 修复后重新过门。
+   - **0 PASS** — 用**刚才送检的原 message** 提交(禁止检查 A 提交 B)。**CANDIDATES** 清单可能随行(只报告): 它绝不构成阻断或推迟的理由 — 逐条显式裁决并给出结论(放行需陈述理由)。结论由你宣布; 脚本只负责撒网。
+   - **1 BLOCKED** — 禁止提交。违规清单原样摆给用户, 修复后重新过门。CANDIDATES 清单可能与阻断项一并打印(便于完整归因)— 候选本身绝不阻断。
    - **2 未登记** — 禁止提交。向用户提议登记; 用户显式确认后 `AGENTSPACE/scripts/repos.sh --add <path>`, 再重新过门。**项目根下未登记仓库一律不 commit** — 先登记, 后提交。
    - **3 用法错误** — 门被错误调用(缺 message 草稿, 或路径不在 git 工作树内)。带齐两个参数重新调用: `AGENTSPACE/scripts/commit-check.sh <仓库路径> "<message 草稿>"`。漏传 message 绝不静默放行 — 门失败即关闭。
 
@@ -44,6 +44,7 @@ description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生�
 - 注释里的实验/run 标识(`# 6-run on .42`) — 这些属于 iteration readme / `data/`。
 - Diff 形状内容 — 以 `++ `/`-- ` 开头的行(粘贴的 diff、xtrace 日志)— 描述改动本身, 永不粘贴工作区 diff。
 - 合法却仍会命中的形态(YAML `plan: 0NNN` 键、`iteration_0NNN.pt` 文件名): 把键名/常量改名为描述其角色 — 归属由 iteration readme 承担; CJK/全角变体(`：`、`０００１`)是你的语义层, 脚本只认 ASCII。
+- 过程叙述注释(WARN 候选 — 由你裁决, 绝不硬阻断): 叙述编辑会话而非代码的注释 — (a) 日期叙述, "何时写的"(`# 2026-09-07 修改`、`// added on 2026-09-07`); (b) 工具/skill 来源, "基于什么改的"(`# based on X skill`)。陈述代码事实的非过程性日期用法合法放行(`# since 2026-01: API v2`)— 这个判断由你做: 对每条候选向用户出声给出带理由的结论。
 
 确实必须引用标准 id 的内容(生成工作区引用的工具、夹具快照)归 `AGENTSPACE/utils/` 或所属 iteration 的 `data/` — 永不进代码仓库。
 
@@ -75,6 +76,16 @@ WARN(不阻断 — 由你结合仓库上下文判断): 数据/模型扩展名 �
   2. 搬进当前 iteration: `mv <path> AGENTSPACE/iterations/iteration_NNNN/data/`(已 gitignore — 即 AGENTS.md 数据收集三策略的第 3 条)。
   3. 程序写死输出目录的, 建议把该目录加进仓库 `.gitignore` — 写宿主文件必须经用户同意, 无一例外。
   4. 重新过门。
+
+## 批量注释审查(仅显式触发 — 只报告)
+
+一种深度审查模式, 与逐次 commit 的门相互独立。仅在用户显式要求时运行(如"对本轮改动做一次批量注释审查")— 绝不自动运行, 绝不作为门的副作用, 也绝不演变为全仓扫查。
+
+- **范围(铁律):** 仅限本次会话 commit 触及的文件, 或用户显式给出的精确 commit 区间(对该区间跑 `git diff --name-only <base>..<head>`)。绝不自行扩大到仓库其余部分 — 永不自动全仓扫查, 无一例外。
+- **全文件注释:** 范围内每个文件全量审查 — 文件里的每一条注释, 不只本轮新增行 — 连新增行门看不到的存量叙述(旧日期戳、旧来源注记)也一并抓出。
+- **多 subagent:** 把范围内文件切分给并行 subagent。每个 subagent 只读分配到的文件、只返回发现(文件:行 · 摘录 · 命中维度 · 建议方向)— 绝不编辑。发现聚合到你, 由你向用户呈现一份合并报告。
+- **维度:** 语义层对新增行执法的一切(任何拼写的记账引用、实验/run 标识、diff 形状粘贴)加上过程叙述维度(日期叙述、工具/skill 来源)— 按全文件评估, 存量注释也在内。
+- **只报告:** 报告即本模式终点。修复是独立的、用户驱动的另一次 commit — 提出修复批次并等用户点头; 绝不未经要求把修复混进进行中的 commit。
 
 ## 边界
 
