@@ -485,9 +485,10 @@ fi
 # the host parses at load time; an unquoted description containing a ": "
 # sequence (e.g. "candidates (...): they never block") breaks the mapping and
 # the skill fails to load for users — invisible to every text-level check, so
-# it must be parsed for real here. PyYAML's error class matches the hosts';
-# a missing yaml module fails closed (pip install pyyaml) rather than letting
-# the gate pass unverified.
+# it must be parsed for real here. The host also rejects a description over
+# 1024 characters at load time, so the cap is enforced on the same pass.
+# PyYAML's error class matches the hosts'; a missing yaml module fails closed
+# (pip install pyyaml) rather than letting the gate pass unverified.
 echo "[14] skill/command frontmatter YAML"
 FM_PY="$(cat <<'EOF'
 import re, sys, yaml
@@ -502,6 +503,10 @@ for f in sys.argv[1:]:
     except Exception as e:
         mark = str(e).replace("\n", " | ")
         print(f"  [issue] invalid frontmatter YAML: {f}: {mark}"); bad += 1
+        continue
+    d = re.search(r"^description:\s*(.*)$", m.group(1), re.M)
+    if d and len(d.group(1)) > 1024:
+        print(f"  [issue] description over 1024 chars ({len(d.group(1))}): {f}"); bad += 1
 sys.exit(1 if bad else 0)
 EOF
 )"
