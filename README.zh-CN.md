@@ -17,6 +17,7 @@
 ```
 <项目>/
 ├── AGENTS.md                  # 根引导: 项目背景 + 实验环境 + 关键代码仓库 + 何时读取规则
+├── worktrees/  .locks/        # agentspace-parallel 泳道与协同锁(按需创建; gitignore)
 └── AGENTSPACE/                # 独立 git 仓库
     ├── AGENTS.md              # 核心入口: 结构/模块 what-when-how/纪律
     ├── plan.md                # 入口: Todo + Done(最近10条)
@@ -34,6 +35,7 @@
     ├── .agentspace-architecture.json  # 当前架构快照
     ├── .agentspace-repos              # 关键代码仓库登记处(只能由 scripts/repos.sh 改写)
     ├── .agentspace-whitelist          # 外部依赖白名单(standalone 模式)
+    ├── .agentspace-parallel-workspace.txt  # 并行工作区协同表(doing/test/merge + 异步便签; 按需创建, gitignore)
     ├── templates/  scripts/  .gitignore
 ```
 
@@ -57,7 +59,7 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理外部依赖白名单 |
 | `agentspace-handoff` | 仅显式 | 一次性会话交接: 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
 | `agentspace-code-clean` | 场景触发 — 登记仓库每次 commit 前 | commit 门与卫生规范: 暂存文件、新增代码/注释行与 message 草稿都必须先过 `AGENTSPACE/scripts/commit-check.sh`; 记账 id 与实验产物永不进入代码仓库 |
-| `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区: 每个 plan 一条泳道(`worktrees/<plan-id>/<仓库名>/`, 分支 `plan-<id>`)从记录在案的主线基点切出; 实施与验证全部在泳道内完成; 用户确认后 CAS squash 合回 — 主线恰好落一个 commit; 纯本地, push 仍是用户显式动作 |
+| `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区: 每个 plan 一条泳道(`worktrees/<plan-id>/<仓库名>/`, 分支 `plan-<id>`)从记录在案的主线基点切出; 实施与验证全部在泳道内完成; 用户确认后 CAS squash 合回 — 主线恰好落一个 commit; 纯本地, push 仍是用户显式动作; 多 agent 协同经 `AGENTSPACE/scripts/parallel-workspace.sh`(共享 plan 状态表 doing/test/merge + 异步便签) |
 
 ### 命令(ZCode 便捷入口)
 
@@ -76,13 +78,15 @@ ZCode 上每个显式 skill 另有斜杠命令, 经命令的 `skills:` 前置字
 之后, agent 在涉及实验/代码改动/迭代的会话中自动管理工作区:
 
 ```bash
-AGENTSPACE/scripts/new-plan.sh "baseline 复现"
+AGENTSPACE/scripts/new-plan.sh "baseline reproduction"
 AGENTSPACE/scripts/new-iteration.sh 1 "跑通训练 pipeline"
 AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, 达标"
 AGENTSPACE/scripts/complete-plan.sh 1 done "复现成功"
 AGENTSPACE/scripts/status.sh      # 状态摘要
 AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 ```
+
+plan 标题必须能产出合规文件名 slug — 只接受小写英文词、数字与单连字符(空格转为连字符; 含中文/大写/标点的标题在任何写入前被硬拒, 且不消耗 id); iteration 标题自由。
 
 一次性交接在任何会话都可用, 不要求有进行中 plan: `/agentspace-handoff-produce` 采用语义命名 — 冲突会拒绝, 绝不自动改名。doctor 审计该模块(残留一致性、过时 — 超 7 天未消费只报告, 绝不自动删除); `AGENTSPACE/scripts/status.sh` 列出待消费 handoff。
 
@@ -142,8 +146,8 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 | v1.0.1 | 2026-09-05 | agentspace-parallel 行为修正: 改动面交集(文件级或语义级)不再阻塞准入 — §2 交集扫描降级为纯信息动作; 唯一阻塞点钉死在合回(§7h: 冲突 hunk / 退役面命中 / 结构性 absorb / 重测失败任一 → 冻结 merge, 与用户讨论处理计划后泳道内更新重测) |
 | v1.0.0 | 2026-09-05 | 新 skill `agentspace-parallel` — 本地 PR-like 并行工作区(按 plan 一条泳道、泳道内验证、CAS squash 合回主线恰好一个 commit, 纯本地)+ plan/iteration 创建脚本锁先于 id 分配的竞态修复 + doctor 并行工作区审计覆盖 + status 泳道去重 + plan 模板改动面声明节与 iteration 模板 PR 簿记指引 |
 | v0.6.4 | 2026-09-01 | commit 门记账 id 禁令扩展到新增 diff 行(代码注释/字符串字面量; 删除行永不阻断)+ doctor 新增行内容事后审计 + rubric skill 更名 agentspace-commit → agentspace-code-clean(脚本名 commit-check.sh 不变)+ 发布工具自食防护(verify-release 常量反向校验与已实现字面量守卫) |
-| v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
-| v0.6.2 | 2026-08-16 | 新增 Codex 强制插件清单与发布校验；共享 skill description、正文、工作区 assets 与命令行为保持不变 |
+| v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验; 共享 skill description、正文、工作区 assets 与命令行为保持不变 |
+| v0.6.2 | 2026-08-16 | 新增 Codex 强制插件清单与发布校验; 共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.1 | 2026-08-15 | commit 文本质量: 门 + doctor 空标题规则(lib.sh 单源)+ agentspace-commit 质量 rubric(标题=一句话改动描述, 无实验/run 标识, 标题/正文须与 diff 相关)+ doctor 三维 commit 审计 |
 | v0.6.0 | 2026-08-15 | commit 规范: 关键代码仓库登记处(.agentspace-repos + repos.sh, 登记须用户确认)+ agentspace-commit skill + commit-check.sh 门 + doctor 登记一致性与 commit 事后审计 + status 关键代码仓库分区 + init 登记步骤 + standalone 白名单豁免 |
 | v0.5.3 | 2026-08-11 | status 近期动态四分区分层(主线软槽 / 宿主代码提交 / 工作区事件 / 台账)+ 会话入口"最近关闭"锚点 + `/agentspace-status` 版本闸门 + 三方验证修复 |

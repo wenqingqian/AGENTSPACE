@@ -1,5 +1,7 @@
 # AGENTSPACE
 
+[中文文档](README.zh-CN.md)
+
 A cross-platform plugin providing git-managed agent workspaces for experiment/iteration-driven projects.
 
 All functionality ships as agent skills — every supported platform (ZCode / Codex / Kimi) loads them from `skills/`; platforms with slash commands (ZCode) additionally get thin `/agentspace-*` command wrappers that delegate to the skills. Initialize explicitly (ZCode: `/agentspace-init`; elsewhere: ask the agent to run the `agentspace-init` skill) to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
@@ -17,6 +19,7 @@ All functionality ships as agent skills — every supported platform (ZCode / Co
 ```
 <project>/
 ├── AGENTS.md                  # Root guide: project overview + env + key repos + when-to-read rules
+├── worktrees/  .locks/        # agentspace-parallel lanes & coordination locks (created on demand; gitignored)
 └── AGENTSPACE/                # Independent git repo
     ├── AGENTS.md              # Core entry: structure / module what-when-how / discipline
     ├── plan.md                # Entry: Todo + Done (latest 10)
@@ -34,6 +37,7 @@ All functionality ships as agent skills — every supported platform (ZCode / Co
     ├── .agentspace-architecture.json  # Current architecture snapshot
     ├── .agentspace-repos              # Key code-repo registry (written only by scripts/repos.sh)
     ├── .agentspace-whitelist          # External-dependency whitelist (standalone mode)
+    ├── .agentspace-parallel-workspace.txt  # Parallel-workspace coordination table (doing/test/merge + sticky notes; created on demand, gitignored)
     ├── templates/  scripts/  .gitignore
 ```
 
@@ -57,7 +61,7 @@ Skills are the functional delivery unit — they behave identically on every sup
 | `agentspace-mode` | Explicit only | Switch workspace mode (hybrid default / standalone); manage the external-dependency whitelist |
 | `agentspace-handoff` | Explicit only | One-shot session handoffs: produce a context snapshot at session close, consume it (read, then delete) at the next session start |
 | `agentspace-code-clean` | Situational — before every commit in a registered key repo | Commit gate and hygiene: staged files, ADDED code/comment lines, and the draft message must all pass `AGENTSPACE/scripts/commit-check.sh`; bookkeeping ids and experiment data never enter code repos |
-| `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces: one worktree lane per plan (`worktrees/<plan-id>/<repo>/`, branch `plan-<id>`) forked from a recorded mainline base; implementation and verification run inside the lane; after user confirmation a CAS squash merge lands exactly one commit on mainline; purely local — push stays user-gated |
+| `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces: one worktree lane per plan (`worktrees/<plan-id>/<repo>/`, branch `plan-<id>`) forked from a recorded mainline base; implementation and verification run inside the lane; after user confirmation a CAS squash merge lands exactly one commit on mainline; purely local — push stays user-gated. Multi-agent coordination runs through `AGENTSPACE/scripts/parallel-workspace.sh` (shared plan-state table: doing/test/merge + async sticky notes) |
 
 ### Commands (ZCode convenience)
 
@@ -83,6 +87,8 @@ AGENTSPACE/scripts/complete-plan.sh 1 done "reproduction successful"
 AGENTSPACE/scripts/status.sh          # Status summary
 AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 ```
+
+Plan titles must yield a compliant filename slug — lowercase english words, digits and single hyphens only (spaces become hyphens; titles with CJK, uppercase or punctuation are refused before anything is written, never consuming an id); iteration titles are free-form.
 
 One-shot session handoffs work in any session, with or without in-progress plans: `/agentspace-handoff-produce` names the snapshot semantically — conflicts are refused, never auto-renamed. Doctor audits the module (residue consistency; staleness — unconsumed > 7 days is reported, never auto-deleted); `AGENTSPACE/scripts/status.sh` lists pending handoffs.
 
@@ -138,7 +144,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 | v1.2.2 | 2026-09-08 | as_lock hardening (expert-review security fixes): bounded acquire wait (`AS_LOCK_TIMEOUT_SECONDS`, default 120s — a live holder outlasting it is a stuck writer; the waiter names the pid and exits non-zero, stale takeover is never capped), placeholder pid written immediately after mkdir to shrink the no-trap crash window (a lock left by that window is instantly stale-takeover-able instead of ghosting for the mtime grace), and a pid-reuse second-level mtime grace (`AS_LOCK_STALE_HOURS`, default 6h — lock mtime is the acquisition time and never refreshes during a hold, so a live pid on an old lock is a recycled pid); both constants env-pre-settable, sanitized, readonly, recorded in architecture.json; scripts-only (handled by step 8a), no structure/AGENTS.md changes |
 | v1.2.1 | 2026-09-07 | new-plan slug hard-check: a plan title must yield a compliant slug (lowercase english words, digits, single hyphens); CJK / uppercase / underscore / trailing-hyphen / empty-slug titles are refused before anything is written and never consume an id — future plans only, existing plan files and index rows untouched |
 | v1.2.0 | 2026-09-07 | Collaborative agent workspace: new `AGENTSPACE/scripts/parallel-workspace.sh` — shared plan-state table (doing/test/merge) + async sticky notes, one file lock + atomic writes, exclusive merge slot under the short-window iron rule with a 15-min stale-MERGELOCK takeover; data file `.agentspace-parallel-workspace.txt` (ledger-local, gitignored) + agentspace-parallel skill four enhancements: fixed worktree path MUST, mainline history-rewrite probe (never a freeze by itself), pre/post merge-back report-layer hooks, §6.5 collaboration-table registration |
-| v1.1.0 | 2026-09-07 | AGENTS.md gains a user-owned 用户规则 section and 纪律 gains two MUSTs (用户规则守护 / 注释卫生; one-time split migration via /agentspace-update step 8b) + commit gate report-only wide-net candidates (plan/iteration word adjacent to digits, any separator — never block; the agent adjudicates each with a stated reason) + doctor --major Blocks 6/7 (notes content-quality audit with evidence chains; cross-plan conflict audit — duplication is explicitly not a finding) + code-clean batch comment review (whole-file, multi-subagent, report-only, explicit trigger only) |
+| v1.1.0 | 2026-09-07 | AGENTS.md gains a user-owned User Rules section and Discipline gains two MUSTs (user-rules guardianship / comment hygiene; one-time split migration via /agentspace-update step 8b) + commit gate report-only wide-net candidates (plan/iteration word adjacent to digits, any separator — never block; the agent adjudicates each with a stated reason) + doctor --major Blocks 6/7 (notes content-quality audit with evidence chains; cross-plan conflict audit — duplication is explicitly not a finding) + code-clean batch comment review (whole-file, multi-subagent, report-only, explicit trigger only) |
 | v1.0.1 | 2026-09-05 | agentspace-parallel behavior fix: change-surface intersections (file-level or semantic) never block admission — the §2 scan is now informational only, and the single blocking point is pinned to merge-back (§7h: any conflict hunk / retired-surface hit / structural absorb / retest failure freezes the merge for a user-decided handling plan, then the lane updates and retests) |
 | v1.0.0 | 2026-09-05 | New skill `agentspace-parallel` — local PR-like parallel workspaces (per-plan worktree lanes, in-lane verification, CAS squash merge-back of exactly one commit per lane, purely local) + lock-before-id race fix in plan/iteration creators + doctor parallel-workspace audit coverage + status lane dedupe + change-surface section in the plan template and PR bookkeeping guidance in the iteration readme |
 | v0.6.4 | 2026-09-01 | Commit gate extends the bookkeeping-id ban to ADDED diff lines (code comments / string literals; deletions never block) + doctor added-lines content audit + rubric skill renamed agentspace-commit → agentspace-code-clean (script name commit-check.sh unchanged) + release-tooling self-hosting guards (verify-release reverse constants check + realized-literal guard) |
