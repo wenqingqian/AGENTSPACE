@@ -7,7 +7,7 @@ set -euo pipefail
 SB="$(build_sandbox t01)"
 WS="$SB/AGENTSPACE"
 
-OUT="$(bash "$WS/scripts/new-plan.sh" "Test Plan Alpha")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "test plan alpha")"
 ID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 [ -n "$ID" ] || fail "no plan id in new-plan output: $OUT"
 
@@ -40,7 +40,7 @@ assert_contains "$WS/plan/done/$(basename "$DOC")" "> 状态: 完成"
 # truncation boundary: 12 more plans completed → Done table keeps the NEWEST 10
 i=1
 while [ "$i" -le 12 ]; do
-  OUT="$(bash "$WS/scripts/new-plan.sh" "Trunc Plan $i")"
+  OUT="$(bash "$WS/scripts/new-plan.sh" "trunc plan $i")"
   TID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
   TDOC="$(ls "$WS"/plan/todo/"$TID"*.md)"
   python3 - "$TDOC" <<'EOF'
@@ -79,7 +79,7 @@ s = open(p).read()
 s = s.rstrip() + "\n| 9999 | Ghost Plan | 2026-08-05 | [plan/todo/9999-ghost.md](plan/todo/9999-ghost.md) |\n"
 open(p, "w").write(s)
 EOF
-OUT="$(bash "$WS/scripts/new-plan.sh" "After Orphan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "after orphan")"
 assert_output_contains "$OUT" "plan:10000"
 # remove the ghost row again (test-only); the 10000 file created above stays
 python3 - "$WS/plan.md" <<'EOF'
@@ -88,7 +88,7 @@ p = sys.argv[1]
 s = open(p).read()  # read FIRST — writing inline would truncate before the read
 open(p, "w").write("\n".join(l for l in s.split("\n") if "| 9999 |" not in l) + "\n")
 EOF
-OUT="$(bash "$WS/scripts/new-plan.sh" "After Orphan 2")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "after orphan 2")"
 assert_output_contains "$OUT" "plan:10001"
 
 # status workbench: strict template sections (v0.5.0; the old ## 下一步
@@ -102,7 +102,7 @@ assert_output_contains "$OUT" "## 软告警 ("
 assert_output_contains "$OUT" "## 会话入口"
 
 # content-level assertion: 进行中 renders the open iteration
-OUT="$(bash "$WS/scripts/new-plan.sh" "Status Probe Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "status probe plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 OUT="$(bash "$WS/scripts/new-iteration.sh" "$PID" "status probe")"
 IID="$(printf '%s' "$OUT" | grep -o 'iteration_[0-9]*' | head -1 | cut -d_ -f2)"

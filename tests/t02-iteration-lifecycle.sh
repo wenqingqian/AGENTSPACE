@@ -9,7 +9,7 @@ set -euo pipefail
 SB="$(build_sandbox t02)"
 WS="$SB/AGENTSPACE"
 
-OUT="$(bash "$WS/scripts/new-plan.sh" "Iteration Host Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "iteration host plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 [ -n "$PID" ] || fail "no plan id: $OUT"
 

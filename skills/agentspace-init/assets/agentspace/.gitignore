@@ -21,3 +21,6 @@ data/
 
 # ---- 一次性会话交接文件(读后即销毁; index.md 仍入 git) ----
 handoff/handoff_*.md
+
+# ---- 并行协同工作区表(运行数据; 由 scripts/parallel-workspace.sh 维护, 不入 git) ----
+.agentspace-parallel-workspace.txt

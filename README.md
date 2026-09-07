@@ -102,6 +102,7 @@ Experiment projects typically have one or more key code repos alongside the work
 .codex-plugin/plugin.json         # Codex manifest
 kimi.plugin.json                  # Kimi manifest
 marketplace.json                  # Marketplace listing
+.agents/plugins/marketplace.json    # Agents-plugin marketplace listing
 icons/icon.png                    # Marketplace icon
 commands/                         # ZCode slash commands (thin wrappers delegating via skills: frontmatter)
 ├── agentspace-init.md
@@ -134,6 +135,8 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.2.1 | 2026-09-07 | new-plan slug hard-check: a plan title must yield a compliant slug (lowercase english words, digits, single hyphens); CJK / uppercase / underscore / trailing-hyphen / empty-slug titles are refused before anything is written and never consume an id — future plans only, existing plan files and index rows untouched |
+| v1.2.0 | 2026-09-07 | Collaborative agent workspace: new `AGENTSPACE/scripts/parallel-workspace.sh` — shared plan-state table (doing/test/merge) + async sticky notes, one file lock + atomic writes, exclusive merge slot under the short-window iron rule with a 15-min stale-MERGELOCK takeover; data file `.agentspace-parallel-workspace.txt` (ledger-local, gitignored) + agentspace-parallel skill four enhancements: fixed worktree path MUST, mainline history-rewrite probe (never a freeze by itself), pre/post merge-back report-layer hooks, §6.5 collaboration-table registration |
 | v1.1.0 | 2026-09-07 | AGENTS.md gains a user-owned 用户规则 section and 纪律 gains two MUSTs (用户规则守护 / 注释卫生; one-time split migration via /agentspace-update step 8b) + commit gate report-only wide-net candidates (plan/iteration word adjacent to digits, any separator — never block; the agent adjudicates each with a stated reason) + doctor --major Blocks 6/7 (notes content-quality audit with evidence chains; cross-plan conflict audit — duplication is explicitly not a finding) + code-clean batch comment review (whole-file, multi-subagent, report-only, explicit trigger only) |
 | v1.0.1 | 2026-09-05 | agentspace-parallel behavior fix: change-surface intersections (file-level or semantic) never block admission — the §2 scan is now informational only, and the single blocking point is pinned to merge-back (§7h: any conflict hunk / retired-surface hit / structural absorb / retest failure freezes the merge for a user-decided handling plan, then the lane updates and retests) |
 | v1.0.0 | 2026-09-05 | New skill `agentspace-parallel` — local PR-like parallel workspaces (per-plan worktree lanes, in-lane verification, CAS squash merge-back of exactly one commit per lane, purely local) + lock-before-id race fix in plan/iteration creators + doctor parallel-workspace audit coverage + status lane dedupe + change-surface section in the plan template and PR bookkeeping guidance in the iteration readme |

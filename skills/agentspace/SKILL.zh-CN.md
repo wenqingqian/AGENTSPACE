@@ -104,7 +104,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 ## 4. 里程碑 git 提交
 
-触发点(具体清单): plan 创建/完成 · iteration 创建/关闭 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · update 应用 · 脚本/模板更新。
+触发点(具体清单): plan 创建/完成 · iteration 创建/关闭 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 · 脚本/模板更新。
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <摘要>"
 ```

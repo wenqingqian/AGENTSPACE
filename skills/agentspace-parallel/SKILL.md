@@ -15,7 +15,10 @@ description: Parallel development on AGENTSPACE-managed projects — per-plan gi
 ## 0. Iron rules (invariants)
 
 1. **One plan = one worktree set = one branch name** (`plan-<plan-id>` in every touched repo);
-   worktree lifecycle = plan lifecycle (multiple iterations share it).
+   worktree lifecycle = plan lifecycle (multiple iterations share it). [MUST] a plan's worktrees
+   live ONLY at `<project-root>/worktrees/<plan-id>/<repo-name>` — always outside every registered
+   repo; any other location is forbidden (ad-hoc paths resolve against whatever the cwd happens to
+   be and create worktrees in strange places).
 2. **Local-only**: no remote operations anywhere in this skill. Push is the user's separate decision.
 3. **The main checkout belongs to the mainline session**; a lane never edits it. The main checkout
    must be clean and untouched only during a merge window (§8.1 step 3) — seconds, not hours.
@@ -50,7 +53,7 @@ A parallel session **assumes nothing** about the project. Read each row:
 | Resource tools | `AGENTSPACE/utils.md` | §9 node/resource tooling (if any) |
 | Session handoff | `AGENTSPACE/handoff/index.md` | consume any handoff pointing at this plan first |
 | e2e multi-instance isolation | gate scripts themselves (ports / output dirs / temp stores) | whether two lanes may run e2e concurrently; if not isolated, e2e joins §9 as an occupy-class resource |
-| **Embedded-form check** | is the project root itself inside a registered repo? | if yes: `.locks/` and `worktrees/` MUST be in that repo's `.gitignore` first (iron rule — lock owner files contain literal bookkeeping ids; a stray `git add -A` would trip the commit gate or sweep whole worktrees into the host) |
+| **Embedded-form check** | is the project root itself inside a registered repo? | if yes: [MUST] hard precondition before ANY lock or worktree is created — `.locks/` and `worktrees/` go into that repo's `.gitignore` first (iron rule — lock owner files contain literal bookkeeping ids; a stray `git add -A` would trip the commit gate or sweep whole worktrees into the host) |
 
 **Lock namespaces** (this skill's convention, under the project root): `.locks/mainline/` (§8) ·
 `.locks/ledger/` (§6) · `.locks/resource-<name>/` (§9). All created by **atomic `mkdir`** (NFS-safe,
@@ -81,8 +84,9 @@ takeover to the user — never silently break a lock.
 
 ## 3. Bringing up worktrees
 
-1. **Create** (fixed organization — the ONLY legal location, at the project root which may or may
-   not be a git host, always outside every registered repo):
+1. **Create** — [MUST] exactly this fixed path and command form (fixed organization — the ONLY
+   legal location, at the project root which may or may not be a git host, always outside every
+   registered repo; no other location is legal — iron rule 1):
    ```bash
    cd <project-root>
    git -C <repo> worktree add worktrees/<plan-id>/<repo-name> -b plan-<plan-id> <repo mainline>
@@ -122,6 +126,10 @@ takeover to the user — never silently break a lock.
   contains only this plan's changes).
 - Big data (datasets / traces / checkpoints) is referenced by absolute path, never copied.
 - e2e runs HERE, pre-merge, at the tier written down per §8.0.
+- [MUST] Before entering §8.1 merge-back (development wrap-up): run the commit gate's semantic
+  review across ALL dimensions over the lane's whole diff (bookkeeping ids / comment hygiene /
+  commit-quality rubric). Report layer — findings go to the user and do NOT block the merge; the
+  §8.1 commit gate keeps its blocking role.
 - [MUST] Need to change a file the mainline is editing → stop and report to the user for
   arbitration; never snatch files.
 
@@ -175,6 +183,18 @@ and keeps working outside the lock — no spinning.
 - Ledger milestone messages stay single-concern; tell the user after committing (standing
   AGENTSPACE discipline).
 
+### 6.5 Collaborative agent workspace (collaboration table)
+
+Any parallel work based on this skill registers itself in the collaboration table: [MUST] call
+`AGENTSPACE/scripts/parallel-workspace.sh --init <plan_id> <desc> [info]` at start-up (§3
+bring-up), and [MUST] `--remove <plan_id>` at wrap-up. Everything else is on-demand, never a
+mandated loop: `--show` gives lane-to-lane status visibility and `--send`/`--recv` pass async
+sticky notes — no forced polling. Merge-back goes through the script's merge state — short-window
+iron rule: attempt the merge / resolve conflicts BEFORE calling `--merge`; `--merge` is called
+only at zero impediment; sequence = set the merge state → do the real merge outside the table
+fast → `--remove` releases the slot; never sit in the merge state blocking others. Data file:
+`AGENTSPACE/.agentspace-parallel-workspace.txt` (inside the ledger, gitignored).
+
 ## 7. Refactor-aware absorb (alignment protocol, in the worktree, lock-free)
 
 > The most dangerous outcome is not a git conflict — it's a **zero-conflict auto-merge**: branch
@@ -187,6 +207,16 @@ mainline; never the reverse).
 a. **Gap profile**: `MB=$(git merge-base HEAD <mainline>)`; walk `git log --oneline $MB..<mainline>`
    commit by commit, reading the diff of any commit touching this plan's change surface;
    `git diff --stat $MB..<mainline>` for the panorama.
+   [MUST] History-rewrite probe (before absorbing, besides the existing HEAD-movement detection):
+   `git merge-base --is-ancestor <base> <mainline>` — is the lane-recorded base SHA still a
+   mainline ancestor? False → the mainline's history was rewritten (rebase / amend /
+   title-and-body polish class). Disposition — never a freeze by itself (§7h's freeze list stays
+   closed): `git diff <base>..<mainline>` empty (pure metadata rewrite, zero content change) →
+   report to the user "mainline history rewritten but content unchanged" + re-point the lane's
+   base anchor at the new SHA + continue the absorb; non-empty (the rewrite moved content) → the
+   normal absorb path — pull the gap back into the worktree, resolve conflicts, retry the merge.
+   Motive: better-commit-style title/body rewrites swap SHAs and invalidate anchors, but as long
+   as the content is unchanged, the squash's net diff is unaffected.
 b. **Intersection verdict**: file intersection (both sides' name-only diffs) + **semantic
    intersection** (is an interface surface this plan consumes changed on the mainline — moved or
    re-signed counts). Both empty → plain merge + full unit tests. Either non-empty → c–e.
@@ -253,7 +283,12 @@ loop:
   2. Present results → user confirms merge (confirmation semantics: "merge when green").
   3. Under .locks/mainline/ (one acquisition; multi-repo plans: ALL repos inside the SAME window):
      per repo: mainline HEAD still == the recorded absorbed point?
-       yes → git merge --squash plan-<id>          # stages the plan's net diff
+       yes → [MUST] history-rewrite probe:
+               git merge-base --is-ancestor <base> <mainline>   # base = the lane-recorded base SHA
+               no  → mainline history rewritten → dispose per §7a's rewrite rule (metadata-only:
+                     re-anchor + continue; content moved: normal absorb path) — never a freeze by
+                     itself → unlock → back to 1
+             → git merge --squash plan-<id>          # stages the plan's net diff
              → commit-check.sh <repo> "<PR-name title>"   # gate BEFORE commit; the content scan
              → git commit -m "<PR-name title>"            #   doubles as a final net over the plan's whole diff
              → git diff plan-<id> <mainline>  →  MUST BE EMPTY
@@ -263,6 +298,9 @@ loop:
      unlock; done
   4. Bookkeeping (lock-free): close the iteration with the tier+reasons, the post-merge mainline
      squash SHA per repo (PERMANENT anchor), and the branch name.
+     [MUST] After the merge-back is accepted (report layer): run the code-clean batch comment
+     review — multi-subagent walk over ALL comments in every file this round's lane touched,
+     report-only; fixes go in a separate follow-up commit, never folded into the squash.
   5. Verification failure at any point: fix-forward on the branch → back to 1. Never hotfix the
      main checkout (attribution stays clean).
 ```

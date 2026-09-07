@@ -92,7 +92,7 @@ OUT5="$(bash "$ST" "$WSV")"
 assert_output_contains "$OUT5" "✓ 无软告警"       # 全部恢复 → 回到全绿
 
 # --- 4) \| 回归: 原始管道标题全链路 ---
-bash "$WS/scripts/new-plan.sh" "Esc Pipe Plan" >/dev/null 2>&1
+bash "$WS/scripts/new-plan.sh" "esc pipe plan" >/dev/null 2>&1
 PLAN="$(ls "$WS"/plan/todo/ | head -1 | cut -d- -f1)"
 mc
 bash "$WS/scripts/new-iteration.sh" "$PLAN" "list | 修复 + close diff" >/dev/null 2>&1
@@ -105,7 +105,7 @@ hc "feat: host side change"
 OUT_MID="$(bash "$ST" "$WSV")"
 assert_output_contains "$OUT_MID" "list \\| 修复 + close diff"
 # 近期动态: 工作区事件(索引日期列, 不依赖 commit) + 台账摘要(类型前缀映射)
-assert_output_contains "$OUT_MID" "$(date +%F) 计划创建: Esc Pipe Plan"
+assert_output_contains "$OUT_MID" "$(date +%F) 计划创建: esc pipe plan"
 assert_output_contains "$OUT_MID" "$(date +%F) 迭代开启: list \\| 修复 + close diff"
 assert_output_contains "$OUT_MID" "$(date +%F) 测试: t15 milestone"  # 台账(test:→测试)
 # 宿主代码提交块: feat commit 在列
@@ -146,7 +146,7 @@ grep -vF "完成时填写" "$PLANFILE" > "$PLANFILE.tmp" && mv "$PLANFILE.tmp" "
 bash "$WS/scripts/complete-plan.sh" "$PLAN" failed "cap result" >/dev/null 2>&1
 mc
 OUT_FAIL="$(bash "$ST" "$WSV")"
-assert_output_contains "$OUT_FAIL" "$(date +%F) 计划失败: Esc Pipe Plan"
+assert_output_contains "$OUT_FAIL" "$(date +%F) 计划失败: esc pipe plan"
 
 # --- 5) 近期动态: 笔记新增 + 交接生成 事件流 ---
 printf '| cap probe note | 标签 | 结论 | plan:%s | %s | [notes/cap-probe-note.md](notes/cap-probe-note.md) |\n' "$PLAN" "$(date +%F)" >> "$WS/notes.md"

@@ -2,6 +2,10 @@
 # Create a new plan: allocate global index, instantiate plan/todo/NNNN-slug.md,
 # insert row in plan.md Todo table, append to plan/index.md.
 # Usage: new-plan.sh "Plan title"
+#   The title must yield a compliant slug — lowercase english words, digits
+#   and single hyphens only; CJK / uppercase / punctuation titles are refused
+#   before anything is written (new plans only — existing plan files are
+#   never touched).
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -23,7 +27,12 @@ CELL="$(as_cell "$TITLE")"
 # python (PYTHONUTF8 alone is ignored by 3.6 — audit R2).
 command -v python3 >/dev/null 2>&1 || as_die "new-plan.sh needs python3 (CJK-aware title truncation) — install it or run the plan creation manually"
 SLUG="$(printf '%s' "$TITLE" | tr '\n\r\t' '   ' | tr -s ' ' | tr ' ' '-' | tr -d '/\\?*":<>|()[]#!' | PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:40])")"
-[ -n "$SLUG" ] || SLUG="plan"
+# Slug contract: lowercase english words + digits + single hyphens. The strip
+# set above leaves CJK bytes, uppercase, underscores and most punctuation in
+# place, and a title made only of stripped chars yields an empty slug — every
+# such result is refused here, before any file or table row is written.
+slug_re='^[a-z0-9]+(-[a-z0-9]+)*$'
+[[ "$SLUG" =~ $slug_re ]] || as_die "plan slug not allowed: \"${SLUG:-<empty>}\" (generated from title \"$TITLE\") — plan filenames accept lowercase english words, digits and single hyphens only; retry with a lowercase english title (words joined by hyphens)"
 FILE="plan/todo/${ID}-${SLUG}.md"
 
 PH_ID="$ID" PH_TITLE="$TITLE" PH_DATE="$DATE" \

@@ -146,7 +146,7 @@ add_whitelist_entry() {
   local entry="$1" tmp base covered
   [ -n "$entry" ] || return 1
   # 输入规范化: /tmp 拼写 → /private/tmp, 与 as_whitelisted/as_external_refs 一致 —
-  # 否则条目以未规范化拼写入库, 匹配时永不命中(真实三方验证发现)
+  # 否则条目以未规范化拼写入库, 匹配时永不命中
   if [ -e "$entry" ]; then
     local canon
     canon="$(cd -P "$(dirname "$entry")" 2>/dev/null && pwd -P)/$(basename "$entry")" || canon="$entry"
@@ -509,9 +509,9 @@ as_diff_added_candidates() {
 }
 
 # Canonical repo root for any path: git toplevel, physical spelling (cd -P
-# resolves symlinked prefixes like /tmp → /private/tmp — the eacbeda lesson).
+# resolves symlinked prefixes like /tmp → /private/tmp).
 # Contract: a DANGLING path (no longer existing) resolves via dirname to the
-# CONTAINING repo's toplevel — the exact previously-fixed trap. Callers must
+# CONTAINING repo's toplevel. Callers must
 # pre-guard with `[ -d ]` / `[ -e ]` before calling; only repos.sh --remove
 # may pass a dangling path, and it never falls back to git-toplevel
 # resolution (parent-physicalize instead).

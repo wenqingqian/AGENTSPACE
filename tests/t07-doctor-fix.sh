@@ -58,7 +58,7 @@ rm -rf "$SB"
 # --- [7] note file missing from notes.md: row backfilled by --fix ---
 SB="$(build_sandbox t07c)"
 WS="$SB/AGENTSPACE"
-OUT="$(bash "$WS/scripts/new-plan.sh" "Backfill Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "backfill plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 sed -e "s/{{TITLE}}/Backfill note/" -e "s/{{DATE}}/2026-08-04/" "$WS/templates/note.md" > "$WS/notes/backfill-note.md"
 python3 - "$WS/notes/backfill-note.md" "$PID" <<'EOF'
@@ -111,7 +111,7 @@ rm -rf "$SB"
 # --- [7] row insert failure: --fix must not claim a fix that did not happen ---
 SB="$(build_sandbox t07e)"
 WS="$SB/AGENTSPACE"
-OUT="$(bash "$WS/scripts/new-plan.sh" "Sep Fail Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "sep fail plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 sed -e "s/{{TITLE}}/Sep fail note/" -e "s/{{DATE}}/2026-08-04/" "$WS/templates/note.md" > "$WS/notes/sep-fail-note.md"
 python3 - "$WS/notes/sep-fail-note.md" "$PID" <<'EOF'
@@ -146,7 +146,7 @@ rm -rf "$SB"
 # --- [2] duplicated id across sections: --fix removes only the orphan row ---
 SB="$(build_sandbox t07f)"
 WS="$SB/AGENTSPACE"
-OUT="$(bash "$WS/scripts/new-plan.sh" "Dup Fix Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "dup fix plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 # complete the plan first so id $PID has a legitimate Done row + plan/done file
 python3 - "$WS/plan/todo/$PID-"*.md <<'EOF'
@@ -177,7 +177,7 @@ assert_output_contains "$OUT" "== Done: 0 issues, 1 auto-repaired =="
 # the orphan row is gone from the Todo section...
 assert_not_contains "$WS/plan.md" "Duplicate orphan"
 # ...while the legitimate Done row (plan/done file present) survives
-assert_contains "$WS/plan.md" "| $PID | Dup Fix Plan |"
+assert_contains "$WS/plan.md" "| $PID | dup fix plan |"
 # blast radius: --fix modified only plan.md
 [ "$(git -C "$WS" diff --name-only)" = "plan.md" ] \
   || fail "unexpected blast radius after --fix: $(git -C "$WS" diff --name-only)"

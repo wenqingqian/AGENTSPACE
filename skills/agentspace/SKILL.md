@@ -104,7 +104,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 
 ## 4. Milestone Git Commits
 
-Triggers (specific): plan created/completed · iteration created/closed · module registered · notes written · tests.md environment changed · examples/data entries registered · update applied · scripts/templates updated.
+Triggers (specific): plan created/completed · iteration created/closed · module registered · notes written · tests.md environment changed · examples/data entries registered · user rules written · update applied · scripts/templates updated.
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <summary>"
 ```

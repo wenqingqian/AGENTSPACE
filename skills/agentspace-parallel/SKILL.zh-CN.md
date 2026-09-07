@@ -12,7 +12,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 
 ## 0. 铁律(不变量)
 
-1. **一 plan 一 worktree 组 一分支名**(每个被改仓库都叫 `plan-<plan-id>`); worktree 生命周期 = plan 生命周期(多 iteration 共用)。
+1. **一 plan 一 worktree 组 一分支名**(每个被改仓库都叫 `plan-<plan-id>`); worktree 生命周期 = plan 生命周期(多 iteration 共用)。[MUST] plan 的 worktree 只能放 `<项目根>/worktrees/<plan-id>/<repo名>`——永远在所有登记仓库之外; 禁止任何其他位置(随手给的路径按当前 cwd 解析, worktree 会建到奇怪的地方)。
 2. **纯本地**: 本 skill 无任何远端操作; push 是用户单独的决定。
 3. **主检出属于主线会话**; 泳道永不动它。主检出只在 merge 窗口(§8.1 第 3 步)期间必须干净且不被触碰——秒级, 不是小时级。
 4. **AGENTSPACE 台账单实例共享**: 索引/登记状态只经 `scripts/` 写入(自锁); 其余写路径走台账锁(§6)。**泳道活跃期间台账仓库禁止 `git add -A`**——会把其他会话的在途改动卷进你的提交。
@@ -36,7 +36,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 | 资源工具 | `AGENTSPACE/utils.md` | §9 节点/资源管理工具(若有) |
 | 会话交接 | `AGENTSPACE/handoff/index.md` | 若有指向本 plan 的 handoff 先 consume |
 | e2e 多实例隔离 | 门脚本本体(端口/输出目录/临时存储) | 两条泳道能否并发跑 e2e; 不隔离则 e2e 归入 §9 占用型资源 |
-| **内嵌型检查** | 项目根本身是否落在登记仓库内? | 是则先把 `.locks/` 与 `worktrees/` 写进该仓库 `.gitignore`(铁律——锁 owner 文件含字面记账 id, 一次手滑 `git add -A` 会触 commit 门, 甚至把整个 worktree 卷进宿主) |
+| **内嵌型检查** | 项目根本身是否落在登记仓库内? | 是则 [MUST] 硬前置——先于任何锁与 worktree 的创建, 把 `.locks/` 与 `worktrees/` 写进该仓库 `.gitignore`(铁律——锁 owner 文件含字面记账 id, 一次手滑 `git add -A` 会触 commit 门, 甚至把整个 worktree 卷进宿主) |
 
 **锁命名空间**(本 skill 统一约定, 项目根下): `.locks/mainline/`(§8) · `.locks/ledger/`(§6) ·
 `.locks/resource-<name>/`(§9)。全部 **mkdir 原子创建**(NFS 安全, 不用 flock), `owner` 文件写
@@ -54,7 +54,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 
 ## 3. 拉起 worktree
 
-1. **建**(固定组织——唯一合法位置, 在项目根, 不管项目根是不是 git 宿主, 永远在所有登记仓库之外):
+1. **建**——[MUST] 用且仅用这个固定路径与命令形态(固定组织——唯一合法位置, 在项目根, 不管项目根是不是 git 宿主, 永远在所有登记仓库之外; 其他任何位置都不合法——铁律 1):
    ```bash
    cd <项目根>
    git -C <repo> worktree add worktrees/<plan-id>/<repo名> -b plan-<plan-id> <repo主分支>
@@ -80,6 +80,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
 - iteration readme 按仓库记 SHA 行(`<repo> plan-<id>:<sha>`); diff 照常存 `iteration_NNNN/data/`(`git -C <worktree> diff <起>..<止>`——分支内区间只含本 plan 改动)。
 - 大数据(数据集/trace/ckpt)绝对路径引用, 不拷贝。
 - e2e 在这里跑, merge 之前, 档位按 §8.0 写定的执行。
+- [MUST] 进 §8.1 合回前(开发收尾): 对泳道全 diff 跑 commit 门语义层全维审查(记账 id / 注释卫生 / commit 质量 rubric)。报告层——发现只报给用户, 不阻塞 merge; §8.1 的 commit 门保持阻断职责。
 - [MUST] 需要改主检出正在改的文件 → 停, 报告用户裁决; 不抢文件。
 
 ## 6. AGENTSPACE 台账并行协议 ★
@@ -115,6 +116,15 @@ pid 存活检查 + mtime 宽限 + mv 原子接管)互斥——**并发调用安�
 - **并行期间会话续接只走 handoff**——latest 软链在泳道间翻转, 并行时无意义。
 - 台账里程碑提交的 message 单一关注点; 提交后告知用户(沿 AGENTSPACE 既有纪律)。
 
+### 6.5 协同 agent workspace(协同表)
+
+任何基于本 skill 的并行工作都要在协同表登记: 启动时(§3 拉起)[MUST] 调
+`AGENTSPACE/scripts/parallel-workspace.sh --init <plan_id> <desc> [info]`, 收尾时 [MUST]
+`--remove <plan_id>`。其余按需, 不强制轮询: `--show` 提供泳道间状态可见性, `--send`/`--recv`
+传异步便签。合回走脚本的 merge 态——短窗铁律: 尝试合并/处理冲突都在 `--merge` 之前完成;
+`--merge` 只在零阻碍时调用; 顺序 = 置 merge 态 → 表外快速完成真实合并 → `--remove` 释放槽位;
+不卡 merge 态挡别人。数据文件: `AGENTSPACE/.agentspace-parallel-workspace.txt`(台账内, gitignore)。
+
 ## 7. 重构感知 absorb(对齐协议, worktree 内, 无锁)
 
 > 最危险的不是 git 报冲突, 而是**零冲突自动合并**——分支代码"干净地"落在被重构掉的旧结构上(旧 API / 退役键 / 搬走的声明位置), 文本不撞、语义已死。
@@ -122,6 +132,7 @@ pid 存活检查 + mtime 宽限 + mv 原子接管)互斥——**并发调用安�
 absorb 方向永远是**主线 → 分支**(分支把自己的意图重定基到当前主线上; 永不反向)。
 
 a. **差距画像**: `MB=$(git merge-base HEAD <主分支>)`; `git log --oneline $MB..<主分支>` 逐条过, 涉及本 plan 改动面的 commit 读 diff; `git diff --stat $MB..<主分支>` 全景。
+   [MUST] 历史改写探测(absorb 之前, 除现有 HEAD 移动检测外): `git merge-base --is-ancestor <base> <主分支>`——泳道记录的 base SHA 是否仍是主线祖先? 为假 → 主线历史被改写(rebase/amend/标题正文优化类)。处置——其本身绝不构成冻结(§7h 的冻结清单保持封闭): `git diff <base>..<主分支>` 为空(纯元数据改写, 内容零变化)→ 报告用户"主线历史被改写但内容未变" + 泳道 base 锚点重指新 SHA + 继续 absorb; 非空(改写动了内容)→ 走正常 absorb 路径——拉回 worktree 处理冲突, 再尝试 merge。动机: better-commit 类标题正文改写会换 SHA 使锚点失效, 但只要内容不变, squash 净 diff 不受影响。
 b. **交集判定**: 文件交集(两侧 name-only diff 的交) + **语义交集**(本 plan 消费的接口面在主线上是否被改, 挪位置/改签名都算)。两者皆空 → 普通 merge + 全量单测; 任一非空 → 走 c–e。判定要诚实——"文件交集为空"但存在语义触碰(如主线收紧了分支**正在扩展**的配置/flag 面)就是语义交集, 不是干净 absorb。
 c. **冲突解决 = 移植, 不是选边**: 每个 hunk 同时理解两侧意图, 把本 plan 的意图移植到新结构上; 禁止机械保留旧块或整段取一侧。
 d. **零冲突也查退役面**: 交集非空时 grep 主线 diff 中删掉的符号/键/入口, 确认本 plan 改动在新结构下落点仍有效、无死代码、无引用已删 API。
@@ -156,7 +167,11 @@ loop:
   2. 出结果 → 用户确认 merge(确认语义 = "绿了就合")。
   3. 持 .locks/mainline/(一次获取; 多仓库 plan: 所有仓库在同一窗口内):
      每仓库: 主线 HEAD 仍 == 记录的 absorb 点?
-       是 → git merge --squash plan-<id>          # 暂存本 plan 净 diff
+       是 → [MUST] 历史改写探测:
+              git merge-base --is-ancestor <base> <主分支>   # base = 泳道记录的 base SHA
+              否  → 主线历史被改写 → 按 §7a 改写处置分判(纯元数据改写: 重指锚点后继续;
+                    动了内容: 走正常 absorb 路径)——其本身绝不构成冻结 → 放锁 → 回 1
+            → git merge --squash plan-<id>          # 暂存本 plan 净 diff
             → commit-check.sh <repo> "<PR名标题>"    # 先过门再 commit; 内容扫描顺带
             → git commit -m "<PR名标题>"               #   成为全 plan 净 diff 的兜底网
             → git diff plan-<id> <主分支>  →  必须为空
@@ -164,6 +179,7 @@ loop:
        否 → 放锁 → 回 1
      放锁; 完成
   4. 记账(锁外): 关闭 iteration, 记量定档位与理由、merge 后各仓库主线 squash SHA(永久锚点)与分支名。
+     [MUST] 合回被接受之后(报告层): 跑 code-clean 批量注释审查——multi-subagent 遍历本轮泳道涉及文件的全量注释, 只报告; 修复另起提交, 绝不混入 squash。
   5. 任一点验证失败: fix-forward 回分支 → 回 1; 不在主检出 hotfix(保持归因)。
 ```
 

@@ -102,6 +102,7 @@ AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 .codex-plugin/plugin.json         # Codex 清单
 kimi.plugin.json                  # Kimi 清单
 marketplace.json                  # 市场清单
+.agents/plugins/marketplace.json    # Agents 插件市场清单
 icons/icon.png                    # 市场图标
 commands/                         # ZCode 斜杠命令(轻量包装, 经 skills: 前置字段委托给 skill)
 ├── agentspace-init.md
@@ -134,6 +135,8 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.2.1 | 2026-09-07 | new-plan slug 硬校验: plan 标题必须产出合规 slug(小写英文词、数字、单连字符); 中文/大写/下划线/尾连字符/空 slug 标题在任何写入前被硬拒且不消耗 id — 只对未来新建生效, 存量 plan 文件与索引行不动 |
+| v1.2.0 | 2026-09-07 | 协同 agent workspace: 新增 `AGENTSPACE/scripts/parallel-workspace.sh` — 共享 plan 状态表(doing/test/merge)+ 异步便签, 单把文件锁 + 原子写, merge 槽全表独占(短窗铁律)+ 15 分钟 MERGELOCK stale 接管; 数据文件 `.agentspace-parallel-workspace.txt`(台账内, gitignore)+ agentspace-parallel skill 四项增强: 固定 worktree 路径 MUST、主线历史改写探测(其本身绝不构成冻结)、合回前后双报告层挂点、§6.5 协同表登记 |
 | v1.1.0 | 2026-09-07 | AGENTS.md 新增用户所有的 用户规则 节 + 纪律 新增两条 MUST(用户规则守护 / 注释卫生; 经 /agentspace-update step 8b 一次性拆分迁移)+ commit 门新增只报告的扩网候选(plan/iteration 词与数字相邻、任意分隔符 — 永不阻断, 由 agent 逐条裁决并给出理由)+ doctor --major 新增块 6/7(notes 内容质量审核带证据链; 跨 plan 冲突审核 — 重复/交叠明确不算发现)+ code-clean 新增批量注释审查(全文件、多 subagent、只报告、仅显式触发) |
 | v1.0.1 | 2026-09-05 | agentspace-parallel 行为修正: 改动面交集(文件级或语义级)不再阻塞准入 — §2 交集扫描降级为纯信息动作; 唯一阻塞点钉死在合回(§7h: 冲突 hunk / 退役面命中 / 结构性 absorb / 重测失败任一 → 冻结 merge, 与用户讨论处理计划后泳道内更新重测) |
 | v1.0.0 | 2026-09-05 | 新 skill `agentspace-parallel` — 本地 PR-like 并行工作区(按 plan 一条泳道、泳道内验证、CAS squash 合回主线恰好一个 commit, 纯本地)+ plan/iteration 创建脚本锁先于 id 分配的竞态修复 + doctor 并行工作区审计覆盖 + status 泳道去重 + plan 模板改动面声明节与 iteration 模板 PR 簿记指引 |

@@ -17,7 +17,7 @@ mc() { git -C "$WS" add -A >/dev/null 2>&1; git -C "$WS" commit -qm "test: t16 m
 
 # --- 1) complete-plan: result containing a raw pipe must keep the index row
 # intact (7 columns + 1 escaped pipe → awk NF=10) and doctor stays green
-bash "$NEWP" "Pipe Result Plan" >/dev/null 2>&1
+bash "$NEWP" "pipe result plan" >/dev/null 2>&1
 PLAN="$(ls "$WS"/plan/todo/ | head -1 | cut -d- -f1)"
 PLANFILE="$(ls "$WS"/plan/todo/*.md | head -1)"
 grep -vF "完成时填写" "$PLANFILE" > "$PLANFILE.tmp" && mv "$PLANFILE.tmp" "$PLANFILE"
@@ -33,7 +33,7 @@ assert_ok bash "$DOC"
 
 # --- 2) doctor --fix id normalization: `| 1 |` row with 0001 file must NOT be
 # deleted; a genuine orphan (0999) is still repaired
-bash "$NEWP" "Pad Plan" >/dev/null 2>&1
+bash "$NEWP" "pad plan" >/dev/null 2>&1
 PID2="$(ls "$WS"/plan/todo/ | head -1 | cut -d- -f1)"
 mc
 python3 - "$WS/plan.md" "$PID2" <<'EOF'

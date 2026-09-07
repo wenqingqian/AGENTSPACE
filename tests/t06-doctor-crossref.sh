@@ -58,7 +58,7 @@ EOF
 SB="$(build_sandbox t06a)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "Crossref Green Plan" "crossref green")
+$(make_plan_iteration "$WS" "crossref green plan" "crossref green")
 EOF
 make_note "$WS" "green-note" "Green note" "iteration_$IID" "回链: [iteration_$IID readme](../iterations/iteration_$IID/readme.md)"
 add_note_row "$WS" "green-note" "Green note" "iteration_$IID"
@@ -70,9 +70,9 @@ rm -rf "$SB"
 # --- [6] iteration→plan mismatch: entry table row says a different plan ---
 SB="$(build_sandbox t06b)"
 WS="$SB/AGENTSPACE"
-OUT="$(bash "$WS/scripts/new-plan.sh" "First Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "first plan")"
 PID1="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
-OUT="$(bash "$WS/scripts/new-plan.sh" "Second Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "second plan")"
 PID2="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 OUT2="$(bash "$WS/scripts/new-iteration.sh" "$PID1" "mismatch test")"
 IID="$(printf '%s' "$OUT2" | grep -o 'iteration_[0-9]*' | head -1 | cut -d_ -f2)"
@@ -126,7 +126,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t06e)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "Backlink Plan" "backlink test")
+$(make_plan_iteration "$WS" "backlink plan" "backlink test")
 EOF
 make_note "$WS" "no-backlink-note" "No backlink note" "iteration_$IID" ""
 add_note_row "$WS" "no-backlink-note" "No backlink note" "iteration_$IID"
@@ -139,7 +139,7 @@ rm -rf "$SB"
 # --- [7] hand-written non-padded 来源 ref (plan:1): normalized before lookup ---
 SB="$(build_sandbox t06f)"
 WS="$SB/AGENTSPACE"
-OUT="$(bash "$WS/scripts/new-plan.sh" "Norm Note Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "norm note plan")"
 PID="$(printf '%s' "$OUT" | grep -o 'plan:[0-9]*' | cut -d: -f2)"
 # hand-write the ref WITHOUT zero padding: the plan-1 form instead of the
 # canonical %04d zero-padded spelling.
@@ -161,7 +161,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t06g)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "Norm Iter Plan" "norm iter")
+$(make_plan_iteration "$WS" "norm iter plan" "norm iter")
 EOF
 python3 - "$WS/iterations/iteration_$IID/readme.md" "$PID" <<'EOF'
 import sys
@@ -185,7 +185,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t06h)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "Exemption Plan" "exemption test")
+$(make_plan_iteration "$WS" "exemption plan" "exemption test")
 EOF
 make_note "$WS" "old-note" "Old note" "iteration_$IID" ""
 # created before the back-link discipline was adopted (2026-08-04)
@@ -200,7 +200,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t06i)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "NoDate Plan" "no-date test")
+$(make_plan_iteration "$WS" "no-date plan" "no-date test")
 EOF
 make_note "$WS" "no-date-note" "No date note" "iteration_$IID" ""
 sed -i '' '/^> 创建:/d' "$WS/notes/no-date-note.md"   # drop the creation-date header
@@ -215,7 +215,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t06j)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "PlainText Plan" "plain-text test")
+$(make_plan_iteration "$WS" "plain-text plan" "plain-text test")
 EOF
 # 详情 mentions the path as plain text only — no markdown link
 make_note "$WS" "plain-note" "Plain text note" "iteration_$IID" "详见 iteration_$IID/readme.md"
@@ -230,7 +230,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t06k)"
 WS="$SB/AGENTSPACE"
 read -r PID IID <<EOF
-$(make_plan_iteration "$WS" "WrongLink Plan" "wrong-link test")
+$(make_plan_iteration "$WS" "wrong-link plan" "wrong-link test")
 EOF
 OTHER="$(printf '%04d' $((10#$IID + 1)))"   # an iteration that does not exist
 make_note "$WS" "wrong-link-note" "Wrong link note" "iteration_$IID" "回链: [iteration_$OTHER readme](../iterations/iteration_$OTHER/readme.md)"

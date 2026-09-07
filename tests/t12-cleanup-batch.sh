@@ -38,7 +38,7 @@ mc
 assert_ok bash "$DOC"
 
 # --- close-iteration: auto host-diff collection ---
-bash "$NEWP" "Diff collection test plan" >/dev/null 2>&1
+bash "$NEWP" "diff collection test plan" >/dev/null 2>&1
 PLAN="$(ls "$WS"/plan/todo/ | head -1 | cut -d- -f1)"
 mc
 bash "$NEWI" "$PLAN" "auto diff collection test" >/dev/null 2>&1

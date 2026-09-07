@@ -16,7 +16,7 @@ sleep 30 & SPID=$!
 kill -9 "$SPID"
 wait "$SPID" 2>/dev/null || true
 printf '%s' "$SPID" > "$WS/.scripts.lock/pid"
-OUT="$(bash "$WS/scripts/new-plan.sh" "Stale Lock Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "stale lock plan")"
 printf '%s' "$OUT" | grep -q 'plan:[0-9]*' || fail "write blocked by stale lock"
 [ ! -e "$WS/.scripts.lock" ] || fail "stale lock not cleaned up"
 for f in "$WS"/.scripts-tmp.*; do
@@ -29,7 +29,7 @@ SB="$(build_sandbox t08b)"
 WS="$SB/AGENTSPACE"
 mkdir -p "$WS/.scripts.lock"
 touch -t 200001010000 "$WS/.scripts.lock"        # 20 years old → stale
-OUT="$(bash "$WS/scripts/new-plan.sh" "Old Lock Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "old lock plan")"
 printf '%s' "$OUT" | grep -q 'plan:[0-9]*' || fail "write blocked by old pid-less lock"
 rm -rf "$SB"
 
@@ -38,7 +38,7 @@ SB="$(build_sandbox t08c)"
 WS="$SB/AGENTSPACE"
 mkdir -p "$WS/.scripts.lock"
 printf '%s' "$$" > "$WS/.scripts.lock/pid"        # the test shell itself: alive
-bash "$WS/scripts/new-plan.sh" "Live Lock Plan" >/dev/null 2>&1 &
+bash "$WS/scripts/new-plan.sh" "live lock plan" >/dev/null 2>&1 &
 WRITER=$!
 sleep 1
 [ -z "$(ls "$WS/plan/todo/"*.md 2>/dev/null || true)" ] \
@@ -54,7 +54,7 @@ SB="$(build_sandbox t08d)"
 WS="$SB/AGENTSPACE"
 chmod 600 "$WS/plan.md"
 before="$(stat -f '%Lp' "$WS/plan.md")"
-bash "$WS/scripts/new-plan.sh" "Perm Plan" >/dev/null 2>&1
+bash "$WS/scripts/new-plan.sh" "perm plan" >/dev/null 2>&1
 after="$(stat -f '%Lp' "$WS/plan.md")"
 [ "$before" = "$after" ] || fail "plan.md permissions changed: $before -> $after"
 rm -rf "$SB"
@@ -65,7 +65,7 @@ WS="$SB/AGENTSPACE"
 mkdir -p "$WS/.scripts.lock"
 : > "$WS/.scripts.lock/pid"           # empty pid (crash between truncate and write)
 touch -t 200001010000 "$WS/.scripts.lock"        # old → outside the 5-min grace
-OUT="$(bash "$WS/scripts/new-plan.sh" "Empty Pid Plan")"
+OUT="$(bash "$WS/scripts/new-plan.sh" "empty pid plan")"
 printf '%s' "$OUT" | grep -q 'plan:[0-9]*' || fail "write blocked by empty-pid stale lock"
 [ ! -e "$WS/.scripts.lock" ] || fail "empty-pid stale lock not cleaned up"
 rm -rf "$SB"
@@ -74,7 +74,7 @@ rm -rf "$SB"
 SB="$(build_sandbox t08f)"
 WS="$SB/AGENTSPACE"
 mkdir -p "$WS/.scripts.lock"          # pid-less, mtime = now → within grace
-bash "$WS/scripts/new-plan.sh" "Fresh Lock Plan" >/dev/null 2>&1 &
+bash "$WS/scripts/new-plan.sh" "fresh lock plan" >/dev/null 2>&1 &
 WRITER=$!
 sleep 1
 [ -z "$(ls "$WS/plan/todo/"*.md 2>/dev/null || true)" ] \

@@ -7,9 +7,11 @@
 #   [1b] archive marker          [7] bash -n on all .sh
 #   [1c] Codex manifest          [8] bilingual sync (skills)
 #   [1d] Kimi manifest           [9] SKILL size budget
-#   [2] archive chain            [11] release rehearsal
+#   [2] archive chain            [10] README release history
+#                                [11] release rehearsal
 #   [3] CHANGELOG quality        [12] realized-literal guard (self-hosting)
 #   [4] constants contract (+reverse: lib.sh COMMIT_* → architecture)
+#   [13] parallel-workspace gitignore contract
 # Usage: bash verify-release.sh
 set -euo pipefail
 # Byte-exact, locale-independent semantics for the whole gate (grep/sed/python
@@ -456,6 +458,25 @@ lit_hits="$(find "$ROOT" -type f \
 if [ -n "$lit_hits" ]; then
   printf '%s\n' "$lit_hits" | sed 's/^/  [issue] realized bookkeeping id: /'
   issues=$((issues+1))
+fi
+
+# --- [13] parallel-workspace gitignore contract ------------------------------
+# The collaboration-table script writes run-state into the ledger directory
+# (WS_FILE="$AS_ROOT/<name>"). That name MUST be ignored by the shipped
+# .gitignore — step 8a replaces .gitignore wholesale, so the assets pairing is
+# the only thing standing between a user workspace and a `git add -A` that
+# sweeps run-state into the ledger repo. The filename is parsed from the
+# script itself so a rename flips this check red instead of silently passing.
+echo "[13] parallel-workspace gitignore contract"
+if [ -f "$ASSETS/scripts/parallel-workspace.sh" ]; then
+  ws_data="$(sed -n 's/^WS_FILE="\$AS_ROOT\/\([^"]*\)"$/\1/p' "$ASSETS/scripts/parallel-workspace.sh")"
+  if [ -z "$ws_data" ]; then
+    echo "  [issue] cannot read WS_FILE from assets/scripts/parallel-workspace.sh"
+    issues=$((issues+1))
+  elif ! grep -Fq "$ws_data" "$ASSETS/.gitignore"; then
+    echo "  [issue] assets/.gitignore misses the parallel-workspace data file: $ws_data"
+    issues=$((issues+1))
+  fi
 fi
 
 # --- summary ----------------------------------------------------------------
