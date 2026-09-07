@@ -2,7 +2,9 @@
 # Parallel-swimlane agent workspace: shared plan-state table + async sticky
 # notes (v1.2.0 协同 agent workspace). Sources lib.sh (as_lock single lock,
 # as_now_iso timestamp, as_cell escaping, as_atomic_write mv, LC_ALL=C,
-# bash-3.1 gate — all inherited; this script adds nothing platform-specific).
+# bash-3.1 gate — all inherited). One deliberate platform branch, in lib.sh's
+# dual-fallback idiom: the MERGELOCK stamp parser tries BSD `date -j -f`
+# first, then falls back to GNU `date -d`.
 #
 # Usage:
 #   parallel-workspace.sh --init <plan_id> <plan_desc> [any_info]
@@ -62,7 +64,8 @@
 # violations exit non-zero.
 # Exit codes: 0 = ok; 1 = operational failure (duplicate init / unregistered
 # id / forbidden state / merge slot still occupied after the 60s re-check);
-# 3 = usage error (bad arity / unknown option / missing value).
+# 3 = usage error (bad arity / unknown option / missing value / free-text
+# field ending with a backslash).
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -90,6 +93,18 @@ ws_usage_err() {
   printf 'error: %s\n' "$*" >&2
   ws_usage
   exit 3
+}
+
+# Free-text fields must not END with a backslash: rows are built without cell
+# padding, so a trailing '\' fuses with the following '|' separator into a
+# literal \| escape — ws_field's shield then eats the separator and silently
+# merges the desc/info columns on the next read-modify-write. info and msg are
+# last fields today (nothing follows them) — refused too, as insurance against
+# a future row format adding a field after them.
+ws_cell_check() {  # <value> <field-label>
+  case "$1" in
+    *\\) ws_usage_err "$2 must not end with a backslash — it would fuse with the row's | separator into a literal \\| escape (drop the trailing backslash and retry)" ;;
+  esac
 }
 
 # ---- read helpers (all run inside the one lock — consistency snapshot) ----
@@ -123,14 +138,20 @@ ws_merge_occupant() {
 # the slot forever (the lock layer has stale recovery; the table layer must too).
 # --merge stamps MERGELOCK|<id>|<utc-iso>; an occupant whose stamp is older than
 # the threshold is auto-reverted to doing on next --merge, with a warning. The
-# stamp row rides the same lock + atomic-write pipeline (no new race). UTC
-# ISO-8601 compares correctly as plain strings.
+# stamp row rides the same lock + atomic-write pipeline (no new race). The
+# window runs from the holder's LAST merge activity — every --merge re-stamps
+# (first entry and idempotent re-entry alike), so the threshold detects a dead
+# holder and never caps a live, busy merge.
 MERGE_STALE_SECONDS=900   # 15 min: a merge window is seconds-to-minutes by the 短窗铁律
 ws_now_epoch() { date -u +%s; }
 ws_merge_stamp_epoch() {  # <id> -> epoch or empty
   [ -f "$WS_FILE" ] || return 0
   ID="$1" awk -F'|' '$1 == "MERGELOCK" && $2 == ENVIRON["ID"] { print $3; exit }' "$WS_FILE" \
-    | { IFS= read -r iso || true; [ -n "${iso:-}" ] && date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$iso" +%s 2>/dev/null || true; }
+    | { IFS= read -r iso || true
+        [ -n "${iso:-}" ] || return 0
+        date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$iso" +%s 2>/dev/null \
+          || date -u -d "$iso" +%s 2>/dev/null || true
+      }
 }
 ws_set_merge_stamp() {  # <id>  (replace-or-append, same lock + atomic pipeline)
   local tmp iso; iso="$(as_now_iso)"
@@ -325,7 +346,8 @@ op_merge() {  # <id>
   local occupant row cur_desc cur_info
   ws_require_plan "$1" "--merge"
   if [ "$(ws_plan_state "$1")" = "merge" ]; then
-    printf 'already merge: plan %s (idempotent — 短窗铁律: finish the real merge, then --remove %s)\n' "$1" "$1"
+    ws_set_merge_stamp "$1"   # renewal: the stale window runs from the LAST merge activity — an idempotent re-entry is proof of life
+    printf 'already merge: plan %s (idempotent, merge window renewed — 短窗铁律: finish the real merge, then --remove %s)\n' "$1" "$1"
     ws_print_inbox "$1" "auto-return after --merge"
     return 0
   fi
@@ -408,6 +430,8 @@ case "$CMD" in
     OP_DESC="$2"
     OP_INFO="${3:-}"
     [ -n "$OP_DESC" ] || ws_usage_err "--init needs a non-empty <plan_desc>"
+    ws_cell_check "$OP_DESC" "<plan_desc>"
+    ws_cell_check "$OP_INFO" "[any_info]"
     ;;
   --remove)
     [ $# -eq 1 ] || ws_usage_err "--remove <plan_id>"
@@ -474,6 +498,8 @@ case "$CMD" in
     if [ "$U_INFO_SET" -eq 0 ] && [ "$U_STATE_SET" -eq 0 ] && [ "$U_DESC_SET" -eq 0 ]; then
       ws_usage_err "--update needs at least one of --any_info / --state / --plan_desc"
     fi
+    if [ "$U_DESC_SET" -eq 1 ]; then ws_cell_check "$U_DESC" "--plan_desc"; fi
+    if [ "$U_INFO_SET" -eq 1 ]; then ws_cell_check "$U_INFO" "--any_info"; fi
     ;;
   --send)
     S_SRC=""; S_DST=""; S_MSG=""
@@ -486,6 +512,7 @@ case "$CMD" in
       esac
     done
     { [ -n "$S_SRC" ] && [ -n "$S_DST" ] && [ -n "$S_MSG" ]; } || ws_usage_err "--send needs --src <id> --dst <id|all> --msg xxx"
+    ws_cell_check "$S_MSG" "--msg"
     S_SRC="$(as_norm_id "$S_SRC")"
     [ "$S_DST" = "all" ] || S_DST="$(as_norm_id "$S_DST")"
     ;;

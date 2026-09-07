@@ -53,6 +53,19 @@ assert_output_not_contains "$OUT" "PLAN|0001|"
 # stored escapes: the raw pipe must sit in the file shielded, 5 logical fields
 assert_contains "$DATA" 'PLAN|0003|doing|desc \| with pipe|info\|x'
 
+# --- free-text fields must not end with a backslash (v1.2.3 row-separator
+# fusion guard): a trailing \ would fuse with the following | separator into a
+# literal \| escape and silently merge the desc/info columns on the next
+# read-modify-write — every free-text surface is refused at parse time,
+# exit 3, data file byte-identical ---
+BEFORE="$(wc -c < "$DATA")"
+assert_fails bash "$PWS" --init 9 "trailing\\"
+assert_fails bash "$PWS" --update 1 --plan_desc "trailing\\"
+assert_fails bash "$PWS" --update 1 --any_info "trailing\\"
+assert_fails bash "$PWS" --send --src 1 --dst 2 --msg "trailing\\"
+AFTER="$(wc -c < "$DATA")"
+[ "$BEFORE" = "$AFTER" ] || fail "trailing-backslash refusals must not touch the data file"
+
 # --- --update: field rewrite, forbidden merge state, unregistered id ---
 OUT="$(bash "$PWS" --update 2 --state test --any_info "wip|note")"
 assert_output_contains "$OUT" "updated: PLAN|0002|test|lane two|wip\|note"
@@ -99,8 +112,14 @@ OUT="$(bash "$PWS" --merge 1)"
 assert_output_contains "$OUT" "merge state set: PLAN|0001|merge|"
 assert_contains "$DATA" "PLAN|0001|merge|"
 assert_contains "$DATA" "MERGELOCK|0001|"
-OUT="$(bash "$PWS" --merge 1)"   # idempotent re-entry
+OUT="$(bash "$PWS" --merge 1)"   # idempotent re-entry RENEWS the merge window (v1.2.3)
 assert_output_contains "$OUT" "already merge"
+assert_output_contains "$OUT" "merge window renewed"
+awk 'index($0, "MERGELOCK|0001|") == 1 { print "MERGELOCK|0001|2020-01-01T00:00:00Z"; next } { print }' \
+  "$DATA" > "$DATA.tmp" && mv "$DATA.tmp" "$DATA"
+bash "$PWS" --merge 1 >/dev/null   # renewal overwrites even a backdated stamp
+assert_not_contains "$DATA" "2020-01-01T00:00:00Z"
+assert_contains "$DATA" "MERGELOCK|0001|"
 # occupied slot: sleep 60 mocked to zero — still occupied after the re-check
 OUT="$(PATH="$FAKEBIN:$PATH" bash "$PWS" --merge 2 2>&1 || true)"
 assert_output_contains "$OUT" "still occupied by plan 0001"
@@ -118,6 +137,37 @@ bash "$PWS" --update 2 --state doing >/dev/null
 assert_not_contains "$DATA" "MERGELOCK|"
 OUT="$(bash "$PWS" --merge 1)"
 assert_output_contains "$OUT" "merge state set: PLAN|0001|merge|"
+
+# GNU/Linux portability (v1.2.3): with BSD `date -j -f` unavailable (fake date
+# refuses -j, like GNU coreutils), the stamp parser must fall back to GNU
+# `date -d` and the stale takeover fires exactly the same. (The macOS-native
+# stale case above exercised the BSD arm of the fallback chain.)
+FAKEGNU="$(mktemp -d)"
+cat > "$FAKEGNU/date" <<'EOF'
+#!/bin/sh
+for a in "$@"; do
+  case "$a" in
+    -j) exit 1 ;;
+  esac
+done
+if [ "$1" = "-u" ] && [ "$2" = "-d" ]; then
+  case "$3" in
+    2020-01-01T00:00:00Z) echo 1577836800; exit 0 ;;
+  esac
+fi
+exec /bin/date "$@"
+EOF
+chmod +x "$FAKEGNU/date"
+awk 'index($0, "MERGELOCK|0001|") == 1 { print "MERGELOCK|0001|2020-01-01T00:00:00Z"; next } { print }' \
+  "$DATA" > "$DATA.tmp" && mv "$DATA.tmp" "$DATA"
+OUT="$(PATH="$FAKEGNU:$FAKEBIN:$PATH" bash "$PWS" --merge 2 2>&1)"
+assert_output_contains "$OUT" "is stale"
+assert_output_contains "$OUT" "merge state set: PLAN|0002|merge|"
+OUT="$(bash "$PWS" --show --plan 1)"
+assert_output_contains "$OUT" "PLAN|0001|doing|"
+rm -rf "$FAKEGNU"
+bash "$PWS" --update 2 --state doing >/dev/null   # re-free the slot after the GNU-sim takeover
+assert_not_contains "$DATA" "MERGELOCK|"
 
 # --- --remove: row + cascade of ALL the plan's MSG rows ---
 bash "$PWS" --init 4 "remove four" >/dev/null

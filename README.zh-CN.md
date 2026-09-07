@@ -139,6 +139,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.2.3 | 2026-09-08 | parallel-workspace.sh 三处修复(audit + expert 咨询): MERGELOCK 戳解析补 GNU `date -d` 回退(修复 stale-merge 接管在 Linux 上静默失效 — BSD 专有的 `date -j -f` 报错被吞、卡死的 merge 槽每次都退化为 60s 等待 + 手动恢复); 自由文本字段以反斜杠结尾在解析期硬拒(exit 3 — 尾随 `\` 会与行内 `\|` 分隔符融合, 下一次读改写把 desc/info 两列静默合并); 幂等 `--merge` 现在重写 MERGELOCK 戳 — 语义变更: 15 分钟 stale 窗改为按持有者最后一次 merge 活动起算(重入即 proof-of-life, 阈值只检测死亡、不再误杀超长 merge); 仅脚本面(由 step 8a 自动替换), 无结构/AGENTS.md 变更 |
 | v1.2.2 | 2026-09-08 | as_lock 三处加固(expert 审查驱动的安全修复): 获取等待上限(`AS_LOCK_TIMEOUT_SECONDS`, 默认 120s — 存活超过上限的持有者必是卡死的 writer, 等待者报出 pid 后 exit 非 0, stale 接管不受此限)、mkdir 后先写占位 pid 收窄无 trap 崩溃窗口(该窗口留下的锁可被立即 stale 接管, 不必幽灵等满 mtime 宽限)、pid 复用 mtime 二级宽限(`AS_LOCK_STALE_HOURS`, 默认 6h — 锁 mtime 即获取时刻且持有期不刷新, 老锁上的活 pid 必是复用 pid); 两条常量 env 可预置、数值消毒、readonly, 已录入 architecture.json; 仅脚本面(由 step 8a 自动替换), 无结构/AGENTS.md 变更 |
 | v1.2.1 | 2026-09-07 | new-plan slug 硬校验: plan 标题必须产出合规 slug(小写英文词、数字、单连字符); 中文/大写/下划线/尾连字符/空 slug 标题在任何写入前被硬拒且不消耗 id — 只对未来新建生效, 存量 plan 文件与索引行不动 |
 | v1.2.0 | 2026-09-07 | 协同 agent workspace: 新增 `AGENTSPACE/scripts/parallel-workspace.sh` — 共享 plan 状态表(doing/test/merge)+ 异步便签, 单把文件锁 + 原子写, merge 槽全表独占(短窗铁律)+ 15 分钟 MERGELOCK stale 接管; 数据文件 `.agentspace-parallel-workspace.txt`(台账内, gitignore)+ agentspace-parallel skill 四项增强: 固定 worktree 路径 MUST、主线历史改写探测(其本身绝不构成冻结)、合回前后双报告层挂点、§6.5 协同表登记 |
