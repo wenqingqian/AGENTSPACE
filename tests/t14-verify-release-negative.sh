@@ -6,7 +6,8 @@
 # tree that is about to be committed — the gate version under test is the
 # working tree's. Baseline must pass; then each planted defect must fail with
 # its check id: [11] rehearsal record dropped, [3] CHANGELOG ## Summary
-# dropped, [12] realized bookkeeping id planted, [4] reverse constants pass.
+# dropped, [12] realized bookkeeping id planted, [4] reverse constants pass,
+# [14] ": " mapping indicator planted in a SKILL.md description.
 # Guards the gate itself, which t01-t13 never exercise.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
@@ -72,6 +73,19 @@ OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"
 assert_output_contains "$OUT" "[fail]"
 assert_output_contains "$OUT" "COMMIT_NEGATIVE_PROBE"
 cp "$REPO/skills/agentspace-init/assets/agentspace/scripts/lib.sh" "$LIB"
+
+# [14] negative: a ": " mapping indicator inside an unquoted SKILL.md
+# description (the "candidates (a, b): they never block" class) must fail the
+# frontmatter YAML check — the exact defect that shipped undetected before the
+# check existed, because every other gate check is text-level only.
+SKF="$SB/skills/agentspace/SKILL.md"
+awk 'NR==3 { print $0 " smoke candidates (a, b): planted"; next } { print }' "$SKF" > "$SKF.tmp" \
+  && mv "$SKF.tmp" "$SKF"
+OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "[fail]"
+assert_output_contains "$OUT" "[14]"
+assert_output_contains "$OUT" "invalid frontmatter YAML"
+cp "$REPO/skills/agentspace/SKILL.md" "$SKF"
 
 # planted defects all restored → the gate must pass again
 OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"

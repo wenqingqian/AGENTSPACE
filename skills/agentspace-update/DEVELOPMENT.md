@@ -204,7 +204,7 @@ Fixed gate sequence for every release (hard gates, agent-driven execution — th
 1. `new-version.sh X.Y.Z` — 7 version markers (all three plugin manifests, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
 2. Write `versions/vX.Y.Z/CHANGELOG.md` — every change block carries Migration instructions (8a scripts / 8b AGENTS.md text ops / 8c markers / plugin-side / dev-only); this is the upgrade chain's instruction sheet.
 3. **Rehearse the update (MUST for every new changelog)**: `bash rehearse-update.sh <old-ref> <new-version>` — sandbox built from the previous version's assets (`git archive <old-ref>`), the new changelog's Migration instructions applied (8a + 8c mechanical; 8b agent-executed per the changelog), convergence verified (markers / scripts byte-identical / doctor green / status renders). Writes the record `versions/vX.Y.Z/rehearsal.md`; a release with a new changelog but no PASSING record fails verify-release [11].
-4. `bash verify-release.sh` → [pass] (checks [0]-[12], incl. the rehearsal record and the realized-literal guard).
+4. `bash verify-release.sh` → [pass] (checks [0]-[14], incl. the rehearsal record, the realized-literal guard, the parallel-workspace gitignore contract, and skill/command frontmatter YAML).
 5. `bash self-test.sh` → all green (all `tests/t[0-9]*.sh`, incl. t13 full-chain replay and the plugin-manifest contract).
 6. code review pipeline (major + sub-1/sub-2 + merger + executor) — 发布走 code review.
 7. Commit + push.

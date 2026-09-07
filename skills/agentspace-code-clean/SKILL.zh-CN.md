@@ -1,6 +1,6 @@
 ---
 name: agentspace-code-clean
-description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件、新增代码/注释行与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit — message 里不出现, 代码与注释里也不出现; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。门还会打印只报告(report-only)的扩网候选(plan/iteration 词与数字相邻、任意分隔符 — `plan-12`、`plan_12`、`plan 13`): 候选永不阻断; agent 必须逐条显式裁决并给出带理由的结论。另有针对本会话 commit 触及文件的批量注释审查(全文件、多 subagent、只报告)— 仅在用户显式要求时运行, 绝不自动。
+description: AGENTSPACE 关键代码仓库的 commit 门与代码/注释卫生。在任何登记于 AGENTSPACE/.agentspace-repos 的仓库(或含 AGENTSPACE/ 工作区的项目内任何 git 仓库)执行 git commit 前必触发 — 暂存文件、新增代码/注释行与 message 草稿必须先过 AGENTSPACE/scripts/commit-check.sh。未登记仓库禁止 commit; 记账 id(plan:NNNN / iteration_NNNN)与实验数据永不进入代码仓库 commit — message 里不出现, 代码与注释里也不出现; commit 文本必须描述真实代码改动(一句话标题、无实验/run 标识、与 diff 相关)。门还会打印只报告(report-only)的扩网候选(plan/iteration 词与数字相邻、任意分隔符 — `plan-12`、`plan_12`、`plan 13`) — 候选永不阻断; agent 必须逐条显式裁决并给出带理由的结论。另有针对本会话 commit 触及文件的批量注释审查(全文件、多 subagent、只报告)— 仅在用户显式要求时运行, 绝不自动。
 ---
 
 # AGENTSPACE Code-Clean 提交门

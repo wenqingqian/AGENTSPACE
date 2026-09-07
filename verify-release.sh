@@ -12,6 +12,7 @@
 #   [3] CHANGELOG quality        [12] realized-literal guard (self-hosting)
 #   [4] constants contract (+reverse: lib.sh COMMIT_* → architecture)
 #   [13] parallel-workspace gitignore contract
+#   [14] skill/command frontmatter YAML (real PyYAML parse)
 # Usage: bash verify-release.sh
 set -euo pipefail
 # Byte-exact, locale-independent semantics for the whole gate (grep/sed/python
@@ -475,6 +476,45 @@ if [ -f "$ASSETS/scripts/parallel-workspace.sh" ]; then
     issues=$((issues+1))
   elif ! grep -Fq "$ws_data" "$ASSETS/.gitignore"; then
     echo "  [issue] assets/.gitignore misses the parallel-workspace data file: $ws_data"
+    issues=$((issues+1))
+  fi
+fi
+
+# --- [14] skill/command frontmatter YAML -------------------------------------
+# Every SKILL.md / SKILL.zh-CN.md / commands/*.md carries a YAML frontmatter
+# the host parses at load time; an unquoted description containing a ": "
+# sequence (e.g. "candidates (...): they never block") breaks the mapping and
+# the skill fails to load for users — invisible to every text-level check, so
+# it must be parsed for real here. PyYAML's error class matches the hosts';
+# a missing yaml module fails closed (pip install pyyaml) rather than letting
+# the gate pass unverified.
+echo "[14] skill/command frontmatter YAML"
+FM_PY="$(cat <<'EOF'
+import re, sys, yaml
+bad = 0
+for f in sys.argv[1:]:
+    t = open(f, encoding="utf-8").read()
+    m = re.match(r"^---\n(.*?)\n---\n", t, re.S)
+    if not m:
+        print(f"  [issue] no frontmatter: {f}"); bad += 1; continue
+    try:
+        yaml.safe_load(m.group(1))
+    except Exception as e:
+        mark = str(e).replace("\n", " | ")
+        print(f"  [issue] invalid frontmatter YAML: {f}: {mark}"); bad += 1
+sys.exit(1 if bad else 0)
+EOF
+)"
+FM_FILES="$(find "$ROOT/skills" "$ROOT/commands" -name 'SKILL.md' -o -name 'SKILL.zh-CN.md' -o -name '*.md' -path "$ROOT/commands/*" 2>/dev/null | sort -u || true)"
+if [ -z "$FM_FILES" ]; then
+  echo "  [issue] no skill/command files found"
+  issues=$((issues+1))
+elif ! python3 -c 'import yaml' 2>/dev/null; then
+  echo "  [issue] PyYAML required for [14] — pip install pyyaml"
+  issues=$((issues+1))
+else
+  # shellcheck disable=SC2086
+  if ! python3 -c "$FM_PY" $FM_FILES; then
     issues=$((issues+1))
   fi
 fi

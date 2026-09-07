@@ -1,6 +1,6 @@
 ---
 name: agentspace
-description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations、utils、tests、notes)。仅在两个条件同时满足时激活: (1) 项目根存在 AGENTSPACE/ 目录, 且 (2) 当前会话涉及本项目的实验、代码改动、项目迭代或状态追踪。项目无关的闲聊或无状态变化的问答不激活。绝不创建或初始化 AGENTSPACE —— 初始化仅通过显式 /agentspace-init 命令。
+description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations、utils、tests、notes)。仅在两个条件同时满足时激活 — (1) 项目根存在 AGENTSPACE/ 目录, 且 (2) 当前会话涉及本项目的实验、代码改动、项目迭代或状态追踪。项目无关的闲聊或无状态变化的问答不激活。绝不创建或初始化 AGENTSPACE —— 初始化仅通过显式 /agentspace-init 命令。
 ---
 
 # AGENTSPACE 日常管理
