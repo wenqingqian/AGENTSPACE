@@ -24,8 +24,11 @@
     ├── plan/{index.md, todo/, done/}
     ├── iterations.md          # 入口: 进行中 + 最近完成(10条)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
+    ├── exp.md                 # 入口: Todo + Doing + 最近完成(10条) — 实验仅限主动登记(用户确认后才入册)
+    ├── exp/{index.md, todo/, doing/, done/}   # 实验手册生命周期; 索引关联 plan/iteration/commit 点/配置
+    ├── exp/exp_data/exp_NNNN/ # 完整实验记录(全量日志; 本机保存, gitignore; 关联 iteration 的 data/ 复制至此)
     ├── data.md + data/        # 公用数据(训练集/模型权重/软连接; 全部 gitignore)
-    ├── examples.md + examples/ # 可复用实验配置(YAML/JSON); 与 tests/ 配合
+    ├── examples.md + examples/ # 可复用实验配置(YAML/JSON); 与 tests/ 配合; exp_spec/exp_NNNN/ 为登记实验的专属配置位(每个登记 exp 必须有)
     ├── utils.md + utils/      # 复用工具(做图/机器状态/日志分析...)
     ├── tests.md + tests/      # 实验环境(容器/conda/GPU) + 测试脚本
     ├── notes.md + notes/      # 持久知识(带来源证据)
@@ -60,6 +63,8 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | `agentspace-handoff` | 仅显式 | 一次性会话交接: 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
 | `agentspace-code-clean` | 场景触发 — 登记仓库每次 commit 前 | commit 门与卫生规范: 暂存文件、新增代码/注释行与 message 草稿都必须先过 `AGENTSPACE/scripts/commit-check.sh`; 记账 id 与实验产物永不进入代码仓库 |
 | `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区: 每个 plan 一条泳道(`worktrees/<plan-id>/<仓库名>/`, 分支 `plan-<id>`)从记录在案的主线基点切出; 实施与验证全部在泳道内完成; 用户确认后 CAS squash 合回 — 主线恰好落一个 commit; 纯本地, push 仍是用户显式动作; 多 agent 协同经 `AGENTSPACE/scripts/parallel-workspace.sh`(共享 plan 状态表 doing/test/merge + 异步便签) |
+| `agentspace-better-exp` | 场景触发 — 用户选择登记实验之后(显式要求走 agentspace-exp 或接受提议) | 实验设计讯问(x-grilling 实验特化版): 每次一问, 沿五轴推进 — 范围、基线与对照公平、测量准确(指标定义/迭代数与 warmup/计时口径/种子与方差)、数据完整、可复现与终止判据 — 每问附推荐答案; 事实查环境不问用户; 共识确认后才行动。绝不自动登记实验; 开发收尾的正确性验证不经用户确认不入册 |
+| `agentspace-better-exp-report` | 场景触发 — 基于已记录实验数据写报告/总结/图时 | 报告写作规范: 先复用项目 `utils/` 的做图工具; 色盲友好配色且全套图一套系列-颜色映射、坐标轴带单位、误差棒注明 n; 文字规则 — 中文为主保留公认英文术语、不用"门/臂"等歧义单字缩称、完整优先于精简、自完备为核心规则(阅读者看不到 agent 的记忆: 每个符号首次出现即定义, 每个结论标注图与数据路径) |
 
 ### 命令(ZCode 便捷入口)
 
@@ -82,6 +87,8 @@ AGENTSPACE/scripts/new-plan.sh "baseline reproduction"
 AGENTSPACE/scripts/new-iteration.sh 1 "跑通训练 pipeline"
 AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, 达标"
 AGENTSPACE/scripts/complete-plan.sh 1 done "复现成功"
+AGENTSPACE/scripts/new-exp.sh "latency benchmark" --plan 1 --iteration 1     # 主动登记的实验记录(配置 → examples/exp_spec/)
+AGENTSPACE/scripts/complete-exp.sh 1 done "baseline 42ms vs 优化后 31ms" --commit "myrepo@a1b2c3d"
 AGENTSPACE/scripts/status.sh      # 状态摘要
 AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 ```
@@ -95,7 +102,7 @@ plan 标题必须能产出合规文件名 slug — 只接受小写英文词、�
 实验型项目通常在台账之外还有若干关键代码仓库。AGENTSPACE 让代码仓库保持干净, 记账全部留在工作区:
 
 - **登记处**: 关键仓库登记在 `AGENTSPACE/.agentspace-repos`(一行一路径; 登记/出册始终须用户显式确认, 只能由 `scripts/repos.sh` 改写)
-- **commit 门(MUST)**: 在登记仓库执行任何 `git commit` 前, agent 先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"`, 仅 PASS 才提交。阻断项: message **与新增代码/注释行**中的记账 id(`plan:NNNN` / `iteration_NNNN` 及变体拼写)、实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)、≥50MB blob、任何 `AGENTSPACE/` 内容泄漏进代码仓库。被阻断的实验产物移入本轮 iteration 的 `data/` 而非删除
+- **commit 门(MUST)**: 在登记仓库执行任何 `git commit` 前, agent 先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"`, 仅 PASS 才提交。阻断项: message **与新增代码/注释行**中的记账 id(`plan:NNNN` / `iteration_NNNN` / `exp_NNNN` 及变体拼写)、实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)、≥50MB blob、任何 `AGENTSPACE/` 内容泄漏进代码仓库。被阻断的实验产物移入本轮 iteration 的 `data/` 而非删除
 - **commit 文本质量**: 标题=对实际改动的一句话描述 — 无实验/run 标识、无记账叙述; 归属由 iteration readme 的宿主起始/结束 commit SHA 承担, 永不进入代码仓库
 - **事后审计**: `scripts/doctor.sh`(关键仓库登记一致性、近期 commit 纪律审计)加上 `/agentspace-doctor`, 报告违规 — 只报告, 绝不自动改写历史
 
@@ -125,7 +132,9 @@ skills/                           # 功能交付单元 — 跨平台可移植
 ├── agentspace-mode/              # 模式控制(仅显式)
 ├── agentspace-handoff/           # 会话交接(仅显式)
 ├── agentspace-code-clean/        # 登记关键仓库的 commit 门与卫生规范(场景触发, 无命令包装)
-└── agentspace-parallel/          # 本地 PR-like 并行工作区(场景触发, 无命令包装)
+├── agentspace-parallel/          # 本地 PR-like 并行工作区(场景触发, 无命令包装)
+├── agentspace-better-exp/        # 实验设计讯问(场景触发, 无命令包装)
+└── agentspace-better-exp-report/ # 实验报告/作图写作规范(场景触发, 无命令包装)
 tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  push-retry.sh   # 发布工具(仓库侧, 不随插件分发)
 ```
 
@@ -139,6 +148,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.3.0 | 2026-09-08 | 实验记录(agentspace-exp): 新增内置 `exp` 模块 — `exp.md` 入口视图 + `exp/{index.md, todo/, doing/, done/, exp_data/exp_NNNN/}` 与三个脚本(`new-exp.sh` / `start-exp.sh` / `complete-exp.sh`); 登记仅限主动(用户显式要求走 agentspace-exp 或接受一次性提议 — 开发收尾的正确性验证绝不自动登记); 每个登记 exp 的配置必须写入 `examples/exp_spec/exp_NNNN/`(complete-exp 对空目录拒绝关闭), 完整实验记录本机全量保存在 exp_data(关联 iteration 的 data/ 复制一份); 索引关联 plan/iteration、测试用 commit 点(repo@sha)与配置文件名; commit 门禁令扩展 `exp_0NNN`(message + 新增行); doctor [16] exp 一致性(--fix 下节↔目录对账) + notes 接受 `exp_NNNN` 来源; status 工作台展示 exp 计数/Doing/事件; 两个新 skill — agentspace-better-exp(开跑前五轴实验设计讯问)与 agentspace-better-exp-report(作图规范 + 自完备文字规则); verify [8] 覆盖两新 skill(并补 handoff), [12] 守卫 exp 实字面量, [13] 强制 exp_data gitignore 合同 |
 | v1.2.5 | 2026-09-08 | agentspace-code-clean 英文 description 从 1094 字符裁剪到 890 — 宿主对 skill description 强制 1024 字符上限, 超长即拒绝加载; 仅删正文已详述的冗余细节(禁令逐字展开、扩网分隔符示例、批量审查实现形容词), 触发关键信息全保留(何时激活/commit-check.sh 门/未登记禁 commit/候选仅报告/批量审查仅显式); 中文 description(528 字符)不超标未动; 仅插件侧 skill 文本, 无工作区/结构变更 |
 | v1.2.4 | 2026-09-08 | SKILL.md 前置 YAML 修复(用户实证): 三份 description 含 `): ` 冒号+空格序列 — 无引号 YAML 纯量内的 mapping 指示符 — 导致 PyYAML 宿主报 "mapping values are not allowed in this context"、skill 无法加载; 改写为 `) —`(agentspace-code-clean 双语)与 `激活 — (1)`(agentspace 中文版, 与英文版 em-dash 风格对齐), 词语零变化仅标点; 发布门新增 [14] 检查(真实 PyYAML 解析全部 skill/命令前置块, t14 补反向用例), 此类缺陷不再可能发布; 仅插件侧 skill 文本, 无工作区/结构变更 |
 | v1.2.3 | 2026-09-08 | parallel-workspace.sh 三处修复(audit + expert 咨询): MERGELOCK 戳解析补 GNU `date -d` 回退(修复 stale-merge 接管在 Linux 上静默失效 — BSD 专有的 `date -j -f` 报错被吞、卡死的 merge 槽每次都退化为 60s 等待 + 手动恢复); 自由文本字段以反斜杠结尾在解析期硬拒(exit 3 — 尾随 `\` 会与行内 `\|` 分隔符融合, 下一次读改写把 desc/info 两列静默合并); 幂等 `--merge` 现在重写 MERGELOCK 戳 — 语义变更: 15 分钟 stale 窗改为按持有者最后一次 merge 活动起算(重入即 proof-of-life, 阈值只检测死亡、不再误杀超长 merge); 仅脚本面(由 step 8a 自动替换), 无结构/AGENTS.md 变更 |

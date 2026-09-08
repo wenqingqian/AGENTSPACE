@@ -61,6 +61,18 @@ AI="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations.md" 2>/dev/null | awk -F'|' -v s
   f && /^\| [0-9]/ { n++ }
   END { print n+0 }
 ' || true)"
+EXP_TODO="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/exp.md" 2>/dev/null | awk -F'|' -v sec="$SEC_TODO" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| [0-9]/ { n++ }
+  END { print n+0 }
+' || true)"
+EXP_DOING="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/exp.md" 2>/dev/null | awk -F'|' -v sec="$SEC_EXP_DOING" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| [0-9]/ { n++ }
+  END { print n+0 }
+' || true)"
 NOTES="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/notes.md" 2>/dev/null | awk -F'|' '
   # 计数与表无关: 首个分隔行之后所有 `| ` 行都算 (软告警场景下可接受)
   /^\|[ :|-]*-[ :|-]*\|$/ { seen=1; next }
@@ -78,7 +90,7 @@ esac
 
 echo "## 项目总览"
 echo "- 项目: —"
-echo "- 现状: 工作区 v$WS_VERSION | $AP plan / $AI iteration 进行中 | $NOTES 条 notes | next: plan $(as_next_plan_id) / iteration $(as_next_iteration_id) | doctor $DOC_MSG"
+echo "- 现状: 工作区 v$WS_VERSION | $AP plan / $AI iteration 进行中 | exp $EXP_TODO 待跑 / $EXP_DOING 在跑 | $NOTES 条 notes | next: plan $(as_next_plan_id) / iteration $(as_next_iteration_id) / exp $(as_next_exp_id) | doctor $DOC_MSG"
 echo
 
 # --- 关键代码仓库: 登记处驱动(每仓库一行机械事实: 分支/脏数/最新提交/上下游)。
@@ -214,6 +226,15 @@ sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations.md" 2>/dev/null | awk -F'|' -v sec="$S
     gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(/^ +| +$/, "", $4)
     gsub(esc, "\\|", $3); gsub(esc, "\\|", $4)
     print "- " $3 " — " $4 " (iteration_" $2 ")"
+  }
+' || true
+sed "s/\\\\|/$ESC/g" "$AS_ROOT/exp.md" 2>/dev/null | awk -F'|' -v sec="$SEC_EXP_DOING" -v esc="$ESC" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| [0-9]/ {
+    gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3)
+    gsub(esc, "\\|", $3)
+    print "- exp_" $2 " — " $3
   }
 ' || true; } )"
 if [ -n "$active" ]; then
@@ -387,6 +408,20 @@ recent="$(
       }
       END { for (i = n; i >= 1; i--) print buf[i] }
     '
+    # 实验: 登记(创建日期, 仅未完成时) / 完成(完成日期, 含 失败/放弃); 同上反转。
+    # exp/index.md 列: $2 ID $3 实验 $4 状态 $9 创建 $10 完成。
+    sed "s/\\\\|/$ESC/g" "$AS_ROOT/exp/index.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
+      /^\| [0-9]/ {
+        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(/^ +| +$/, "", $4)
+        gsub(/^ +| +$/, "", $9); gsub(/^ +| +$/, "", $10)
+        if ($9 != "" && $10 == "") { gsub(esc, "\\|", $3); buf[++n] = $9 " 实验登记: " $3 " (exp_" $2 ")" }
+        if ($10 != "") {
+          k = ($4 == "失败" ? "失败" : ($4 == "放弃" ? "放弃" : "完成"))
+          gsub(esc, "\\|", $3); buf[++n] = $10 " 实验" k ": " $3 " (exp_" $2 ")"
+        }
+      }
+      END { for (i = n; i >= 1; i--) print buf[i] }
+    '
     # 笔记: 新增(日期列; 与 NOTES 计数同表同形状)。notes.md 为表头插入
     # (doctor --fix 的 notes_insert_row), 文件序即新→旧, 不反转。
     sed "s/\\\\|/$ESC/g" "$AS_ROOT/notes.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
@@ -438,7 +473,7 @@ echo
 
 # --- 软告警: 入口文件行形状校验 + 版本漂移 + 未提交 + doctor ---
 alerts=""
-for f in plan.md plan/index.md iterations.md iterations/index.md notes.md register.md utils.md tests.md data.md examples.md handoff/index.md; do
+for f in plan.md plan/index.md iterations.md iterations/index.md exp.md exp/index.md notes.md register.md utils.md tests.md data.md examples.md handoff/index.md; do
   [ -f "$AS_ROOT/$f" ] || continue
   a="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/$f" 2>/dev/null | awk -F'|' -v f="$f" '
     /^## / { sec=$0; sub(/^## +/, "", sec); expect=0; next }

@@ -26,8 +26,11 @@ All functionality ships as agent skills — every supported platform (ZCode / Co
     ├── plan/{index.md, todo/, done/}
     ├── iterations.md          # Entry: in-progress + latest completed (10)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
+    ├── exp.md                 # Entry: Todo + Doing + latest completed (10) — experiments are opt-in (user-confirmed enrollment only)
+    ├── exp/{index.md, todo/, doing/, done/}   # Manual lifecycle; index links plans/iterations/commits/configs
+    ├── exp/exp_data/exp_NNNN/ # Complete local-only experiment record (full logs; gitignored; linked-iteration data copied here)
     ├── data.md + data/        # Shared data (training sets / model weights / symlinks; gitignored)
-    ├── examples.md + examples/ # Reusable experiment configs (YAML/JSON); pairs with tests/
+    ├── examples.md + examples/ # Reusable experiment configs (YAML/JSON); pairs with tests/; exp_spec/exp_NNNN/ holds per-experiment configs (required for every registered exp)
     ├── utils.md + utils/      # Reusable tools (plotting / machine status / log analysis...)
     ├── tests.md + tests/      # Experiment env (container/conda/GPU) + test scripts
     ├── notes.md + notes/      # Persistent knowledge (with source evidence)
@@ -62,6 +65,8 @@ Skills are the functional delivery unit — they behave identically on every sup
 | `agentspace-handoff` | Explicit only | One-shot session handoffs: produce a context snapshot at session close, consume it (read, then delete) at the next session start |
 | `agentspace-code-clean` | Situational — before every commit in a registered key repo | Commit gate and hygiene: staged files, ADDED code/comment lines, and the draft message must all pass `AGENTSPACE/scripts/commit-check.sh`; bookkeeping ids and experiment data never enter code repos |
 | `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces: one worktree lane per plan (`worktrees/<plan-id>/<repo>/`, branch `plan-<id>`) forked from a recorded mainline base; implementation and verification run inside the lane; after user confirmation a CAS squash merge lands exactly one commit on mainline; purely local — push stays user-gated. Multi-agent coordination runs through `AGENTSPACE/scripts/parallel-workspace.sh` (shared plan-state table: doing/test/merge + async sticky notes) |
+| `agentspace-better-exp` | Situational — after the user opts into recording an experiment (explicit agentspace-exp request or accepted offer) | Experiment-design interrogation (x-grilling style): one question at a time across five axes — scope, baseline/control fairness, measurement accuracy (metric definitions, iterations/warmup, timing hygiene, seeds/variance), data completeness, reproducibility/stopping criteria — each with a recommended answer; facts are looked up, not asked; runs only after shared understanding. Never auto-enrolls experiments; correctness-verification runs stay out unless the user confirms |
+| `agentspace-better-exp-report` | Situational — when writing a report/summary/figures from recorded experiment data | Report-writing guidance: check the project's `utils/` plotting tools first; colorblind-safe palette with one series-to-color mapping across figures, units, error bars with stated n; and prose rules — Chinese base with established English terms, no ambiguous single-character shorthand (门/臂), completeness over compression, self-containment as the core rule (readers cannot see the agent's memory: define every symbol at first use, cite figure + data path per claim) |
 
 ### Commands (ZCode convenience)
 
@@ -84,6 +89,8 @@ AGENTSPACE/scripts/new-plan.sh "baseline reproduction"
 AGENTSPACE/scripts/new-iteration.sh 1 "run training pipeline"
 AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, target met"
 AGENTSPACE/scripts/complete-plan.sh 1 done "reproduction successful"
+AGENTSPACE/scripts/new-exp.sh "latency benchmark" --plan 1 --iteration 1     # opt-in experiment records (configs → examples/exp_spec/)
+AGENTSPACE/scripts/complete-exp.sh 1 done "baseline 42ms vs optimized 31ms" --commit "myrepo@a1b2c3d"
 AGENTSPACE/scripts/status.sh          # Status summary
 AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 ```
@@ -97,7 +104,7 @@ One-shot session handoffs work in any session, with or without in-progress plans
 Experiment projects typically have one or more key code repos alongside the workspace. AGENTSPACE keeps the code repos clean while all bookkeeping stays in the workspace:
 
 - **Registry**: key repos are registered in `AGENTSPACE/.agentspace-repos` (one path per line; registration/removal always requires explicit user confirmation, written only by `scripts/repos.sh`)
-- **Commit gate (MUST)**: before any `git commit` in a registered repo, the agent runs `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commits only on PASS. Blocked: bookkeeping ids (`plan:NNNN` / `iteration_NNNN` and variant spellings) in the message **and in ADDED code/comment lines**, experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`), blobs ≥ 50MB, and any `AGENTSPACE/` content leaking into the code repo. Blocked experiment output is moved into the iteration's `data/` instead of deleted
+- **Commit gate (MUST)**: before any `git commit` in a registered repo, the agent runs `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commits only on PASS. Blocked: bookkeeping ids (`plan:NNNN` / `iteration_NNNN` / `exp_NNNN` and variant spellings) in the message **and in ADDED code/comment lines**, experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`), blobs ≥ 50MB, and any `AGENTSPACE/` content leaking into the code repo. Blocked experiment output is moved into the iteration's `data/` instead of deleted
 - **Commit-text quality**: the title is a one-line description of the actual change — no experiment/run identifiers, no bookkeeping narrative; attribution lives in the iteration readme (host start/end commit SHAs), never in the code repo
 - **Ex-post audit**: `scripts/doctor.sh` (key-repo registry consistency, recent-commit discipline audit) plus `/agentspace-doctor` report violations — report-only; history is never rewritten automatically
 
@@ -127,7 +134,9 @@ skills/                           # The functional unit — portable across plat
 ├── agentspace-mode/              # Mode control (explicit only)
 ├── agentspace-handoff/           # Session handoffs (explicit only)
 ├── agentspace-code-clean/        # Commit gate & hygiene for registered key repos (situational; no command wrapper)
-└── agentspace-parallel/          # Local PR-like parallel workspaces (situational; no command wrapper)
+├── agentspace-parallel/          # Local PR-like parallel workspaces (situational; no command wrapper)
+├── agentspace-better-exp/        # Experiment-design interrogation (situational; no command wrapper)
+└── agentspace-better-exp-report/ # Experiment report/figure writing guidance (situational; no command wrapper)
 tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  push-retry.sh   # Release tooling (repo-side, not part of the plugin)
 ```
 
@@ -141,6 +150,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.3.0 | 2026-09-08 | Experiment records (agentspace-exp): new built-in `exp` module — `exp.md` entry view + `exp/{index.md, todo/, doing/, done/, exp_data/exp_NNNN/}` with three scripts (`new-exp.sh` / `start-exp.sh` / `complete-exp.sh`); enrollment is opt-in only (user asks for agentspace-exp or accepts a one-time offer — correctness-verification runs are never auto-enrolled); every registered exp MUST carry configs in `examples/exp_spec/exp_NNNN/` (complete-exp refuses to close an empty dir) and keeps its complete local-only record in `exp_data` (linked-iteration data copied in); index links plans/iterations, tested commit points (repo@sha) and config names; commit gate bans `exp_0NNN` bookkeeping ids (message + ADDED lines); doctor [16] exp consistency (section↔dir reconciliation under --fix) + notes accept `exp_NNNN` sources; status workbench shows exp counts/Doing/events; two new skills — agentspace-better-exp (five-axis experiment-design interrogation before launch) and agentspace-better-exp-report (figure craft + self-containment prose rules); verify [8] covers both (+ handoff), [12] guards realized exp ids, [13] enforces the exp_data gitignore contract |
 | v1.2.5 | 2026-09-08 | agentspace-code-clean EN description trimmed from 1094 to 890 characters — the host enforces a 1024-character cap on skill descriptions and refuses to load an over-long skill; cuts are body-duplicated detail only (the expanded ban restatement, the wide-net separator examples, the batch-review implementation adjectives), trigger-critical content intact (when to activate, the commit-check.sh gate, never commit in unregistered repos, candidates report-only, batch review explicit-only); zh description (528 chars) unaffected; plugin-side skill text only, no workspace/structure changes |
 | v1.2.4 | 2026-09-08 | SKILL.md frontmatter YAML fix (user-reported): three descriptions contained a `): ` colon-space sequence — a mapping indicator inside an unquoted YAML scalar — so PyYAML hosts failed with "mapping values are not allowed in this context" and the skill could not load; reworded to `) —` in agentspace-code-clean (EN + zh) and `激活 — (1)` in the agentspace zh description (wording unchanged, punctuation only, aligned with the EN em-dash style); release gate gains check [14] (real PyYAML parse of every skill/command frontmatter, t14 negative case) so this defect class cannot ship again; plugin-side skill text only, no workspace/structure changes |
 | v1.2.3 | 2026-09-08 | parallel-workspace.sh three fixes (audit + expert consultation): MERGELOCK stamp parsing gains a GNU `date -d` fallback (fixes the stale-merge takeover silently never firing on Linux — BSD-only `date -j -f` failed and was swallowed, so a wedged merge slot degraded to a 60s wait + manual lever every time); free-text fields ending with a backslash are refused at parse time with exit 3 (a trailing `\` fuses with the row's `\|` separator and silently merges the desc/info columns on the next read-modify-write); idempotent `--merge` now re-stamps MERGELOCK — semantic change: the 15-min stale window runs from the holder's LAST merge activity (re-entry is proof of life; the threshold detects a dead holder, it never caps a busy merge); scripts-only (handled by step 8a), no structure/AGENTS.md changes |

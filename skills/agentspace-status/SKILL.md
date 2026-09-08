@@ -68,7 +68,7 @@ Section names, order and empty-state placeholders are hard-coded by status.sh �
 
 ## Project-paragraph subagent prompt (verbatim; replace <SHA1> <SHA2> … with the collected list)
 
-> Read-only synthesis. Read ONLY these files: AGENTSPACE/AGENTS.md (项目背景 section), AGENTSPACE/plan.md, AGENTSPACE/plan/index.md, AGENTSPACE/iterations.md, AGENTSPACE/iterations/index.md, AGENTSPACE/notes.md. Produce THREE deliverables:
+> Read-only synthesis. Read ONLY these files: AGENTSPACE/AGENTS.md (项目背景 section), AGENTSPACE/plan.md, AGENTSPACE/plan/index.md, AGENTSPACE/iterations.md, AGENTSPACE/iterations/index.md, AGENTSPACE/exp.md, AGENTSPACE/exp/index.md, AGENTSPACE/notes.md. Produce THREE deliverables:
 > 1. `PROJECT_SUMMARY=<paragraph>` — ONE paragraph (≤120 Chinese characters) stating what the project is and its current state.
 > 2. `RECENT_SUMMARY=<2-3 句>` — what the recent activity (events + commits) means as a whole: what converged, what was reverted, what is pending. Do not enumerate — synthesize.
 > 3. For EACH `SHA@REPO` pair in this list: <SHA1>@<REPO1> <SHA2>@<REPO2> — inspect it via `git -C <REPO> show --stat <sha>` and `git -C <REPO> log -1 --format='%s' <sha>`; write `COMMIT_SUMMARY_<sha>=<2-3 句中文>` — what the change does and why, linking to its iteration/plan when the workspace records it. If a SHA cannot be inspected, omit its line.
@@ -83,5 +83,5 @@ Section names, order and empty-state placeholders are hard-coded by status.sh �
 - The script output is a complete template even without soft content (every soft slot stays `—`).
 - Status ≠ progress: never invent "next steps"; if the workspace has no active work, the sections say so.
 - Soft slots (项目 paragraph, 近期主线, per-commit 概括) are hard-coded placeholders whose CONTENT is agent-analyzed — the slot is template-fixed, the content is soft. Everything else (events, ledger, stats, linkage, anchors) is mechanical.
-- 近期动态 is a mechanical activity timeline: workspace events from the index date columns (plan created/completed, iteration opened/closed, note added, handoff produced), code commits from the REGISTERED key repos (`.agentspace-repos`, 3 per repo — with per-commit stats and iteration linkage; empty registry falls back to single-host probing with a 未登记 marker), and the workspace's own ledger commits (type prefix mapped to a Chinese label, e.g. plan:→计划 / fix:→修复).
+- 近期动态 is a mechanical activity timeline: workspace events from the index date columns (plan created/completed, iteration opened/closed, exp registered/completed, note added, handoff produced), code commits from the REGISTERED key repos (`.agentspace-repos`, 3 per repo — with per-commit stats and iteration linkage; empty registry falls back to single-host probing with a 未登记 marker), and the workspace's own ledger commits (type prefix mapped to a Chinese label, e.g. plan:→计划 / fix:→修复).
 - Version gate: the workspace's scripts are workspace-side assets updated only by /agentspace-update; an old workspace produces old-format output even under a new plugin, and the old script itself cannot warn about drift — the gate is the only place this can be caught.

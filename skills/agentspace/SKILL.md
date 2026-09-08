@@ -20,7 +20,7 @@ While working, ensure the following three files' content is in the current conte
 2. `AGENTSPACE/tests.md` — experiment environment
 3. `AGENTSPACE/iterations.md` — iteration status
 
-Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` → `iterations.md` → `plan.md` (when task-related) → `iterations/latest/readme.md` "当前状态 · 下一步".
+Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` → `iterations.md` → `plan.md` (when task-related) → `exp.md` (when experiments are registered) → `iterations/latest/readme.md` "当前状态 · 下一步".
 
 ## 2. Workflows
 
@@ -62,8 +62,7 @@ After writing results in the readme's "结果" section:
 ```bash
 AGENTSPACE/scripts/close-iteration.sh <id> "One-line result"
 ```
-Milestone commit.
-If the result holds transferable lessons (SHOULD — knowledge distillation), write a note (templates/note.md) with source `iteration_NNNN`, back-linking this iteration's readme in 详情.
+Milestone commit. If the result holds transferable lessons (SHOULD — knowledge distillation), write a note (templates/note.md) with source `iteration_NNNN`, back-linking this iteration's readme in 详情.
 
 ### Complete Plan
 **Before running (required by script gate)**: fill the plan document's "结果" section (one-line conclusion + key evidence) — the script refuses while the template placeholder remains.
@@ -76,6 +75,16 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 2. Distill transferable lessons into notes (template `templates/note.md`, source `plan:NNNN`); tagging notes with topic keywords is recommended (optional)
 3. Milestone commit
 
+### Run an Experiment → Register exp (opt-in only)
+
+**Experiment enrollment (MUST)**: exp is registered ONLY on the user's explicit agentspace-exp request, or their acceptance of your one-time offer when they mention an upcoming experiment — correctness-verification runs are never auto-enrolled. Align the design with the agentspace-better-exp skill first. Division of labor — plan = why/what, iteration = change the code, exp = measure the code; an exp needs no plan/iteration; a linked exp copies iteration data/ into exp_data (canonical full record). Reports and figures follow the agentspace-better-exp-report skill.
+
+```bash
+AGENTSPACE/scripts/new-exp.sh "English experiment title" [--plan NNNN] [--iteration NNNN]   # configs land in examples/exp_spec/exp_NNNN/ (required)
+AGENTSPACE/scripts/start-exp.sh <id>                     # launch todo→doing (small exps may skip); full logs → exp/exp_data/exp_NNNN/
+AGENTSPACE/scripts/complete-exp.sh <id> <done|failed|abandoned> "result" [--commit "repo@sha,..."]
+```
+
 ### Historical Search (results / which plan touched file Y)
 - Small scope: `grep -rn <keyword> plan iterations notes` (exclude `data/`)
 - Keywords may not match (synonyms, descriptive wording) or scope may be large: delegate to a subagent (Explore) to read the "代码变更 (diff)" / "结果" sections of readmes and summarize
@@ -84,29 +93,28 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 ### Tools / Environment / Knowledge / Extensions
 - Need a utility tool (plotting / machine status / runtime status / log analysis)? Check `utils.md` first — reuse, don't rewrite. New tools go into `utils/` and are registered in `utils.md`
 - Shared data (training sets, model weights, symlinks)? Put in `data/` and register in `data.md`; entire data/ is gitignored
-- Reusable experiment configs (YAML/JSON)? Put in `examples/` and register in `examples.md`; test scripts in `tests/` reference these configs
+- Reusable experiment configs (YAML/JSON)? Put in `examples/` and register in `examples.md`; test scripts in `tests/` reference these configs. Exception: configs of registered experiments live in `examples/exp_spec/exp_NNNN/`, indexed via exp/index.md
 - Environment change (container / conda / machine / dependency)? Update `tests.md` the same day. Test scripts go in `tests/` and are registered
-- Pitfalls / transferable conclusions → `notes/` (template `templates/note.md`), **must include source** (plan:NNNN / iteration_NNNN)
+- Pitfalls / transferable conclusions → `notes/` (template `templates/note.md`), **must include source** (plan:NNNN / iteration_NNNN / exp_NNNN)
 - New module (not built-in): **confirm with user first** → `AGENTSPACE/scripts/register-module.sh <name> "purpose"`
 
 ## 3. Discipline
 
 - **[MUST] Commit gate for registered key repos** — before any `git commit` in a repo registered in `AGENTSPACE/.agentspace-repos`, run `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commit only on PASS; never commit in unregistered repos (propose registration, user confirms, then commit). Full rules: the agentspace-code-clean skill and AGENTS.md "关键代码仓库"
-- `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` **may only be modified by scripts** — always call scripts, never hand-edit tables
-- Content documents (plan docs / iteration readmes / notes / utils / tests) are written directly by you, using `templates/` templates
-- Cross-references always use ids: `plan:NNNN` / `iteration_NNNN`; never paths, never latest (latest flips)
+- Content documents (plan docs / iteration readmes / exp manuals / notes / utils / tests) are written directly by you, using `templates/` templates
+- Cross-references always use ids: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; never paths, never latest (latest flips)
 - `data/` not in git (gitignored); all output saved locally
 - **[MUST] Wrap-up protocol** — before ending any project work session, in order: ① update the in-progress iteration readme's "当前状态 · 下一步" (the re-entry point for the next session — replace the template guidance comment with real content) ② run `AGENTSPACE/scripts/doctor.sh` (hard errors must be resolved; warnings must be reported to the user) ③ milestone commit (§4)
-- **[MUST] On script errors** (e.g., "Section not found"): do NOT hand-edit tables. Run `doctor.sh` to locate the issue, then discuss a repair plan with the user. **A one-time manual fix explicitly confirmed by the user is the only allowed exception** to the scripts-only rule. This applies to plan.md / iterations.md / plan/index.md / iterations/index.md / register.md and any content documents
-- **[MUST] Scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` may only be modified by scripts; never hand-edit tables (except the user-confirmed exception above)
+- **[MUST] On script errors** (e.g., "Section not found"): do NOT hand-edit tables. Run `doctor.sh` to locate the issue, then discuss a repair plan with the user. **A one-time manual fix explicitly confirmed by the user is the only allowed exception** to the scripts-only rule. This applies to plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md / register.md and any content documents
+- **[MUST] Scripts-only** — `plan.md` / `iterations.md` / `exp.md` / `plan/index.md` / `iterations/index.md` / `exp/index.md` may only be modified by scripts; never hand-edit tables (except the user-confirmed exception above)
 - Status self-check: `AGENTSPACE/scripts/status.sh`; run `AGENTSPACE/scripts/doctor.sh` after wrap-up and whenever you suspect corruption; for deeper audits (per-file content, cross-cutting history, repairs) run the explicit `/agentspace-doctor` command (--minor | --major [--fix]) — it is never triggered automatically
 - **Do not read plugin development data**: `skills/agentspace-update/versions/`, `DEVELOPMENT.md`, `marketplace.json` etc. are plugin infrastructure, unrelated to the project — never read or reference during project work
 
 ## 4. Milestone Git Commits
 
-Triggers (specific): plan created/completed · iteration created/closed · module registered · notes written · tests.md environment changed · examples/data entries registered · user rules written · update applied · scripts/templates updated.
+Triggers (specific): plan created/completed · iteration created/closed · exp created/completed · module registered · notes written · tests.md environment changed · examples/data entries registered · user rules written · update applied · scripts/templates updated.
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <summary>"
 ```
-Type examples: `plan` / `iteration` / `notes` / `data` / `examples` / `utils` / `tests` / `register` / `docs`.
+Type examples: `plan` / `iteration` / `exp` / `notes` / `data` / `examples` / `utils` / `tests` / `register` / `docs`.
 Report to user after commit (commit summary). **Only operate on the AGENTSPACE repo**; never add/commit the host repo. Host code state recorded via commit sha; diff (against host HEAD) saved to data/ when needed.

@@ -67,6 +67,20 @@ mv "${SRC[0]}" "$AS_ROOT/$DEST"
 as_replace_line "$AS_ROOT/$DEST" "$STATUS_TODO" "> 状态: $STATUS_CN ($DATE)"
 
 echo "plan:$ID → $STATUS_CN ($DEST)"
+# Soft reminder: linked open experiments survive a plan's closure (an exp may
+# outlive its plan); reverse lookup on exp/index.md 关联 plan column. Escape-
+# aware read (\| shielded before the -F'|' split), same as status.sh.
+_RE="$(printf '\037')"
+OPEN_EXPS="$(sed "s/\\\\|/$_RE/g" "$AS_ROOT/exp/index.md" 2>/dev/null | awk -F'|' -v pid="plan:$ID" '
+  /^\| [0-9]/ {
+    pl=$5; gsub(/^ +| +$/, "", pl); state=$4; gsub(/^ +| +$/, "", state)
+    if (index(pl, pid) && (state == "todo" || state == "doing")) n++
+  }
+  END { print n+0 }
+' || true)"
+if [ "${OPEN_EXPS:-0}" -gt 0 ]; then
+  echo "note: $OPEN_EXPS linked open experiment(s) reference plan:$ID — they stay open (an exp may outlive its plan); remember to close them separately"
+fi
 # v0.3.2: lesson distillation upgraded from SHOULD to MUST — every completed
 # plan's transferable lessons must land in notes/ before the milestone commit
 echo "Next [MUST]: review this plan's iterations (结果/code-diff) and distill transferable lessons into notes with source plan:$ID"

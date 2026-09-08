@@ -37,13 +37,13 @@ notes_insert_row() {
   as_atomic_write "$AS_ROOT/notes.md" "$tmp"
 }
 
-# Primary source ref (plan:NNNN / iteration_NNNN) of a note file, from its
+# Primary source ref (plan:NNNN / iteration_NNNN / exp_NNNN) of a note file, from its
 # "> 来源:" header line — first matching token wins, trailing context ignored.
 # The numeric part is zero-pad-normalized (as_norm_id) so hand-written refs
 # like plan:1 match the padded index rows / iteration dir names in [7]/[8].
 note_primary_ref() {
   local ref
-  ref="$(grep -E '^> 来源:' "$1" 2>/dev/null | head -1 | grep -oE 'plan:[0-9]+|iteration_[0-9]+' | head -1 || true)"
+  ref="$(grep -E '^> 来源:' "$1" 2>/dev/null | head -1 | grep -oE 'plan:[0-9]+|iteration_[0-9]+|exp_[0-9]+' | head -1 || true)"
   if [ -n "$ref" ]; then
     case "$ref" in
       plan:*)
@@ -53,6 +53,10 @@ note_primary_ref() {
       iteration_*)
         if [[ "${ref#iteration_}" =~ ^[0-9]+$ ]]; then
           ref="iteration_$(as_norm_id "${ref#iteration_}")"
+        fi ;;
+      exp_*)
+        if [[ "${ref#exp_}" =~ ^[0-9]+$ ]]; then
+          ref="exp_$(as_norm_id "${ref#exp_}")"
         fi ;;
     esac
   fi
@@ -208,7 +212,7 @@ done
 # ---- 4. link validity: script-managed tables only (links are script contract output) ----
 echo "[4] link validity"
 # shellcheck disable=SC2016
-for t in plan.md plan/index.md iterations.md iterations/index.md register.md; do
+for t in plan.md plan/index.md iterations.md iterations/index.md exp.md exp/index.md register.md; do
   tfile="$AS_ROOT/$t"
   [ -f "$tfile" ] || continue
   # Only table data rows (| ...) — header pointers like the latest symlink are out of scope
@@ -224,7 +228,7 @@ done
 
 # ---- 5. contract: placeholder constants must still match templates ----
 echo "[5] placeholder contract"
-for pair in "RESUME_PH_ITER:templates/iteration-readme.md" "RESULT_PH_ITER:templates/iteration-readme.md" "RESULT_PH_PLAN:templates/plan.md"; do
+for pair in "RESUME_PH_ITER:templates/iteration-readme.md" "RESULT_PH_ITER:templates/iteration-readme.md" "RESULT_PH_PLAN:templates/plan.md" "RESULT_PH_EXP:templates/exp-manual.md"; do
   const="${pair%%:*}"; tpl="${pair##*:}"
   val="$(eval "printf '%s' \"\${$const}\"")"
   grep -Fq "$val" "$AS_ROOT/$tpl" || warn "constant $const no longer matches $tpl (contract drift — update the constant or the template)"
@@ -274,7 +278,7 @@ for f in "$AS_ROOT"/notes/*.md; do
     warn "notes.md missing row for $slug (add a row with 来源/日期/链接)"
   fi
   if [ -z "$ref" ]; then
-    warn "notes/$slug: 来源 missing or malformed (need plan:NNNN / iteration_NNNN)"
+    warn "notes/$slug: 来源 missing or malformed (need plan:NNNN / iteration_NNNN / exp_NNNN)"
   else
     case "$ref" in
       plan:*)
@@ -285,6 +289,10 @@ for f in "$AS_ROOT"/notes/*.md; do
         iid="${ref#iteration_}"
         [ -d "$AS_ROOT/iterations/iteration_$iid" ] \
           || warn "notes/$slug: 来源 $ref target dir not found" ;;
+      exp_*)
+        eid="${ref#exp_}"
+        grep -q "^| *$eid *|" "$AS_ROOT/exp/index.md" \
+          || warn "notes/$slug: 来源 $ref not found in exp/index.md" ;;
     esac
   fi
 done
@@ -700,7 +708,7 @@ while IFS= read -r repo; do
   while IFS= read -r sha; do
     [ -n "$sha" ] || continue
     msg="$(git -C "$repo" log -1 --format=%B "$sha" 2>/dev/null || true)"
-    mhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE" 2>/dev/null | head -1 || true)"
+    mhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE" 2>/dev/null | head -1 || true)"
     if [ -n "$mhit" ]; then
       warn "$repo @$sha: commit message 含工作区记账引用 — \"${mhit#*:}\" (已落历史, 只报告: 处置由用户决定)"
     fi
@@ -765,6 +773,125 @@ while IFS= read -r repo; do
     fi
   done < <(git -C "$repo" log -"$COMMIT_AUDIT_N" --format=%h 2>/dev/null || true)
 done < <(as_repos)
+
+# ---- 16. exp: manuals ↔ exp.md sections ↔ full index ↔ exp_spec ↔ exp_data ----
+# Directionality notes:
+# - exp_spec/ is TRACKED → bidirectional check (row↔dir both reported).
+# - exp_data/ is gitignored local-only → a fresh clone lacks every exp_data dir,
+#   so row→dir is a silent skip (never red on another machine); an exp_data dir
+#   without an index row IS reported (script-created implies a row existed).
+# - --fix is RECONCILIATION first: an exp.md Todo/Doing row whose manual sits in
+#   the other open dir is MOVED to the matching section (a mid-script crash
+#   between mv and table writes leaves exactly this shape); a row with no manual
+#   anywhere is an orphan and is removed (same data-loss-free pattern as [2]/[3]).
+echo "[16] exp consistency"
+if [ -f "$AS_ROOT/exp/index.md" ] || [ -d "$AS_ROOT/exp" ]; then
+  # forward: manual files → tables. Open manuals must appear in the entry view
+  # IN THE MATCHING SECTION (section-bounded: a 最近完成 row does not count —
+  # a completed row while the manual sits in todo/doing is an anomaly the rows
+  # loop below reports from its side).
+  for d in todo doing done; do
+    for f in "$AS_ROOT"/exp/$d/exp_[0-9]*.md; do
+      [ -f "$f" ] || continue
+      id="$(basename "$f" | sed 's/^exp_//; s/-.*$//')"
+      grep -q "^| *$id *|" "$AS_ROOT/exp/index.md" 2>/dev/null \
+        || warn "exp/index.md missing exp_$id ($(basename "$f"))"
+      if [ "$d" = "todo" ] || [ "$d" = "doing" ]; then
+        if [ "$d" = "todo" ]; then want_sec="$SEC_TODO"; else want_sec="$SEC_EXP_DOING"; fi
+        if ! awk -F'|' -v sec="$want_sec" -v id="$id" '
+          $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
+          /^## / { f=0 }
+          f && /^\| [0-9]/ { c=$2; gsub(/^ +| +$/, "", c); if (c == id) { found=1; exit } }
+          END { exit found ? 0 : 1 }
+        ' "$AS_ROOT/exp.md" 2>/dev/null; then
+          warn "exp.md $want_sec missing open exp_$id ($(basename "$f"))"
+        fi
+      fi
+    done
+  done
+  # entry rows: section position ↔ dir position (reconcile under --fix, orphans removed)
+  for pair_sec_dir in "$SEC_TODO:todo" "$SEC_EXP_DOING:doing"; do
+    sec="${pair_sec_dir%%:*}"; want_dir="${pair_sec_dir##*:}"
+    other_dir="doing"; [ "$want_dir" = "doing" ] && other_dir="todo"
+    sec_ids="$(awk -F'|' -v sec="$sec" '
+      $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
+      /^## / { f=0 }
+      f && /^\| [0-9]/ { gsub(/ /, "", $2); print $2 }
+    ' "$AS_ROOT/exp.md" 2>/dev/null || true)"
+    for id in $sec_ids; do
+      if [[ "$id" =~ ^[0-9]+$ ]]; then
+        id="$(as_norm_id "$id")"
+      else
+        warn "exp.md $sec row $id malformed (non-numeric id) — not removed"
+        continue
+      fi
+      if compgen -G "$AS_ROOT/exp/$want_dir/exp_$id-*.md" >/dev/null; then
+        continue
+      fi
+      if compgen -G "$AS_ROOT/exp/$other_dir/exp_$id-*.md" >/dev/null; then
+        if [ "$FIX" -eq 1 ]; then
+          title="$(as_row_cell "$AS_ROOT/exp.md" "$id" 3)"
+          mdate="$(as_row_cell "$AS_ROOT/exp.md" "$id" 4)"
+          mfile="$(compgen -G "$AS_ROOT/exp/$other_dir/exp_$id-*.md" | head -1)"
+          dest="exp/$other_dir/$(basename "$mfile")"
+          as_remove_row_section "$AS_ROOT/exp.md" "$sec" "$id"
+          if [ "$other_dir" = "doing" ]; then tgt_sec="$SEC_EXP_DOING"; else tgt_sec="$SEC_TODO"; fi
+          as_insert_row "$AS_ROOT/exp.md" "$tgt_sec" \
+            "| $id | $title | $mdate | [$dest]($dest) |"
+          ok "exp.md row exp_$id moved $sec → $tgt_sec (manual sits in exp/$other_dir/)"
+        else
+          warn "exp.md $sec row exp_$id: manual is in exp/$other_dir/ (section ≠ dir position — run --fix to reconcile)"
+        fi
+      elif [ "$FIX" -eq 1 ]; then
+        before="$(wc -l < "$AS_ROOT/exp.md")"
+        as_remove_row_section "$AS_ROOT/exp.md" "$sec" "$id"
+        if [ "$(wc -l < "$AS_ROOT/exp.md")" -lt "$before" ]; then
+          ok "removed orphan $sec row exp_$id (no manual)"
+        else
+          warn "exp.md orphan row exp_$id NOT removed (section \"$sec\" missing or drifted)"
+        fi
+      else
+        warn "exp.md $sec row exp_$id has no corresponding manual (orphan row)"
+      fi
+    done
+  done
+  # index rows must own a manual somewhere
+  idx_ids="$(grep -hoE '^\| *[0-9]+' "$AS_ROOT/exp/index.md" 2>/dev/null | grep -oE '[0-9]+' || true)"
+  for id in $idx_ids; do
+    compgen -G "$AS_ROOT/exp/todo/exp_$id-*.md" >/dev/null && continue
+    compgen -G "$AS_ROOT/exp/doing/exp_$id-*.md" >/dev/null && continue
+    compgen -G "$AS_ROOT/exp/done/exp_$id-*.md" >/dev/null && continue
+    warn "exp/index.md row exp_$id has no manual in exp/todo|doing|done/"
+  done
+  # exp_spec (tracked): bidirectional
+  if [ -d "$AS_ROOT/examples/exp_spec" ]; then
+    for d in "$AS_ROOT"/examples/exp_spec/exp_[0-9]*; do
+      [ -d "$d" ] || continue
+      sid="$(basename "$d" | sed 's/^exp_//')"
+      grep -q "^| *$sid *|" "$AS_ROOT/exp/index.md" 2>/dev/null \
+        || warn "examples/exp_spec/exp_$sid has no exp/index.md row (orphan config dir)"
+    done
+  fi
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    [ -d "$AS_ROOT/examples/exp_spec/exp_$id" ] \
+      || warn "exp_$id: missing examples/exp_spec/exp_$id/ (config contract — new-exp.sh creates it)"
+  done <<< "$idx_ids"
+  # exp_data (local-only): dir → row only
+  if [ -d "$AS_ROOT/exp/exp_data" ]; then
+    for d in "$AS_ROOT"/exp/exp_data/exp_[0-9]*; do
+      [ -d "$d" ] || continue
+      did="$(basename "$d" | sed 's/^exp_//')"
+      grep -q "^| *$did *|" "$AS_ROOT/exp/index.md" 2>/dev/null \
+        || warn "exp/exp_data/exp_$did has no exp/index.md row (orphan data dir)"
+    done
+  fi
+  # hygiene: the exp_data ignore pattern must exist — a missing line lets the
+  # next `git add -A` milestone commit sweep full experiment output into the
+  # ledger's history (silent data-hygiene damage)
+  grep -Fqx "exp/exp_data/" "$AS_ROOT/.gitignore" 2>/dev/null \
+    || warn ".gitignore missing the exp/exp_data/ line (full experiment output would enter the ledger repo — see v1.3.0 CHANGELOG)"
+fi
 
 echo
 echo "== Done: $issues issues, $fixed auto-repaired =="

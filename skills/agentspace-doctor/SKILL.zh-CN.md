@@ -29,8 +29,8 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
 ## 3. 阶段 B — Minor: 逐文件内容审查
 
 **审查范围 — 全量阅读**:
-- 管理表: `plan.md`、`iterations.md`、`notes.md`、`data.md`、`register.md`
-- 条目: `plan/todo/*.md`、`plan/done/*.md`、`iterations/iteration_NNNN/readme.md`、`notes/*.md`、`examples/*.md`、`templates/*.md`
+- 管理表: `plan.md`、`iterations.md`、`exp.md`、`notes.md`、`data.md`、`register.md`
+- 条目: `plan/todo/*.md`、`plan/done/*.md`、`iterations/iteration_NNNN/readme.md`、`exp/todo/*.md`、`exp/doing/*.md`、`exp/done/*.md`、`notes/*.md`、`examples/*.md`、`templates/*.md`
 - 范围内的文件缺失时(如早于 data/examples 模块的工作区没有 `data.md`/`examples.md`): 记为蓝级观察 — 不升级为红/黄
 - 宿主根 `AGENTS.md` — 其中的 AGENTSPACE 区块: 只做内部一致性(规则与硬规则存在且不互相矛盾、结构块与实际布局一致)。**不要**与插件侧模板比对 — 用户项目中插件开发数据禁读
 - `utils/`、`tests/` — 只做与入口表的存在性/结构对应(如 `utils.md` ↔ `utils/`); `scripts/` — 与架构契约(`AGENTS.md` 结构块 + `.agentspace-architecture.json`)对应, 因为 `scripts/` 没有入口表; 不对脚本做文字审查

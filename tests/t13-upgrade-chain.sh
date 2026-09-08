@@ -272,6 +272,65 @@ wl = open(A, encoding="utf-8").read().splitlines()
 edit(A, wl[-1], wl[-1] + "\n\n" + USER_SEC,
      "v1.1.0", "AGENTS.md: 用户规则节追加")
 
+# --- v1.3.0: exp module (8a scripts/templates/.gitignore already applied as
+#     current assets above; here: new entry files + dirs + AGENTS.md/examples.md
+#     8b ops per the v1.3.0 changelog) ---
+for d in ("todo", "doing", "done"):
+    os.makedirs(f"{WS}/exp/{d}", exist_ok=True)
+    open(f"{WS}/exp/{d}/.gitkeep", "w").close()
+cp_asset("exp.md", "exp.md")
+cp_asset("exp/index.md", "exp/index.md")
+edit(A, "├── data.md + data/    ← 公用数据(训练集/模型权重/软连接; 全部 gitignore)",
+        "├── exp.md             ← exp 入口视图 (Todo + Doing + 最近完成 10 条)\n"
+        "├── exp/               ← index.md(全量索引) + todo/ + doing/ + done/ + exp_data/exp_NNNN/(完整实验记录, 不入 git)\n"
+        "├── data.md + data/    ← 公用数据(训练集/模型权重/软连接; 全部 gitignore)",
+        "v1.3.0", "AGENTS.md 结构树: exp 行")
+edit(A, "├── examples.md + examples/ ← 可复用实验配置(YAML/JSON); 与 tests/ 配合(脚本在 tests/, 配置在 examples/)",
+        "├── examples.md + examples/ ← 可复用实验配置(YAML/JSON); exp_spec/exp_NNNN/ 为登记实验的专属配置位",
+        "v1.3.0", "AGENTS.md 结构树: examples 行")
+edit(A, "├── templates/         ← 文档模板(plan / iteration-readme / module-entry / note / handoff)",
+        "├── templates/         ← 文档模板(plan / iteration-readme / exp-manual / module-entry / note / handoff)",
+        "v1.3.0", "AGENTS.md 结构树: templates 行")
+edit(A, "### data —— 公用数据 (data.md + data/)",
+        "### exp —— 实验记录 (exp.md + exp/)\n"
+        "- **what**: 独立登记的实验(度量/验证/调研)。分工: plan 管\"为什么/做什么\", iteration 管\"改代码\", exp 管\"测代码\"; exp 可不关联 plan/iteration(纯度量/调研实验), 关联时经索引的 关联 plan / 关联 iteration 列记录(agentspace-exp 即本模块工作流的称谓, 非斜杠命令)\n"
+        "- **when**: **用户显式要求走 agentspace-exp, 或 agent 在用户提到要做实验时提议并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill\n"
+        "- **how**: `scripts/new-exp.sh \"标题\" [--plan NNNN] [--iteration NNNN]` → 实验配置**必须**写入 `examples/exp_spec/exp_NNNN/`(脚本预创建) → 运行与结果**全量**落 `exp/exp_data/exp_NNNN/`(关联 iteration 的 data/ 产物复制一份至此; 该目录不入 git, 为本机权威记录) → `scripts/start-exp.sh <id>`(开跑, todo→doing; 小实验可省略) → `scripts/complete-exp.sh <id> <done|failed|abandoned> \"结果\" [--commit \"仓库名@sha,...\"]`\n"
+        "- **commits 语义**: exp 记录测试用关键仓库的 commit **点**(repo@sha, 关闭时落定), 与 iteration 的 commit 窗口(起始/结束)互补; 报告与作图走 agentspace-better-exp-report skill\n\n"
+        "### data —— 公用数据 (data.md + data/)",
+        "v1.3.0", "AGENTS.md 模块节: exp 小节")
+edit(A, "- **when/how**: 有可复用的实验参数/配置时放入 examples/ 并在 examples.md 登记; 测试脚本通过路径引用 examples/ 下的配置",
+        "- **when/how**: 有可复用的实验参数/配置时放入 examples/ 并在 examples.md 登记; 测试脚本通过路径引用 examples/ 下的配置\n"
+        "- **exp_spec 契约**: 所有经 agentspace-exp 登记的实验, 其配置必须写入 `examples/exp_spec/exp_NNNN/`(由 new-exp.sh 预创建, 关闭时空目录会被 complete-exp.sh 拒绝); 该子树由 exp/index.md 的配置列索引, 不在 examples.md 登记",
+        "v1.3.0", "AGENTS.md examples 小节: exp_spec 契约行")
+edit(A, "每条笔记必须带\"来源\"(plan:NNNN / iteration_NNNN)",
+        "每条笔记必须带\"来源\"(plan:NNNN / iteration_NNNN / exp_NNNN)",
+        "v1.3.0", "AGENTS.md notes 小节: exp 来源")
+edit(A, "- 内容文档(plan 文档 / iteration readme / notes / utils / tests)由 agent 直接撰写, 使用 templates/ 模板",
+        "- 内容文档(plan 文档 / iteration readme / exp 手册 / notes / utils / tests)由 agent 直接撰写, 使用 templates/ 模板",
+        "v1.3.0", "AGENTS.md 纪律: 内容文档行")
+edit(A, "- **[MUST] scripts-only**: plan.md / iterations.md / plan/index.md / iterations/index.md 与 .agentspace-repos **只能由 scripts/ 改写**, 禁止手工编辑",
+        "- **[MUST] scripts-only**: plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md 与 .agentspace-repos **只能由 scripts/ 改写**, 禁止手工编辑",
+        "v1.3.0", "AGENTS.md 纪律: scripts-only 行")
+edit(A, "- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration",
+        "- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。exp 只在用户显式要求走 agentspace-exp、或 agent 提议并经用户确认后创建; 开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)",
+        "v1.3.0", "AGENTS.md 纪律: 创建前确认行")
+edit(A, "- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN`; 不用路径, 不用 latest(latest 会翻转)",
+        "- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest(latest 会翻转)",
+        "v1.3.0", "AGENTS.md 纪律: 相互引用行")
+ms = open(A, encoding="utf-8").read()
+if ms.count("iteration 创建/关闭 · 模块注册") != 1:
+    log("v1.3.0", "AGENTS.md 里程碑行: exp 触发词", "FAILED", "anchor not unique")
+    sys.exit(1)
+edit(A, "iteration 创建/关闭 · 模块注册", "iteration 创建/关闭 · exp 创建/完成 · 模块注册",
+     "v1.3.0", "AGENTS.md 里程碑行: exp 触发词")
+edit(A, "2. 任务相关时读 plan.md; 会话续接时: 有 handoff 先读 `handoff/index.md` 选最新并 consume, 否则读 `iterations/latest/readme.md` 的\"当前状态 · 下一步\"",
+        "2. 任务相关时读 plan.md(有登记实验时读 exp.md); 会话续接时: 有 handoff 先读 `handoff/index.md` 选最新并 consume, 否则读 `iterations/latest/readme.md` 的\"当前状态 · 下一步\"",
+        "v1.3.0", "AGENTS.md 读取规则 2")
+edit(f"{WS}/examples.md", "> tests/ 放入口脚本(如何跑), examples/ 放配置(用什么参数跑)。",
+        "> tests/ 放入口脚本(如何跑), examples/ 放配置(用什么参数跑)。\n> exp_spec 子树除外: 所有经 agentspace-exp 登记的实验, 其配置必须写入 `examples/exp_spec/exp_NNNN/`(由 new-exp.sh 预创建); 该子树由 exp/index.md 的配置列索引, 不在本表登记。",
+        "v1.3.0", "examples.md: exp_spec 说明行")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)

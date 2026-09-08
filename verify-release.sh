@@ -11,7 +11,7 @@
 #                                [11] release rehearsal
 #   [3] CHANGELOG quality        [12] realized-literal guard (self-hosting)
 #   [4] constants contract (+reverse: lib.sh COMMIT_* → architecture)
-#   [13] parallel-workspace gitignore contract
+#   [13] assets gitignore contracts
 #   [14] skill/command frontmatter YAML (real PyYAML parse)
 # Usage: bash verify-release.sh
 set -euo pipefail
@@ -370,12 +370,16 @@ bilingual "$ROOT/skills/agentspace-code-clean"
 bilingual "$ROOT/skills/agentspace-init"
 bilingual "$ROOT/skills/agentspace-mode"
 bilingual "$ROOT/skills/agentspace-parallel"
+bilingual "$ROOT/skills/agentspace-handoff"
+bilingual "$ROOT/skills/agentspace-better-exp"
+bilingual "$ROOT/skills/agentspace-better-exp-report"
 # mechanism-parity spot checks: load-bearing upgrade rules must exist in BOTH
 # languages — heading/token parity cannot catch a missing rule paragraph
 # (e.g. the skip-missing-archive rule once existed only in SKILL.md).
 # Each pair belongs to ONE skill; grep that skill's two files.
 for pair in "skills/agentspace-update|skip to the next existing archive|跳过缺失的中间档案" \
-            "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身"; do
+            "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身" \
+            "skills/agentspace-better-exp|enrollment always requires explicit user confirmation, never automatic|登记必须经用户显式确认, 绝不自动进行"; do
   skill="${pair%%|*}"; rest="${pair#*|}"
   en="${rest%%|*}"; zh="${rest#*|}"
   grep -Fq -- "$en" "$ROOT/$skill/SKILL.md" || {
@@ -448,7 +452,7 @@ echo "[12] realized-literal guard"
 # derived from lib.sh — single source with the gate (a regex tightening there
 # must not silently desync this guard); -i mirrors the gate's case-insensitive
 # message scan.
-LIT_RE="$(sed -n 's/^readonly COMMIT_BAN_PLAN_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_ITER_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")"
+LIT_RE="$(sed -n 's/^readonly COMMIT_BAN_PLAN_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_ITER_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_EXP_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")"
 lit_hits="$(find "$ROOT" -type f \
   -not -path "$ROOT/.git/*" \
   -not -path "$ROOT/AGENTSPACE/*" \
@@ -461,14 +465,18 @@ if [ -n "$lit_hits" ]; then
   issues=$((issues+1))
 fi
 
-# --- [13] parallel-workspace gitignore contract ------------------------------
-# The collaboration-table script writes run-state into the ledger directory
-# (WS_FILE="$AS_ROOT/<name>"). That name MUST be ignored by the shipped
-# .gitignore — step 8a replaces .gitignore wholesale, so the assets pairing is
-# the only thing standing between a user workspace and a `git add -A` that
-# sweeps run-state into the ledger repo. The filename is parsed from the
-# script itself so a rename flips this check red instead of silently passing.
-echo "[13] parallel-workspace gitignore contract"
+# --- [13] assets gitignore contracts -----------------------------------------
+# Two runtime-data contracts pair a script/feature with the shipped .gitignore —
+# step 8a replaces .gitignore wholesale, so the assets pairing is the only thing
+# standing between a user workspace and a `git add -A` that sweeps run-state or
+# full experiment output into the ledger repo:
+# (a) the collaboration-table script writes WS_FILE="$AS_ROOT/<name>" into the
+#     ledger dir — the filename is parsed from the script itself so a rename
+#     flips this check red instead of silently passing;
+# (b) exp/exp_data/ holds the complete local-only experiment record (created by
+#     new-exp.sh) — a missing ignore line lets the next milestone commit absorb
+#     every experiment log into the ledger's git history.
+echo "[13] assets gitignore contracts"
 if [ -f "$ASSETS/scripts/parallel-workspace.sh" ]; then
   ws_data="$(sed -n 's/^WS_FILE="\$AS_ROOT\/\([^"]*\)"$/\1/p' "$ASSETS/scripts/parallel-workspace.sh")"
   if [ -z "$ws_data" ]; then
@@ -478,6 +486,10 @@ if [ -f "$ASSETS/scripts/parallel-workspace.sh" ]; then
     echo "  [issue] assets/.gitignore misses the parallel-workspace data file: $ws_data"
     issues=$((issues+1))
   fi
+fi
+if ! grep -Fqx "exp/exp_data/" "$ASSETS/.gitignore"; then
+  echo "  [issue] assets/.gitignore misses the exp/exp_data/ line (complete experiment output would enter the ledger repo)"
+  issues=$((issues+1))
 fi
 
 # --- [14] skill/command frontmatter YAML -------------------------------------

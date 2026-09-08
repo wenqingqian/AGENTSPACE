@@ -23,6 +23,10 @@
      - 文件: path/to/file.py
      - 文件: path/to/other.cfg -->
 
+## 相关实验
+
+<!-- 由 new-exp.sh 自动追加(关联本 iteration 的 exp), 请勿手工编辑 -->
+
 ## 环境
 
 <!-- 引用 tests.md 的环境条目。

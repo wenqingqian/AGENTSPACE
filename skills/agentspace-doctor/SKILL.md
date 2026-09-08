@@ -29,8 +29,8 @@ Run `AGENTSPACE/scripts/doctor.sh [--fix]` first. Its output is the baseline:
 ## 3. Phase B — Minor: Per-File Content Review
 
 **Review scope — read fully**:
-- Management tables: `plan.md`, `iterations.md`, `notes.md`, `data.md`, `register.md`
-- Entries: `plan/todo/*.md`, `plan/done/*.md`, `iterations/iteration_NNNN/readme.md`, `notes/*.md`, `examples/*.md`, `templates/*.md`
+- Management tables: `plan.md`, `iterations.md`, `exp.md`, `notes.md`, `data.md`, `register.md`
+- Entries: `plan/todo/*.md`, `plan/done/*.md`, `iterations/iteration_NNNN/readme.md`, `exp/todo/*.md`, `exp/doing/*.md`, `exp/done/*.md`, `notes/*.md`, `examples/*.md`, `templates/*.md`
 - Handoffs: `handoff/index.md` + `handoff/handoff_*.md` — read fully (the session-resume entry; the files are gitignored, so git status will not surface them)
 - If a scoped file is absent (e.g. `data.md`/`examples.md` in workspaces predating those modules): note the absence as a 蓝 observation — do not escalate to 红/黄
 - Host root `AGENTS.md` — the AGENTSPACE section: internal consistency only (rules and hard rules present and non-contradictory, structure block matches the workspace layout). Do NOT diff against plugin-side templates — plugin dev data is off-limits in user projects

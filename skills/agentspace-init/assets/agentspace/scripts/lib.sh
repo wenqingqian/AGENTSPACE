@@ -37,8 +37,10 @@ readonly SEC_RECENT="最近完成 (10 条)"
 readonly SEC_RELATED="相关迭代"
 readonly SEC_REGISTERED="已注册模块"
 readonly SEC_HANDOFF="Handoffs"
+readonly SEC_EXP_DOING="Doing"
 readonly STATUS_TODO="> 状态: todo"
 readonly STATUS_PROGRESS="> 状态: 进行中"
+readonly STATUS_EXP_DOING="> 状态: doing"
 # Staleness threshold for handoff [11] / status summary (days unconsumed
 # before a handoff is flagged 过时). Single source — doctor.sh and status.sh
 # both use it (find -mtime +$((STALE_DAYS-1)) = strictly more than STALE_DAYS-1
@@ -76,6 +78,8 @@ readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
 readonly RESULT_PH_PLAN="<!-- 完成时填写: 一句话结论"
 # Warning: doctor flags in-progress readmes while present. Template: iteration-readme.md "当前状态 · 下一步"
 readonly RESUME_PH_ITER="<!-- 会话续接块:"
+# Gate: complete-exp refuses while present. Template: exp-manual.md "结果"
+readonly RESULT_PH_EXP="<!-- 一句话结论; 关闭 exp 前必填 -->"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
@@ -349,6 +353,10 @@ as_external_refs() {
 # 各报首个命中行; WARN 级(数据扩展名/输出目录)属 agent 语义层, 不在事后扫描内。
 readonly COMMIT_BAN_PLAN_RE="plan:[[:space:]]*0[0-9]{3,}"
 readonly COMMIT_BAN_ITER_RE="iteration_0[0-9]{3,}"
+# exp ids are the canonical exp_0NNN form (same leading-0 anchor); no exp candidate
+# regex exists by design — the exp word tight against digits matches common prose
+# ("exp 3") and every false candidate costs agent adjudication on every commit.
+readonly COMMIT_BAN_EXP_RE="exp_0[0-9]{3,}"
 # Dash form `plan-NNNN` — the lane branch-name shape (agentspace-parallel). It
 # never belongs in commit TEXT (absorb messages included); the branch name
 # itself is a ref, not text, and stays legal. Report-only heuristic in doctor
@@ -427,7 +435,7 @@ as_msg_title_blank() {
 # must revisit it.
 as_diff_added_hits() {
   (
-    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE}"
+    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE}"
     export AS_EXCERPT_CAP="${AS_EXCERPT_CAP:-$COMMIT_EXCERPT_CAP}"
     export AS_FILE_HITS_CAP="${AS_FILE_HITS_CAP:-$COMMIT_FILE_HITS_CAP}"
     export AS_LINE_MAX="${AS_LINE_MAX:-0}"
@@ -481,7 +489,7 @@ as_diff_added_hits() {
 # it out of every blocking path (it has no exit-code voice).
 as_diff_added_candidates() {
   (
-    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE}"
+    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE}"
     export AS_CAND_RE="${AS_CAND_RE:-$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE}"
     export AS_EXCERPT_CAP="${AS_EXCERPT_CAP:-$COMMIT_EXCERPT_CAP}"
     export AS_FILE_HITS_CAP="${AS_FILE_HITS_CAP:-$COMMIT_FILE_HITS_CAP}"
@@ -675,6 +683,28 @@ as_next_iteration_id() {
     [[ "$n" =~ ^[0-9]+$ ]] || continue
     (( 10#$n > max )) && max=$((10#$n))
   done < <(as_row_ids "$AS_ROOT/iterations.md" "$AS_ROOT/iterations/index.md")
+  printf "%04d" $((max + 1))
+}
+
+# Next experiment index (scan exp/todo + exp/doing + exp/done manuals + tables).
+# Manual files carry the full exp_NNNN- prefix (the exp id also names
+# exp_data/exp_NNNN/ and examples/exp_spec/exp_NNNN/, so the id must be
+# self-describing outside exp/); table ID columns stay bare numeric, matching
+# plan/iteration — as_row_ids reads them unchanged.
+as_next_exp_id() {
+  local max=0 f base n
+  while IFS= read -r -d '' f; do
+    base="$(basename "$f")"
+    n="${base#exp_}"
+    n="${n%%-*}"
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    (( 10#$n > max )) && max=$((10#$n))
+  done < <(find "$AS_ROOT/exp/todo" "$AS_ROOT/exp/doing" "$AS_ROOT/exp/done" -maxdepth 1 \
+    -name 'exp_[0-9][0-9][0-9][0-9]-*.md' -print0 2>/dev/null)
+  while IFS= read -r n; do
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    (( 10#$n > max )) && max=$((10#$n))
+  done < <(as_row_ids "$AS_ROOT/exp.md" "$AS_ROOT/exp/index.md")
   printf "%04d" $((max + 1))
 }
 

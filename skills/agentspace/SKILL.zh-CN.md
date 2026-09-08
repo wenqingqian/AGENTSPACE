@@ -20,7 +20,7 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 2. `AGENTSPACE/tests.md` — 实验环境
 3. `AGENTSPACE/iterations.md` — 迭代状态
 
-恢复序列(会话开始/状态不确定时): `AGENTS.md` → `tests.md` → `iterations.md` → `plan.md`(任务相关时) → `iterations/latest/readme.md` 的"当前状态 · 下一步"。
+恢复序列(会话开始/状态不确定时): `AGENTS.md` → `tests.md` → `iterations.md` → `plan.md`(任务相关时) → `exp.md`(有登记实验时) → `iterations/latest/readme.md` 的"当前状态 · 下一步"。
 
 ## 2. 工作流
 
@@ -62,8 +62,7 @@ AGENTSPACE/scripts/new-iteration.sh <plan-id> "本轮内容"   # 输出 iteratio
 ```bash
 AGENTSPACE/scripts/close-iteration.sh <id> "结果一句话"
 ```
-里程碑提交。
-结果含可迁移教训时 (SHOULD — 知识提炼), 写一条笔记(templates/note.md, 来源 `iteration_NNNN`), 在"详情"中回链本迭代的 readme。
+里程碑提交。结果含可迁移教训时 (SHOULD — 知识提炼), 写一条笔记(templates/note.md, 来源 `iteration_NNNN`), 在"详情"中回链本迭代的 readme。
 
 ### 完成计划
 **运行前(脚本闸门要求)**: 先填写 plan 文档"结果"节(一句话结论 + 关键证据) — 占位符未替换时脚本会拒绝。
@@ -76,6 +75,16 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 2. 把可迁移教训沉淀进 notes(模板 `templates/note.md`, 来源 `plan:NNNN`); 打主题标签为建议(可选)
 3. 里程碑提交
 
+### 跑实验 → 登记 exp(仅限主动登记)
+
+**实验登记 (MUST)**: 只有用户显式要求走 agentspace-exp、或你在听到实验意向时提议一次并经用户接受后才登记 exp —— 开发收尾的正确性验证绝不自动登记。登记前先用 agentspace-better-exp skill 对齐设计。分工 — plan = 为什么/做什么, iteration = 改代码, exp = 测代码; exp 可不关联 plan/iteration; 关联时把 iteration data/ 复制进 exp_data(权威全量记录)。报告与作图走 agentspace-better-exp-report skill。
+
+```bash
+AGENTSPACE/scripts/new-exp.sh "English experiment title" [--plan NNNN] [--iteration NNNN]   # 配置落入 examples/exp_spec/exp_NNNN/(硬性要求)
+AGENTSPACE/scripts/start-exp.sh <id>                     # 开跑 todo→doing(小实验可省略); 完整日志 → exp/exp_data/exp_NNNN/
+AGENTSPACE/scripts/complete-exp.sh <id> <done|failed|abandoned> "结果一句话" [--commit "仓库名@sha,..."]
+```
+
 ### 历史检索(结果定位 / 哪个 plan 动过文件 Y)
 - 小范围: `grep -rn <关键词> plan iterations notes`(排除 `data/`)
 - 关键词可能对不上(同义词/描述差异)或范围大: 派 subagent(Explore)读 readme 的"代码变更 (diff)"/"结果"节归纳
@@ -84,29 +93,28 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 ### 工具 / 环境 / 知识 / 扩展模块
 - 需要辅助工具(做图 / 机器状态 / 运行状态 / 日志分析)先查 `utils.md`, 复用而非重写; 新工具写入 `utils/` 并在 `utils.md` 登记
 - 公用数据(训练集/模型权重/软连接)放 `data/` 并在 `data.md` 登记; data/ 全部 gitignore
-- 可复用实验配置(YAML/JSON)放 `examples/` 并在 `examples.md` 登记; tests/ 放脚本, examples/ 放配置
+- 可复用实验配置(YAML/JSON)放 `examples/` 并在 `examples.md` 登记; tests/ 放脚本, examples/ 放配置。例外: 登记实验的配置在 `examples/exp_spec/exp_NNNN/`, 由 exp/index.md 索引
 - 环境变化(容器 / conda / 机器 / 依赖)当天更新 `tests.md`; 测试脚本放 `tests/` 并登记
-- 踩坑 / 可迁移结论 → `notes/`(模板 `templates/note.md`), **必须带来源**(plan:NNNN / iteration_NNNN)
+- 踩坑 / 可迁移结论 → `notes/`(模板 `templates/note.md`), **必须带来源**(plan:NNNN / iteration_NNNN / exp_NNNN)
 - 新模块(非内置模块): **先与用户确认** → `AGENTSPACE/scripts/register-module.sh <name> "用途"`
 
 ## 3. 纪律
 
 - **[MUST] 登记仓库 commit 门** — 在登记于 `AGENTSPACE/.agentspace-repos` 的仓库执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 且通过才可提交; 未登记仓库一律不 commit(先提议登记, 用户确认后再提交)。完整规则见 agentspace-code-clean skill 与 AGENTS.md "关键代码仓库"节
-- `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` **只能由 scripts/ 改写** — 一律调脚本, 不手工编辑表格
-- 内容文档(plan 文档 / iteration readme / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
-- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN`; 不用路径, 不用 latest
+- 内容文档(plan 文档 / iteration readme / exp 手册 / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
+- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest
 - `data/` 不入 git(已 gitignore), 产物全量本地保存
 - **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口 — 用实际内容替换模板引导注释) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
-- **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / plan/index.md / iterations/index.md / register.md 及内容文档
-- **[MUST] scripts-only** — `plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` 只能由 scripts 改写, 禁止手工编辑(用户确认例外除外)
+- **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md / register.md 及内容文档
+- **[MUST] scripts-only** — `plan.md` / `iterations.md` / `exp.md` / `plan/index.md` / `iterations/index.md` / `exp/index.md` 只能由 scripts 改写, 禁止手工编辑(用户确认例外除外)
 - 状态自检 `AGENTSPACE/scripts/status.sh`; 收尾后及怀疑损坏时运行 `AGENTSPACE/scripts/doctor.sh`; 需要深度审计(逐文件内容、跨历史交叉、修复)时显式运行 `/agentspace-doctor` 命令(--minor | --major [--fix])— 该命令绝不自动触发
 - **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用
 
 ## 4. 里程碑 git 提交
 
-触发点(具体清单): plan 创建/完成 · iteration 创建/关闭 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 · 脚本/模板更新。
+触发点(具体清单): plan 创建/完成 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 · 脚本/模板更新。
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <摘要>"
 ```
-type 示例: `plan` / `iteration` / `notes` / `data` / `examples` / `utils` / `tests` / `register` / `docs`。
+type 示例: `plan` / `iteration` / `exp` / `notes` / `data` / `examples` / `utils` / `tests` / `register` / `docs`。
 提交后告知用户(commit 摘要)。**只操作 AGENTSPACE 仓库**, 绝不 add/commit 宿主仓库; 宿主代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/。

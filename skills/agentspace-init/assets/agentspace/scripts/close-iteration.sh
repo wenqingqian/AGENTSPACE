@@ -98,4 +98,19 @@ awk -v status_old="$STATUS_PROGRESS" -v status_new="> 状态: 已完成 ($DATE)"
 as_atomic_write "$README" "$tmp2"
 
 echo "iteration_$ID closed → $DIR/readme.md (frozen)"
+# Soft reminder: linked open experiments keep their full record in exp_data
+# (reverse lookup on exp/index.md 关联 iteration column; report-only). The read
+# is escape-aware (\| in titles shielded before the -F'|' split) — same
+# discipline as status.sh's exp event stream.
+_RE="$(printf '\037')"
+OPEN_EXPS="$(sed "s/\\\\|/$_RE/g" "$AS_ROOT/exp/index.md" 2>/dev/null | awk -F'|' -v iid="iteration_$ID" '
+  /^\| [0-9]/ {
+    iter=$6; gsub(/^ +| +$/, "", iter); state=$4; gsub(/^ +| +$/, "", state)
+    if (index(iter, iid) && (state == "todo" || state == "doing")) n++
+  }
+  END { print n+0 }
+' || true)"
+if [ "${OPEN_EXPS:-0}" -gt 0 ]; then
+  echo "note: $OPEN_EXPS linked open experiment(s) reference iteration_$ID — copy this iteration's data/ artifacts into exp/exp_data/exp_*/ before closing the exp"
+fi
 echo "Next [SHOULD]: if the result holds transferable lessons, write a note (templates/note.md) with source iteration_$ID, back-linking this readme in 详情"

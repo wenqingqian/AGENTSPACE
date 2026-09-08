@@ -68,7 +68,7 @@ description: 查看 AGENTSPACE 工作区状态工作台 — 项目总览 + 现�
 
 ## 项目段落子代理提示词 (逐字; 把 <SHA1> <SHA2> … 替换为收集到的列表)
 
-> Read-only synthesis. Read ONLY these files: AGENTSPACE/AGENTS.md (项目背景 section), AGENTSPACE/plan.md, AGENTSPACE/plan/index.md, AGENTSPACE/iterations.md, AGENTSPACE/iterations/index.md, AGENTSPACE/notes.md. Produce THREE deliverables:
+> Read-only synthesis. Read ONLY these files: AGENTSPACE/AGENTS.md (项目背景 section), AGENTSPACE/plan.md, AGENTSPACE/plan/index.md, AGENTSPACE/iterations.md, AGENTSPACE/iterations/index.md, AGENTSPACE/exp.md, AGENTSPACE/exp/index.md, AGENTSPACE/notes.md. Produce THREE deliverables:
 > 1. `PROJECT_SUMMARY=<paragraph>` — ONE paragraph (≤120 Chinese characters) stating what the project is and its current state.
 > 2. `RECENT_SUMMARY=<2-3 句>` — what the recent activity (events + commits) means as a whole: what converged, what was reverted, what is pending. Do not enumerate — synthesize.
 > 3. For EACH `SHA@REPO` pair in this list: <SHA1>@<REPO1> <SHA2>@<REPO2> — inspect it via `git -C <REPO> show --stat <sha>` and `git -C <REPO> log -1 --format='%s' <sha>`; write `COMMIT_SUMMARY_<sha>=<2-3 句中文>` — what the change does and why, linking to its iteration/plan when the workspace records it. If a SHA cannot be inspected, omit its line.
@@ -83,5 +83,5 @@ description: 查看 AGENTSPACE 工作区状态工作台 — 项目总览 + 现�
 - 即使没有软内容, 脚本输出本身也是完整模板(每个软槽保持 `—`)。
 - 状态 ≠ 进度: 绝不虚构"下一步"; 工作区没有进行中内容时, 各节如实显示。
 - 软槽(项目段落 / 近期主线 / 每 commit 概括)是模板硬编码的**槽**, 其内容由 agent 分析(软) — 槽固定、内容软。其余(事件、台账、stat、关联、锚点)全部机械。
-- 近期动态 = 机械活动时间线: 索引日期列的工作区事件(计划创建/完成、迭代开启/关闭、笔记新增、交接生成) + **已登记关键代码仓库**的 commit(`.agentspace-repos`, 每仓库 3 条, 带 stat 与 iteration 关联; 空登记回退单宿主探测并标注"未登记") + 工作区自身台账 commit(类型前缀映射中文, 如 plan:→计划 / fix:→修复)。
+- 近期动态 = 机械活动时间线: 索引日期列的工作区事件(计划创建/完成、迭代开启/关闭、实验登记/完成、笔记新增、交接生成) + **已登记关键代码仓库**的 commit(`.agentspace-repos`, 每仓库 3 条, 带 stat 与 iteration 关联; 空登记回退单宿主探测并标注"未登记") + 工作区自身台账 commit(类型前缀映射中文, 如 plan:→计划 / fix:→修复)。
 - 版本闸门: 工作区脚本是工作区侧资产, 只有 /agentspace-update 会更新; 旧工作区在新型插件下也会产出旧格式输出, 而旧脚本本身无法告警漂移 — 闸门是唯一能捕获此场景的位置。
