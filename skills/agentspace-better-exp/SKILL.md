@@ -1,6 +1,6 @@
 ---
 name: agentspace-better-exp
-description: Experiment-design interrogation for AGENTSPACE workspaces (x-grilling style). Activate ONLY when BOTH hold — (1) an AGENTSPACE workspace exists in the project root, AND (2) the user explicitly asked for agentspace-exp or has confirmed recording this experiment into exp (an exp manual exists or is about to be created). Interview one question at a time across five axes — fixed and reasonable scope; baseline and control fairness; measurement accuracy (metric definitions, iterations and warmup, timing hygiene, seeds and variance); data completeness (raw logs and configs captured in full to support later reports); reproducibility and stopping criteria — each question with a recommended answer; facts readable from the environment are looked up, never asked; act only after shared understanding is confirmed. Do NOT activate for casual experiment discussion without opt-in, or to enroll correctness-verification runs — enrollment always requires explicit user confirmation, never automatic.
+description: Experiment-design interrogation for AGENTSPACE workspaces (x-grilling style). Activate ONLY when BOTH hold — (1) an AGENTSPACE workspace exists in the project root, AND (2) enrollment was confirmed via the agentspace-exp trigger (explicit /agentspace-exp request or accepted one-time offer; exp manual existing or about to be created). Interview one question at a time over five axes — fixed, reasonable scope; baseline/control fairness; measurement accuracy (metric definitions, warmup, timing hygiene, seeds/variance); data completeness (raw logs and configs captured in full for later reports); reproducibility/stopping criteria — each with a recommended answer; facts readable from the environment are looked up, never asked; act only after shared understanding is confirmed. Do NOT activate for casual experiment discussion, or to enroll correctness-verification runs — enrollment always requires explicit user confirmation, never automatic.
 ---
 
 # Better Experiments (agentspace-better-exp)
@@ -9,7 +9,7 @@ description: Experiment-design interrogation for AGENTSPACE workspaces (x-grilli
 
 ## 0. Iron rules
 
-1. **Post-consent only** — this skill activates after the user opted into recording the experiment (explicit agentspace-exp request, or accepted your one-time offer). Never activate to make the offer itself; never enroll correctness-verification runs.
+1. **Post-consent only** — this skill activates after the user opted into recording the experiment through the agentspace-exp trigger (explicit /agentspace-exp request, or accepted your one-time offer). Never activate to make the offer itself; never enroll correctness-verification runs.
 2. **One question at a time** — wait for each answer before the next; every question carries your recommended answer (the interviewer is never a blank interrogator).
 3. **Facts vs decisions** — anything readable from the environment (repo state, existing configs, tests.md environment, utils tools, prior notes/iterations) is looked up, never asked. Only genuine decisions go to the user.
 4. **No launch before consensus** — the experiment is neither registered nor run until the user confirms shared understanding; the manual's 实验问题与范围 and 假设与预期 sections are the written proof of that consensus.

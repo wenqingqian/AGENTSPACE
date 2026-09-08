@@ -15,7 +15,7 @@
 
 ## AGENTSPACE
 
-本项目的实验与迭代状态由 `AGENTSPACE/` 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、utils(复用工具)、tests(环境与测试)、notes(知识)。
+本项目的实验与迭代状态由 `AGENTSPACE/` 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、exp(实验记录)、utils(复用工具)、tests(环境与测试)、notes(知识)。
 
 ### 何时读取 AGENTSPACE/AGENTS.md
 
@@ -28,6 +28,6 @@
 ### 硬规则
 
 - AGENTSPACE 初始化只通过显式 `/agentspace-init` 命令, 绝不自动创建
-- AGENTSPACE 的索引/条目状态(plan.md、iterations.md、exp.md、各 index.md)只能由 `AGENTSPACE/scripts/` 下的脚本改写; 实验(exp)只在用户显式要求走 agentspace-exp 或经确认提议后登记
+- AGENTSPACE 的索引/条目状态(plan.md、iterations.md、exp.md、各 index.md)只能由 `AGENTSPACE/scripts/` 下的脚本改写; 实验(exp)只在用户显式要求走 /agentspace-exp(命令或同名触发器 skill)或经确认提议后登记, 设计对齐走 agentspace-better-exp、报告走 agentspace-better-exp-report
 - commit 门: 在已登记关键代码仓库(AGENTSPACE/.agentspace-repos)执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 并通过; 未登记仓库先登记(用户确认)后提交
 - 禁止读取插件开发数据: `skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等与项目无关, 不在 AGENTSPACE 管理范围内

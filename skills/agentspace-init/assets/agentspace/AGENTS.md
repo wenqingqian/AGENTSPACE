@@ -71,8 +71,8 @@ AGENTSPACE/
   3. fallback → 在工作区找到本轮产出的结果文件, `mv` 进 `iteration_NNNN/data/`
 
 ### exp —— 实验记录 (exp.md + exp/)
-- **what**: 独立登记的实验(度量/验证/调研)。分工: plan 管"为什么/做什么", iteration 管"改代码", exp 管"测代码"; exp 可不关联 plan/iteration(纯度量/调研实验), 关联时经索引的 关联 plan / 关联 iteration 列记录(agentspace-exp 即本模块工作流的称谓, 非斜杠命令)
-- **when**: **用户显式要求走 agentspace-exp, 或 agent 在用户提到要做实验时提议并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill
+- **what**: 独立登记的实验(度量/验证/调研)。分工: plan 管"为什么/做什么", iteration 管"改代码", exp 管"测代码"; exp 可不关联 plan/iteration(纯度量/调研实验), 关联时经索引的 关联 plan / 关联 iteration 列记录(agentspace-exp 是本模块的触发器 — `/agentspace-exp` 命令 + 同名 skill, 持有登记门与生命周期; 设计对齐/报告由 better-exp 系列两个正式 skill 承担)
+- **when**: **用户显式要求走 /agentspace-exp, 或 agent 在用户提到要做实验时提议一次并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill
 - **how**: `scripts/new-exp.sh "标题" [--plan NNNN] [--iteration NNNN]` → 实验配置**必须**写入 `examples/exp_spec/exp_NNNN/`(脚本预创建) → 运行与结果**全量**落 `exp/exp_data/exp_NNNN/`(关联 iteration 的 data/ 产物复制一份至此; 该目录不入 git, 为本机权威记录) → `scripts/start-exp.sh <id>`(开跑, todo→doing; 小实验可省略) → `scripts/complete-exp.sh <id> <done|failed|abandoned> "结果" [--commit "仓库名@sha,..."]`
 - **commits 语义**: exp 记录测试用关键仓库的 commit **点**(repo@sha, 关闭时落定), 与 iteration 的 commit 窗口(起始/结束)互补; 报告与作图走 agentspace-better-exp-report skill
 
@@ -117,7 +117,7 @@ AGENTSPACE/
 规则分级: `[MUST]` 违反会造成损坏/不可逆; `[SHOULD]` 最佳实践; `[MAY]` 可选。
 
 - **[MUST] scripts-only**: plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md 与 .agentspace-repos **只能由 scripts/ 改写**, 禁止手工编辑
-- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。exp 只在用户显式要求走 agentspace-exp、或 agent 提议并经用户确认后创建; 开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)
+- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建; 开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)
 - **[MUST] commit 门**: 登记仓库 commit 前必过 `scripts/commit-check.sh <仓库> "<message>"`(见 关键代码仓库 节); 未登记仓库先登记后提交; 登记/出册必须用户显式确认
 - **[MUST] 并行工作区约定**: 多 plan 并行开发走 agentspace-parallel skill(PR-like 本地泳道)。固定位置 `worktrees/<plan-id>/<仓库名>/` 与锁目录 `.locks/` 在**项目根**(非 AGENTSPACE/ 内); 内嵌形态下宿主仓库必须先经 .gitignore 豁免这两个路径(锁 owner 文件含记账 id 字面量, 被 `git add -A` 扫入会触发 commit 门)。并行期台账写操作: 脚本自带锁, 内容文档写前取 `.locks/ledger/`; 永不 `git -C AGENTSPACE add -A` 一把梭(逐路径 add)
 - **[MUST] 收尾协议**: 结束项目工作前依次执行 — ① 更新进行中 readme 的"当前状态 · 下一步" ② 运行 `scripts/doctor.sh`(硬错误必须解决, 告警报告用户) ③ 里程碑提交

@@ -331,6 +331,18 @@ edit(f"{WS}/examples.md", "> tests/ 放入口脚本(如何跑), examples/ 放配
         "> tests/ 放入口脚本(如何跑), examples/ 放配置(用什么参数跑)。\n> exp_spec 子树除外: 所有经 agentspace-exp 登记的实验, 其配置必须写入 `examples/exp_spec/exp_NNNN/`(由 new-exp.sh 预创建); 该子树由 exp/index.md 的配置列索引, 不在本表登记。",
         "v1.3.0", "examples.md: exp_spec 说明行")
 
+# --- v1.3.1: exp 模块触发器措辞 (8b per the v1.3.1 changelog — agentspace-exp
+#     becomes a command+skill trigger, no longer a bare workflow name) ---
+edit(A, "(agentspace-exp 即本模块工作流的称谓, 非斜杠命令)",
+        "(agentspace-exp 是本模块的触发器 — `/agentspace-exp` 命令 + 同名 skill, 持有登记门与生命周期; 设计对齐/报告由 better-exp 系列两个正式 skill 承担)",
+        "v1.3.1", "AGENTS.md exp 模块: what 行触发器表述")
+edit(A, "- **when**: **用户显式要求走 agentspace-exp, 或 agent 在用户提到要做实验时提议并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill",
+        "- **when**: **用户显式要求走 /agentspace-exp, 或 agent 在用户提到要做实验时提议一次并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill",
+        "v1.3.1", "AGENTS.md exp 模块: when 行 /agentspace-exp")
+edit(A, "exp 只在用户显式要求走 agentspace-exp、或 agent 提议并经用户确认后创建",
+        "exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建",
+        "v1.3.1", "AGENTS.md 纪律: 创建前确认行 /agentspace-exp")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)

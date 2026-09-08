@@ -75,15 +75,9 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 2. 把可迁移教训沉淀进 notes(模板 `templates/note.md`, 来源 `plan:NNNN`); 打主题标签为建议(可选)
 3. 里程碑提交
 
-### 跑实验 → 登记 exp(仅限主动登记)
+### 跑实验 → agentspace-exp skill(仅限主动登记)
 
-**实验登记 (MUST)**: 只有用户显式要求走 agentspace-exp、或你在听到实验意向时提议一次并经用户接受后才登记 exp —— 开发收尾的正确性验证绝不自动登记。登记前先用 agentspace-better-exp skill 对齐设计。分工 — plan = 为什么/做什么, iteration = 改代码, exp = 测代码; exp 可不关联 plan/iteration; 关联时把 iteration data/ 复制进 exp_data(权威全量记录)。报告与作图走 agentspace-better-exp-report skill。
-
-```bash
-AGENTSPACE/scripts/new-exp.sh "English experiment title" [--plan NNNN] [--iteration NNNN]   # 配置落入 examples/exp_spec/exp_NNNN/(硬性要求)
-AGENTSPACE/scripts/start-exp.sh <id>                     # 开跑 todo→doing(小实验可省略); 完整日志 → exp/exp_data/exp_NNNN/
-AGENTSPACE/scripts/complete-exp.sh <id> <done|failed|abandoned> "结果一句话" [--commit "仓库名@sha,..."]
-```
+**实验登记 (MUST)**: exp 记录一律经 agentspace-exp skill —— 由显式 `/agentspace-exp` 命令触发, 或用户接受其在实验意向时的一次性提议后触发; 开发收尾的正确性验证绝不登记。设计对齐与报告分别委托 agentspace-better-exp / agentspace-better-exp-report skill。
 
 ### 历史检索(结果定位 / 哪个 plan 动过文件 Y)
 - 小范围: `grep -rn <关键词> plan iterations notes`(排除 `data/`)

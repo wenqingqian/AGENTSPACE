@@ -46,8 +46,17 @@ for field in ("composerIcon", "logo"):
         raise SystemExit("invalid interface asset " + field)
 PYEOF
 
-for command in init update doctor handoff-produce handoff-consume status mode; do
+for command in init update doctor handoff-produce handoff-consume status mode exp; do
   [ -f "$REPO/commands/agentspace-$command.md" ] || fail "existing command missing: agentspace-$command"
+done
+# reverse completeness: every command file on disk must be in the list above —
+# a new command added without extending the list would silently lose its guard
+for f in "$REPO"/commands/agentspace-*.md; do
+  base="$(basename "$f" .md)"; base="${base#agentspace-}"
+  case " init update doctor handoff-produce handoff-consume status mode exp " in
+    *" $base "*) ;;
+    *) fail "command file not covered by the t20 list: $base" ;;
+  esac
 done
 
 for doc in "$REPO"/skills/*/SKILL.md "$REPO"/skills/*/SKILL.zh-CN.md; do

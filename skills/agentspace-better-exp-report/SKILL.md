@@ -1,6 +1,6 @@
 ---
 name: agentspace-better-exp-report
-description: Experiment-report writing guidance for AGENTSPACE workspaces — figure craft and prose standards when summarizing experiment results (typically from exp/exp_data records). Activate when the user asks for an experiment report, summary, analysis or figures from recorded experiment data, or when a registered exp closes with reporting requested. Covers figures (check the project's utils/ plotting tools first; colorblind-safe palette with one series-to-color mapping reused across all figures; units on every axis; error bars with stated n and std-vs-CI semantics; self-contained labels) and prose (Chinese base with established English technical terms; no ambiguous single-character shorthand like 门 or 臂; completeness over compression; and self-containment as the core rule — readers cannot see the agent's memory or context, so every symbol, acronym, condition and abbreviation is defined at first use, and every claim cites its figure, table and data path).
+description: Experiment-report writing guidance for AGENTSPACE workspaces — figure craft and prose standards when summarizing experiment results (typically from exp/exp_data records). Activate when the user asks for an experiment report, summary, analysis or figures from recorded experiment data, or when a registered exp closes with reporting requested. Covers figures (check the project's utils/ plotting tools first; colorblind-safe palette with one series-to-color mapping reused across all figures; units on every axis; error bars with stated n and std-vs-CI semantics; self-contained labels) and prose (Chinese base, English only for community-default terms; no ambiguous single-character shorthand like 门 or 臂; completeness over compression; and self-containment as the core rule — readers cannot see the agent's memory or context, so every symbol, acronym, condition and abbreviation is defined at first use, and every claim cites its figure, table and data path).
 ---
 
 # Better Experiment Reports (agentspace-better-exp-report)
@@ -33,11 +33,11 @@ description: Experiment-report writing guidance for AGENTSPACE workspaces — fi
 
 - Self-contained labels — a figure plus its legend must survive being quoted alone: series defined (what "A" and "B" actually are), conditions stated, units present.
 - No bare symbols — an axis labeled "x" or a legend entry "m3" carries no meaning alone; write what they are.
-- Language — Chinese labels with established English technical terms, matching the prose rules in §2.
+- Language — Chinese labels; English only for community-default terms, matching the prose rules in §2.
 
 ## 2. Prose
 
-- **Chinese base, selective English** — established technical terms stay English (throughput, gate, expert, top-1 accuracy); a single common English word beats an awkward Chinese compound when it is the community default.
+- **Chinese base, English by community default** — the test for keeping a term in English is whether the field's community uses that term by default, never membership in a fixed whitelist (no list covers the vocabulary correctly). A passing term (e.g. throughput, top-1 accuracy) stays English; a term the community already expresses in Chinese is written in Chinese. Coin neither awkward Chinese compounds nor invented English.
 - **No ambiguous shorthand** — single characters like 门 (gate) or 臂 (arm / expert path) carry no meaning out of context; replace with the full common description or the English term itself.
 - **Completeness over compression** — do not compress into ambiguity; a longer clear sentence beats a shorter cryptic one. Brevity comes from cutting what does not matter, never from cryptic wording.
 - **Self-containment (core rule)** — the reader cannot see your memory or context: every symbol, acronym, condition and abbreviation is defined at first use; every claim carries its evidence (figure or table number plus the data path under exp_data); assumptions stated; negative and inconclusive results reported, not buried.

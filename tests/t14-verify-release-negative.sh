@@ -87,6 +87,18 @@ assert_output_contains "$OUT" "[14]"
 assert_output_contains "$OUT" "invalid frontmatter YAML"
 cp "$REPO/skills/agentspace/SKILL.md" "$SKF"
 
+# [14] negative, length class: a description over 1000 characters (valid YAML,
+# over the cap) must fail the same check — the cap value itself is guarded
+# (1024 vs 1000 regressions pass silently without this case). The filler is
+# appended on the same line so the description stays one YAML scalar.
+awk 'NR==3 { printf "%s ", $0; for (i = 0; i < 600; i++) printf "x"; printf "\n"; next } { print }' "$SKF" > "$SKF.tmp" \
+  && mv "$SKF.tmp" "$SKF"
+OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"
+assert_output_contains "$OUT" "[fail]"
+assert_output_contains "$OUT" "[14]"
+assert_output_contains "$OUT" "over 1000 chars"
+cp "$REPO/skills/agentspace/SKILL.md" "$SKF"
+
 # planted defects all restored → the gate must pass again
 OUT="$(bash "$SB/verify-release.sh" 2>&1 || true)"
 assert_output_contains "$OUT" "[pass] release-ready"

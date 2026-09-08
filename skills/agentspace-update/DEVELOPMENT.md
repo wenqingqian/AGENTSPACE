@@ -136,6 +136,8 @@ Key fields:
 
 **SKILL size budget (MUST)**: `skills/agentspace/SKILL.md` stays ≤ 120 lines. New guidance goes into `assets/agentspace/AGENTS.md` (which the skill keeps in context via §1) unless it is an ACTION (what to do), not background. If the budget is exceeded, move detail down to AGENTS.md.
 
+**Description budget (MUST)**: every SKILL/command frontmatter description stays ≤ 1000 characters (verify-release [14] enforces the hard cap; hosts refuse 1024+). Keep ~50 chars of headroom (aim ≤ 950) — a description parked at the cap makes every future wording tweak a release-blocking trim.
+
 **Bilingual sync check (MUST, every release)**: `SKILL.md` and `SKILL.zh-CN.md` must have the same section structure and order. Compare heading LEVEL sequences (text differs by language, so compare `#`/`##`/`###` markers only):
 ```bash
 grep -o '^#\{1,3\}' skills/agentspace/SKILL.md > /tmp/skill-en

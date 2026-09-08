@@ -362,24 +362,19 @@ bilingual() {
   fi
   rm -f "$en" "$zh"
 }
-bilingual "$ROOT/skills/agentspace"
-bilingual "$ROOT/skills/agentspace-update"
-bilingual "$ROOT/skills/agentspace-doctor"
-bilingual "$ROOT/skills/agentspace-status"
-bilingual "$ROOT/skills/agentspace-code-clean"
-bilingual "$ROOT/skills/agentspace-init"
-bilingual "$ROOT/skills/agentspace-mode"
-bilingual "$ROOT/skills/agentspace-parallel"
-bilingual "$ROOT/skills/agentspace-handoff"
-bilingual "$ROOT/skills/agentspace-better-exp"
-bilingual "$ROOT/skills/agentspace-better-exp-report"
+# derived from the skills/ directory (a hardcoded list would silently stop
+# covering the next skill someone adds without editing it)
+for _skill_dir in "$ROOT"/skills/*/; do
+  bilingual "${_skill_dir%/}"
+done
 # mechanism-parity spot checks: load-bearing upgrade rules must exist in BOTH
 # languages — heading/token parity cannot catch a missing rule paragraph
 # (e.g. the skip-missing-archive rule once existed only in SKILL.md).
 # Each pair belongs to ONE skill; grep that skill's two files.
 for pair in "skills/agentspace-update|skip to the next existing archive|跳过缺失的中间档案" \
             "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身" \
-            "skills/agentspace-better-exp|enrollment always requires explicit user confirmation, never automatic|登记必须经用户显式确认, 绝不自动进行"; do
+            "skills/agentspace-better-exp|enrollment always requires explicit user confirmation, never automatic|登记必须经用户显式确认, 绝不自动进行" \
+            "skills/agentspace-exp|at most once per session|同一会话内最多提议一次"; do
   skill="${pair%%|*}"; rest="${pair#*|}"
   en="${rest%%|*}"; zh="${rest#*|}"
   grep -Fq -- "$en" "$ROOT/$skill/SKILL.md" || {
@@ -497,8 +492,9 @@ fi
 # the host parses at load time; an unquoted description containing a ": "
 # sequence (e.g. "candidates (...): they never block") breaks the mapping and
 # the skill fails to load for users — invisible to every text-level check, so
-# it must be parsed for real here. The host also rejects a description over
-# 1024 characters at load time, so the cap is enforced on the same pass.
+# it must be parsed for real here. Descriptions are capped at 1000 characters
+# (user-set limit with headroom under the host's 1024 hard refusal), enforced
+# on the same pass.
 # PyYAML's error class matches the hosts'; a missing yaml module fails closed
 # (pip install pyyaml) rather than letting the gate pass unverified.
 echo "[14] skill/command frontmatter YAML"
@@ -517,8 +513,8 @@ for f in sys.argv[1:]:
         print(f"  [issue] invalid frontmatter YAML: {f}: {mark}"); bad += 1
         continue
     d = re.search(r"^description:\s*(.*)$", m.group(1), re.M)
-    if d and len(d.group(1)) > 1024:
-        print(f"  [issue] description over 1024 chars ({len(d.group(1))}): {f}"); bad += 1
+    if d and len(d.group(1)) > 1000:
+        print(f"  [issue] description over 1000 chars ({len(d.group(1))}): {f}"); bad += 1
 sys.exit(1 if bad else 0)
 EOF
 )"

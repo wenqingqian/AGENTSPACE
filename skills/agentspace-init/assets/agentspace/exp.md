@@ -2,7 +2,7 @@
 
 > 本文件是入口视图, 由 scripts/ 维护(new-exp.sh / start-exp.sh / complete-exp.sh), 请勿手工编辑。
 > 完整历史见 [exp/index.md](exp/index.md); 单个实验手册在 exp/todo|doing|done/ 下, 按需读取。
-> exp 只在用户显式要求走 agentspace-exp、或 agent 提议并经用户确认后登记(见 AGENTS.md exp 模块节)。
+> exp 只在用户显式要求走 /agentspace-exp、或 agent 同一会话内最多提议一次并经用户确认后登记(见 AGENTS.md exp 模块节)。
 
 ## Todo
 

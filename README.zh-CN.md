@@ -55,16 +55,17 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | Skill | 触发方式 | 功能 |
 | --- | --- | --- |
 | `agentspace` | 自动(带守卫) | 涉及实验/代码改动/迭代的会话中的日常管理; 项目无关会话不介入 |
-| `agentspace-init` | 仅显式 | 初始化工作区 — 唯一入口, 幂等; 分析项目后询问 goal/运行环境/关键代码仓库 |
+| `agentspace-init` | 仅显式 | 初始化工作区 — 唯一入口, 幂等 |
 | `agentspace-update` | 仅显式 | 把工作区迁移到当前插件版本; 默认保守, `--force` 激进 |
-| `agentspace-doctor` | 仅显式 | 深度健康检查: 确定性一致性 + `--minor` 逐文件审查 + `--major` 跨历史审计 + `--fix` 分级修复; 绝不自动触发 |
-| `agentspace-status` | 仅显式 | 状态工作台: 项目总览 + 现状 + 软告警(现状快照, 无"下一步"叙述) |
-| `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理外部依赖白名单 |
-| `agentspace-handoff` | 仅显式 | 一次性会话交接: 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
-| `agentspace-code-clean` | 场景触发 — 登记仓库每次 commit 前 | commit 门与卫生规范: 暂存文件、新增代码/注释行与 message 草稿都必须先过 `AGENTSPACE/scripts/commit-check.sh`; 记账 id 与实验产物永不进入代码仓库 |
-| `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区: 每个 plan 一条泳道(`worktrees/<plan-id>/<仓库名>/`, 分支 `plan-<id>`)从记录在案的主线基点切出; 实施与验证全部在泳道内完成; 用户确认后 CAS squash 合回 — 主线恰好落一个 commit; 纯本地, push 仍是用户显式动作; 多 agent 协同经 `AGENTSPACE/scripts/parallel-workspace.sh`(共享 plan 状态表 doing/test/merge + 异步便签) |
-| `agentspace-better-exp` | 场景触发 — 用户选择登记实验之后(显式要求走 agentspace-exp 或接受提议) | 实验设计讯问(x-grilling 实验特化版): 每次一问, 沿五轴推进 — 范围、基线与对照公平、测量准确(指标定义/迭代数与 warmup/计时口径/种子与方差)、数据完整、可复现与终止判据 — 每问附推荐答案; 事实查环境不问用户; 共识确认后才行动。绝不自动登记实验; 开发收尾的正确性验证不经用户确认不入册 |
-| `agentspace-better-exp-report` | 场景触发 — 基于已记录实验数据写报告/总结/图时 | 报告写作规范: 先复用项目 `utils/` 的做图工具; 色盲友好配色且全套图一套系列-颜色映射、坐标轴带单位、误差棒注明 n; 文字规则 — 中文为主保留公认英文术语、不用"门/臂"等歧义单字缩称、完整优先于精简、自完备为核心规则(阅读者看不到 agent 的记忆: 每个符号首次出现即定义, 每个结论标注图与数据路径) |
+| `agentspace-doctor` | 仅显式 | 深度健康检查 — 确定性一致性 + `--minor` 逐文件审查 + `--major` 跨历史审计 + `--fix` 分级修复 |
+| `agentspace-status` | 仅显式 | 状态工作台 — 项目总览、现状、软告警 |
+| `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理依赖白名单 |
+| `agentspace-handoff` | 仅显式 | 一次性会话交接 — 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
+| `agentspace-exp` | 显式 — `/agentspace-exp`; 场景 — 实验意向时的一次性提议 | 实验记录 — 持有登记门(仅限主动; 开发收尾的正确性验证绝不登记)并驱动手册生命周期; 设计对齐委托 agentspace-better-exp, 报告委托 agentspace-better-exp-report |
+| `agentspace-code-clean` | 场景触发 — 登记仓库每次 commit 前 | commit 门与卫生规范 — 暂存文件、新增代码/注释行与 message 必须先过 `commit-check.sh`; 记账 id 与实验产物永不进入代码仓库 |
+| `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区 — 每个 plan 一条泳道, 泳道内实施与验证, 用户确认后 CAS squash 合回主线恰好一个 commit |
+| `agentspace-better-exp` | 场景触发 — 用户选择登记实验之后 | 开跑前的实验设计讯问 — 五轴(范围、基线与对照公平、测量准确、数据完整、可复现与终止), 每次一问并附推荐答案 |
+| `agentspace-better-exp-report` | 场景触发 — 基于已记录实验数据写报告/总结/图时 | 实验报告的作图与文字规范 — 复用项目做图工具、色盲友好配色、误差棒注明 n; 自完备是核心文字规则 |
 
 ### 命令(ZCode 便捷入口)
 
@@ -76,6 +77,7 @@ ZCode 上每个显式 skill 另有斜杠命令, 经命令的 `skills:` 前置字
 /agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查      (skill agentspace-doctor)
 /agentspace-status                              # 状态工作台        (skill agentspace-status)
 /agentspace-mode                                # 模式控制          (skill agentspace-mode)
+/agentspace-exp [标题]                          # 登记实验 — 登记门 + 生命周期(skill agentspace-exp)
 /agentspace-handoff-produce [--name <名>] [--description <说明>]  # 会话收尾(skill agentspace-handoff)
 /agentspace-handoff-consume [--name <名>] [--keep]                # 会话开始(skill agentspace-handoff)
 ```
@@ -121,6 +123,7 @@ commands/                         # ZCode 斜杠命令(轻量包装, 经 skills:
 ├── agentspace-doctor.md
 ├── agentspace-status.md
 ├── agentspace-mode.md
+├── agentspace-exp.md
 ├── agentspace-handoff-produce.md
 └── agentspace-handoff-consume.md
 skills/                           # 功能交付单元 — 跨平台可移植
@@ -131,10 +134,11 @@ skills/                           # 功能交付单元 — 跨平台可移植
 ├── agentspace-status/            # 状态工作台(仅显式)
 ├── agentspace-mode/              # 模式控制(仅显式)
 ├── agentspace-handoff/           # 会话交接(仅显式)
-├── agentspace-code-clean/        # 登记关键仓库的 commit 门与卫生规范(场景触发, 无命令包装)
-├── agentspace-parallel/          # 本地 PR-like 并行工作区(场景触发, 无命令包装)
-├── agentspace-better-exp/        # 实验设计讯问(场景触发, 无命令包装)
-└── agentspace-better-exp-report/ # 实验报告/作图写作规范(场景触发, 无命令包装)
+├── agentspace-exp/               # 实验记录 — 登记门 + 生命周期(触发器; 命令 /agentspace-exp)
+├── agentspace-code-clean/        # 登记关键仓库的 commit 门与卫生规范(场景触发)
+├── agentspace-parallel/          # 本地 PR-like 并行工作区(场景触发)
+├── agentspace-better-exp/        # 实验设计讯问(场景触发)
+└── agentspace-better-exp-report/ # 实验报告/作图写作规范(场景触发)
 tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  push-retry.sh   # 发布工具(仓库侧, 不随插件分发)
 ```
 
@@ -148,17 +152,18 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
-| v1.3.0 | 2026-09-08 | 实验记录(agentspace-exp): 新增内置 `exp` 模块 — `exp.md` 入口视图 + `exp/{index.md, todo/, doing/, done/, exp_data/exp_NNNN/}` 与三个脚本(`new-exp.sh` / `start-exp.sh` / `complete-exp.sh`); 登记仅限主动(用户显式要求走 agentspace-exp 或接受一次性提议 — 开发收尾的正确性验证绝不自动登记); 每个登记 exp 的配置必须写入 `examples/exp_spec/exp_NNNN/`(complete-exp 对空目录拒绝关闭), 完整实验记录本机全量保存在 exp_data(关联 iteration 的 data/ 复制一份); 索引关联 plan/iteration、测试用 commit 点(repo@sha)与配置文件名; commit 门禁令扩展 `exp_0NNN`(message + 新增行); doctor [16] exp 一致性(--fix 下节↔目录对账) + notes 接受 `exp_NNNN` 来源; status 工作台展示 exp 计数/Doing/事件; 两个新 skill — agentspace-better-exp(开跑前五轴实验设计讯问)与 agentspace-better-exp-report(作图规范 + 自完备文字规则); verify [8] 覆盖两新 skill(并补 handoff), [12] 守卫 exp 实字面量, [13] 强制 exp_data gitignore 合同 |
-| v1.2.5 | 2026-09-08 | agentspace-code-clean 英文 description 从 1094 字符裁剪到 890 — 宿主对 skill description 强制 1024 字符上限, 超长即拒绝加载; 仅删正文已详述的冗余细节(禁令逐字展开、扩网分隔符示例、批量审查实现形容词), 触发关键信息全保留(何时激活/commit-check.sh 门/未登记禁 commit/候选仅报告/批量审查仅显式); 中文 description(528 字符)不超标未动; 仅插件侧 skill 文本, 无工作区/结构变更 |
-| v1.2.4 | 2026-09-08 | SKILL.md 前置 YAML 修复(用户实证): 三份 description 含 `): ` 冒号+空格序列 — 无引号 YAML 纯量内的 mapping 指示符 — 导致 PyYAML 宿主报 "mapping values are not allowed in this context"、skill 无法加载; 改写为 `) —`(agentspace-code-clean 双语)与 `激活 — (1)`(agentspace 中文版, 与英文版 em-dash 风格对齐), 词语零变化仅标点; 发布门新增 [14] 检查(真实 PyYAML 解析全部 skill/命令前置块, t14 补反向用例), 此类缺陷不再可能发布; 仅插件侧 skill 文本, 无工作区/结构变更 |
-| v1.2.3 | 2026-09-08 | parallel-workspace.sh 三处修复(audit + expert 咨询): MERGELOCK 戳解析补 GNU `date -d` 回退(修复 stale-merge 接管在 Linux 上静默失效 — BSD 专有的 `date -j -f` 报错被吞、卡死的 merge 槽每次都退化为 60s 等待 + 手动恢复); 自由文本字段以反斜杠结尾在解析期硬拒(exit 3 — 尾随 `\` 会与行内 `\|` 分隔符融合, 下一次读改写把 desc/info 两列静默合并); 幂等 `--merge` 现在重写 MERGELOCK 戳 — 语义变更: 15 分钟 stale 窗改为按持有者最后一次 merge 活动起算(重入即 proof-of-life, 阈值只检测死亡、不再误杀超长 merge); 仅脚本面(由 step 8a 自动替换), 无结构/AGENTS.md 变更 |
-| v1.2.2 | 2026-09-08 | as_lock 三处加固(expert 审查驱动的安全修复): 获取等待上限(`AS_LOCK_TIMEOUT_SECONDS`, 默认 120s — 存活超过上限的持有者必是卡死的 writer, 等待者报出 pid 后 exit 非 0, stale 接管不受此限)、mkdir 后先写占位 pid 收窄无 trap 崩溃窗口(该窗口留下的锁可被立即 stale 接管, 不必幽灵等满 mtime 宽限)、pid 复用 mtime 二级宽限(`AS_LOCK_STALE_HOURS`, 默认 6h — 锁 mtime 即获取时刻且持有期不刷新, 老锁上的活 pid 必是复用 pid); 两条常量 env 可预置、数值消毒、readonly, 已录入 architecture.json; 仅脚本面(由 step 8a 自动替换), 无结构/AGENTS.md 变更 |
-| v1.2.1 | 2026-09-07 | new-plan slug 硬校验: plan 标题必须产出合规 slug(小写英文词、数字、单连字符); 中文/大写/下划线/尾连字符/空 slug 标题在任何写入前被硬拒且不消耗 id — 只对未来新建生效, 存量 plan 文件与索引行不动 |
-| v1.2.0 | 2026-09-07 | 协同 agent workspace: 新增 `AGENTSPACE/scripts/parallel-workspace.sh` — 共享 plan 状态表(doing/test/merge)+ 异步便签, 单把文件锁 + 原子写, merge 槽全表独占(短窗铁律)+ 15 分钟 MERGELOCK stale 接管; 数据文件 `.agentspace-parallel-workspace.txt`(台账内, gitignore)+ agentspace-parallel skill 四项增强: 固定 worktree 路径 MUST、主线历史改写探测(其本身绝不构成冻结)、合回前后双报告层挂点、§6.5 协同表登记 |
-| v1.1.0 | 2026-09-07 | AGENTS.md 新增用户所有的 用户规则 节 + 纪律 新增两条 MUST(用户规则守护 / 注释卫生; 经 /agentspace-update step 8b 一次性拆分迁移)+ commit 门新增只报告的扩网候选(plan/iteration 词与数字相邻、任意分隔符 — 永不阻断, 由 agent 逐条裁决并给出理由)+ doctor --major 新增块 6/7(notes 内容质量审核带证据链; 跨 plan 冲突审核 — 重复/交叠明确不算发现)+ code-clean 新增批量注释审查(全文件、多 subagent、只报告、仅显式触发) |
-| v1.0.1 | 2026-09-05 | agentspace-parallel 行为修正: 改动面交集(文件级或语义级)不再阻塞准入 — §2 交集扫描降级为纯信息动作; 唯一阻塞点钉死在合回(§7h: 冲突 hunk / 退役面命中 / 结构性 absorb / 重测失败任一 → 冻结 merge, 与用户讨论处理计划后泳道内更新重测) |
-| v1.0.0 | 2026-09-05 | 新 skill `agentspace-parallel` — 本地 PR-like 并行工作区(按 plan 一条泳道、泳道内验证、CAS squash 合回主线恰好一个 commit, 纯本地)+ plan/iteration 创建脚本锁先于 id 分配的竞态修复 + doctor 并行工作区审计覆盖 + status 泳道去重 + plan 模板改动面声明节与 iteration 模板 PR 簿记指引 |
-| v0.6.4 | 2026-09-01 | commit 门记账 id 禁令扩展到新增 diff 行(代码注释/字符串字面量; 删除行永不阻断)+ doctor 新增行内容事后审计 + rubric skill 更名 agentspace-commit → agentspace-code-clean(脚本名 commit-check.sh 不变)+ 发布工具自食防护(verify-release 常量反向校验与已实现字面量守卫) |
+| v1.3.1 | 2026-09-09 | 新增 `/agentspace-exp` 命令 + 触发器 skill(实验记录登记门与生命周期; 设计/报告委托两个 better-exp skill); better-exp-report 文字规范从英文白名单改为社区默认判据; 双 README 重写为单行式 skill 与版本摘要; 发布门 description 上限收紧到 1000 字符 |
+| v1.3.0 | 2026-09-08 | 实验记录(exp 模块)— 主动登记、todo/doing/done 手册生命周期(三脚本)、配置强制入 `examples/exp_spec/`、全量记录本机存 `exp_data/`、commit 门禁 exp id、doctor [16] 一致性, 新增 agentspace-better-exp 与 agentspace-better-exp-report 双 skill |
+| v1.2.5 | 2026-09-08 | agentspace-code-clean 英文 description 1094→890 字符, 适应宿主 1024 字符上限; 触发关键内容全保留 |
+| v1.2.4 | 2026-09-08 | 前置 YAML 热修 — 三份 description 含冒号+空格序列, PyYAML 宿主加载失败; 发布门新增真实 YAML 解析检查 |
+| v1.2.3 | 2026-09-08 | parallel-workspace.sh 三修 — GNU date 回退(Linux 上 stale 接管生效)、尾随反斜杠硬拒(exit 3)、幂等 `--merge` 重写 MERGELOCK(stale 窗自最后活动起算) |
+| v1.2.2 | 2026-09-08 | as_lock 三加固 — 获取等待上限、mkdir 后立即写占位 pid、pid 复用 mtime 宽限(常量可 env 预置) |
+| v1.2.1 | 2026-09-07 | new-plan slug 硬校验 — 不合规标题在任何写入前拒绝且不消耗 id |
+| v1.2.0 | 2026-09-07 | 协同 agent workspace — parallel-workspace.sh 共享 plan 状态表 + 异步便签、单文件锁、独占 merge 槽 + 15 分钟 stale 接管 |
+| v1.1.0 | 2026-09-07 | AGENTS.md 用户规则节 + 两条纪律 MUST; commit 门只报告的扩网候选; doctor `--major` 块 6/7(notes 质量、跨 plan 冲突); code-clean 批量注释审查 |
+| v1.0.1 | 2026-09-05 | agentspace-parallel 行为修正 — 改动面交集不阻塞准入, 唯一阻塞点钉在合回(§7h) |
+| v1.0.0 | 2026-09-05 | 新 skill agentspace-parallel — 本地 PR-like 并行工作区(按 plan 泳道、CAS squash 合回); plan/iteration 创建脚本锁先于 id 竞态修复 |
+| v0.6.4 | 2026-09-01 | commit 门记账 id 禁令扩展到新增 diff 行; skill 更名 agentspace-code-clean; 发布工具自食防护 |
 | v0.6.3 | 2026-08-19 | 新增 Kimi 兼容清单(`kimi.plugin.json`)并纳入三清单版本同步与发布校验; 共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.2 | 2026-08-16 | 新增 Codex 强制插件清单与发布校验; 共享 skill description、正文、工作区 assets 与命令行为保持不变 |
 | v0.6.1 | 2026-08-15 | commit 文本质量: 门 + doctor 空标题规则(lib.sh 单源)+ agentspace-commit 质量 rubric(标题=一句话改动描述, 无实验/run 标识, 标题/正文须与 diff 相关)+ doctor 三维 commit 审计 |

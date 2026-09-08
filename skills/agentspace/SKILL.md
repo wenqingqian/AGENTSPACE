@@ -75,15 +75,9 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 2. Distill transferable lessons into notes (template `templates/note.md`, source `plan:NNNN`); tagging notes with topic keywords is recommended (optional)
 3. Milestone commit
 
-### Run an Experiment → Register exp (opt-in only)
+### Run an Experiment → agentspace-exp skill (opt-in only)
 
-**Experiment enrollment (MUST)**: exp is registered ONLY on the user's explicit agentspace-exp request, or their acceptance of your one-time offer when they mention an upcoming experiment — correctness-verification runs are never auto-enrolled. Align the design with the agentspace-better-exp skill first. Division of labor — plan = why/what, iteration = change the code, exp = measure the code; an exp needs no plan/iteration; a linked exp copies iteration data/ into exp_data (canonical full record). Reports and figures follow the agentspace-better-exp-report skill.
-
-```bash
-AGENTSPACE/scripts/new-exp.sh "English experiment title" [--plan NNNN] [--iteration NNNN]   # configs land in examples/exp_spec/exp_NNNN/ (required)
-AGENTSPACE/scripts/start-exp.sh <id>                     # launch todo→doing (small exps may skip); full logs → exp/exp_data/exp_NNNN/
-AGENTSPACE/scripts/complete-exp.sh <id> <done|failed|abandoned> "result" [--commit "repo@sha,..."]
-```
+**Experiment enrollment (MUST)**: exp records go through the agentspace-exp skill — triggered by the explicit `/agentspace-exp` command, or when the user accepts its one-time offer made on an experiment mention; correctness-verification runs are never enrolled. Design alignment and reporting delegate to the agentspace-better-exp / agentspace-better-exp-report skills.
 
 ### Historical Search (results / which plan touched file Y)
 - Small scope: `grep -rn <keyword> plan iterations notes` (exclude `data/`)
