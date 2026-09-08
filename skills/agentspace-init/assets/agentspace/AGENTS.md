@@ -24,7 +24,7 @@ hybrid
 > AGENTSPACE 自身(台账仓库)永远豁免、永不在册。
 
 - **形态**: 内嵌(工作区在代码仓库内 — 宿主须经 .gitignore 或 .git/info/exclude 豁免 AGENTSPACE/, 宿主历史不出现其内容与 gitlink)或分开存放(仓库在树外, 按路径登记)。形态是派生事实, 不存储。
-- **commit 门(MUST)**: 在登记仓库执行 `git commit` 前, 必须先运行 `scripts/commit-check.sh <仓库> "<message>"` 并通过(exit 0); 未登记仓库(exit 2)先登记后提交。完整规则见 agentspace-code-clean skill。
+- **commit 门(MUST)**: 在登记仓库执行 `git commit` 前, 必须先运行 `scripts/commit-check.sh <仓库> "<message>"` 并通过(exit 0); 未登记仓库(exit 2)先登记后提交。commit 门与全部代码/注释/commit 文本卫生规则见 agentspace-code-clean skill(被动层默认生效; 主动清理既有代码/历史仅经用户显式要求)。
 - **message**: 记账 id(plan:NNNN / iteration_NNNN)与记账叙述永不进入代码仓库 commit; 归属由 iteration readme 的宿主 SHA 记录承担。
 - **文件**: 实验产物(`events.out.tfevents.*`、顶层 wandb/mlruns/lightning_logs、≥50MB blob)阻断; 数据扩展名 ≥100KB 与顶层输出目录为 WARN(agent 结合仓库上下文判断); 阻断后导流: unstage → `mv` 进 iteration_NNNN/data/ → 建议补 .gitignore(须用户同意)。
 - **standalone 模式**: 登记仓库是工作对象, 豁免白名单语义(doctor [13] 不报违规)。
@@ -123,7 +123,7 @@ AGENTSPACE/
 - **[MUST] 收尾协议**: 结束项目工作前依次执行 — ① 更新进行中 readme 的"当前状态 · 下一步" ② 运行 `scripts/doctor.sh`(硬错误必须解决, 告警报告用户) ③ 里程碑提交
 - **[MUST] 脚本报错恢复**: 报错时禁止自行手工编辑表格; 先跑 `scripts/doctor.sh` 定位, 修复方案与用户确认; **经用户明确确认的一次性手工修复是唯一合法例外**
 - **[MUST] 用户规则守护**: 用户规则节的写入/修改/删除只能经用户显式确认; agent 永不自动创建或改写用户规则; agent 提议仅限当前会话内工作或用户指示显现强规则性质时启发式提出(附现象证据), 用户拒绝后同一提议不再重复
-- **[MUST] 注释卫生**: 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文); 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动
+- **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 commit 文本默认遵循 agentspace-code-clean 被动层规则 — 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文), 禁止 why-not-alternative 反馈残留与测试实例引用; 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动; 既有代码/历史的清理与重建仅在用户显式要求时按该 skill 的 CLEANUP 流程执行
 - 内容文档(plan 文档 / iteration readme / exp 手册 / notes / utils / tests)由 agent 直接撰写, 使用 templates/ 模板
 - 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest(latest 会翻转)
 - **里程碑 git 提交**(具体触发点): plan 创建/完成 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 → `git -C AGENTSPACE add -A && commit`, 并告知用户

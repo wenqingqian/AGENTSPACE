@@ -64,7 +64,7 @@ Skills are the functional delivery unit — they behave identically on every sup
 | `agentspace-mode` | Explicit only | Switch workspace mode (hybrid default / standalone); manage the dependency whitelist |
 | `agentspace-handoff` | Explicit only | One-shot session handoffs — produce a context snapshot at session close, consume it (read, then delete) at the next start |
 | `agentspace-exp` | Explicit — `/agentspace-exp`; situational — one-time offer on an experiment mention | Experiment records — holds the enrollment gate (opt-in only; correctness-verification runs never enrolled) and drives the manual lifecycle; delegates design alignment to agentspace-better-exp and reports to agentspace-better-exp-report |
-| `agentspace-code-clean` | Situational — before every commit in a registered key repo | Commit gate and hygiene — staged files, ADDED code/comment lines, and the message must pass `commit-check.sh`; bookkeeping ids and experiment artifacts never enter code repos |
+| `agentspace-code-clean` | Passive default — before every commit in a registered key repo; active level explicit-only | Two-level hygiene — SKILL.md carries the default rule layer (commit gate, comment tiers, commit-text rules; merged union of x-code-clean and x-better-commit), CLEANUP.md the explicit-only post-processing procedures (clean past code/comments over any range, rewrite commit messages, rebuild history safely) |
 | `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces — one worktree lane per plan, in-lane implementation and verification, one CAS squash-merge commit back to mainline after user confirmation |
 | `agentspace-better-exp` | Situational — after the user opts into recording an experiment | Experiment-design interrogation before launch — five axes (scope, baseline/control fairness, measurement accuracy, data completeness, reproducibility/stopping), one question at a time with a recommended answer |
 | `agentspace-better-exp-report` | Situational — writing a report/summary/figures from recorded experiment data | Figure and prose standards for experiment reports — reuse project plotting tools, colorblind-safe palette, error bars with stated n; self-containment is the core prose rule |
@@ -108,6 +108,7 @@ Experiment projects typically have one or more key code repos alongside the work
 - **Registry**: key repos are registered in `AGENTSPACE/.agentspace-repos` (one path per line; registration/removal always requires explicit user confirmation, written only by `scripts/repos.sh`)
 - **Commit gate (MUST)**: before any `git commit` in a registered repo, the agent runs `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commits only on PASS. Blocked: bookkeeping ids (`plan:NNNN` / `iteration_NNNN` / `exp_NNNN` and variant spellings) in the message **and in ADDED code/comment lines**, experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`), blobs ≥ 50MB, and any `AGENTSPACE/` content leaking into the code repo. Blocked experiment output is moved into the iteration's `data/` instead of deleted
 - **Commit-text quality**: the title is a one-line description of the actual change — no experiment/run identifiers, no bookkeeping narrative; attribution lives in the iteration readme (host start/end commit SHAs), never in the code repo
+- **Code hygiene (built-in)**: code, comments, and commit text in registered repos follow the agentspace-code-clean rules by default (comment tiers: delete feedback-driven why-not-alternative residue, redundancy, test-instance citations; commit title/body rules); cleaning up past code or history runs only on the user's explicit request, per the skill's CLEANUP procedures
 - **Ex-post audit**: `scripts/doctor.sh` (key-repo registry consistency, recent-commit discipline audit) plus `/agentspace-doctor` report violations — report-only; history is never rewritten automatically
 
 ## Plugin Structure
@@ -137,7 +138,7 @@ skills/                           # The functional unit — portable across plat
 ├── agentspace-mode/              # Mode control (explicit only)
 ├── agentspace-handoff/           # Session handoffs (explicit only)
 ├── agentspace-exp/               # Experiment records — enrollment gate + lifecycle (trigger; command /agentspace-exp)
-├── agentspace-code-clean/        # Commit gate & hygiene for registered key repos (situational)
+├── agentspace-code-clean/        # Two-level hygiene for registered key repos — passive rules in SKILL.md + explicit-only CLEANUP procedures
 ├── agentspace-parallel/          # Local PR-like parallel workspaces (situational)
 ├── agentspace-better-exp/        # Experiment-design interrogation (situational)
 └── agentspace-better-exp-report/ # Experiment report/figure writing guidance (situational)
@@ -154,6 +155,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.4.0 | 2026-09-09 | agentspace-code-clean restructured into two levels — passive rule layer in SKILL.md (default load; merged rule union of x-code-clean comment tiers and x-better-commit commit-text rules) plus an explicit-only active level (CLEANUP.md post-processing: scope rules, classification, report-then-confirm, commit rewrite, history-rebuild safety); code hygiene becomes a built-in AGENTS.md rule; changelog and README follow the merged commit-text focus rules |
 | v1.3.1 | 2026-09-09 | New `/agentspace-exp` command + trigger skill (experiment-record enrollment gate and lifecycle; design/report delegate to the two better-exp skills); better-exp-report prose rule reframed from an English-term whitelist to a community-default test; READMEs rewritten to one-line skill and release summaries; release-gate description cap tightened to 1000 chars |
 | v1.3.0 | 2026-09-08 | Experiment records (exp module) — opt-in enrollment, manual todo/doing/done lifecycle with three scripts, mandatory configs in `examples/exp_spec/`, local-only full records in `exp_data/`, commit-gate ban on exp ids, doctor [16] consistency, plus two new skills (agentspace-better-exp, agentspace-better-exp-report) |
 | v1.2.5 | 2026-09-08 | agentspace-code-clean EN description trimmed 1094→890 chars to fit the host's 1024-character cap; trigger-critical content intact |

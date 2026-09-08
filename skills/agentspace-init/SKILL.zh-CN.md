@@ -21,11 +21,12 @@ description: /agentspace-init 命令的内部初始化流程——在当前项�
    ```markdown
    <!-- AGENTSPACE -->
    ## AGENTSPACE
-   本项目的实验与迭代状态由 AGENTSPACE/ 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、utils(复用工具)、tests(环境与测试)、notes(知识)。
+   本项目的实验与迭代状态由 AGENTSPACE/ 管理(独立 git 仓库): plan(任务计划)、iterations(代码变更迭代)、exp(实验记录)、utils(复用工具)、tests(环境与测试)、notes(知识)。
    - 何时读取 AGENTSPACE/AGENTS.md: 对话涉及本项目的实验、代码改动、项目迭代或状态查询/变更时 → 先读 AGENTSPACE/AGENTS.md 并按其规则工作
    - 何时不必读取: 与本项目无关的问答、无状态变化的纯查询, 且用户未明确要求使用 AGENTSPACE 时
-   - 硬规则: 初始化只通过显式 /agentspace-init; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写
+   - 硬规则: 初始化只通过显式 /agentspace-init; AGENTSPACE 的索引/条目状态只能由 AGENTSPACE/scripts/ 下的脚本改写; 实验(exp)只在用户显式要求走 /agentspace-exp(命令或同名触发器 skill)或经确认提议后登记, 设计对齐走 agentspace-better-exp、报告走 agentspace-better-exp-report
    - 硬规则(commit 门): 在已登记关键代码仓库(.agentspace-repos)执行 git commit 前, 必须先运行 AGENTSPACE/scripts/commit-check.sh <仓库> "<message>" 并通过; 未登记仓库先登记后提交
+   - 硬规则(代码卫生): 代码/注释/commit 文本卫生遵循 agentspace-code-clean 规则(默认被动层); 对既有代码/历史的清理与重建仅在用户显式要求时执行
    <!-- /AGENTSPACE -->
    ```
 

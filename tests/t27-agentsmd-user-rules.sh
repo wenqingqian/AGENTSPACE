@@ -22,17 +22,18 @@ LAST="$(grep -n '^## ' "$AG" | tail -1)"
 assert_output_contains "$LAST" "用户规则"
 
 # the two new MUSTs live INSIDE 纪律 at the changelog-pinned position:
-# 脚本报错恢复 < 用户规则守护 < 注释卫生 < 内容文档 < 用户规则 section
-for s in "[MUST] 用户规则守护" "[MUST] 注释卫生" "[MUST] 脚本报错恢复" "内容文档("; do
+# 脚本报错恢复 < 用户规则守护 < 代码卫生 < 内容文档 < 用户规则 section
+# (v1.4.0 renamed the 注释卫生 MUST to 代码卫生 in place — same position)
+for s in "[MUST] 用户规则守护" "[MUST] 代码卫生" "[MUST] 脚本报错恢复" "内容文档("; do
   grep -Fq "$s" "$AG" || fail "expected '$s' in asset AGENTS.md"
 done
 n_anchor="$(grep -nF "[MUST] 脚本报错恢复" "$AG" | cut -d: -f1)"
 n_must1="$(grep -nF "[MUST] 用户规则守护" "$AG" | cut -d: -f1)"
-n_must2="$(grep -nF "[MUST] 注释卫生" "$AG" | cut -d: -f1)"
+n_must2="$(grep -nF "[MUST] 代码卫生" "$AG" | cut -d: -f1)"
 n_content="$(grep -nF "内容文档(" "$AG" | cut -d: -f1)"
 [ "$n_anchor" -lt "$n_must1" ] || fail "用户规则守护 must follow 脚本报错恢复"
-[ "$n_must1" -lt "$n_must2" ] || fail "注释卫生 must follow 用户规则守护"
-[ "$n_must2" -lt "$n_content" ] || fail "注释卫生 must precede the 内容文档 line"
+[ "$n_must1" -lt "$n_must2" ] || fail "代码卫生 must follow 用户规则守护"
+[ "$n_must2" -lt "$n_content" ] || fail "代码卫生 must precede the 内容文档 line"
 [ "$n_content" -lt "$n_user" ] || fail "纪律 MUSTs must precede the 用户规则 section"
 
 # milestone trigger line gains 用户规则写入 before update 应用

@@ -252,7 +252,12 @@ al = open(f"{ASSET}/AGENTS.md").read().splitlines()
 guard = [l for l in open(A, encoding="utf-8").read().splitlines()
          if l.startswith("- **[MUST] 脚本报错恢复**")][0]
 m1 = [l for l in al if l.startswith("- **[MUST] 用户规则守护**")][0]
-m2 = [l for l in al if l.startswith("- **[MUST] 注释卫生**")][0]
+# the 注释卫生 line is pinned inline, NOT sourced from the live asset —
+# v1.4.0 renames it to 代码卫生 in the asset, so live sourcing would find
+# nothing; the pinned text is the v1.1.0-era original the later v1.4.0 op
+# transforms (same inline pattern as the other historical ops below).
+m2 = ("- **[MUST] 注释卫生**: 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、"
+      "记账与会话上下文); 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动")
 edit(A, guard, guard + "\n" + m1 + "\n" + m2,
      "v1.1.0", "AGENTS.md 纪律: 用户规则守护/注释卫生行")
 # milestone trigger token: the changelog pins the substring swap
@@ -342,6 +347,16 @@ edit(A, "- **when**: **用户显式要求走 agentspace-exp, 或 agent 在用户
 edit(A, "exp 只在用户显式要求走 agentspace-exp、或 agent 提议并经用户确认后创建",
         "exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建",
         "v1.3.1", "AGENTS.md 纪律: 创建前确认行 /agentspace-exp")
+
+# --- v1.4.0: code-clean 内置为 AGENTS.md 规则 (8b per the v1.4.0 changelog — the
+#     passive layer becomes the default requirement, active cleanup stays
+#     explicit-only) ---
+edit(A, "未登记仓库(exit 2)先登记后提交。完整规则见 agentspace-code-clean skill。",
+        "未登记仓库(exit 2)先登记后提交。commit 门与全部代码/注释/commit 文本卫生规则见 agentspace-code-clean skill(被动层默认生效; 主动清理既有代码/历史仅经用户显式要求)。",
+        "v1.4.0", "AGENTS.md 关键代码仓库: commit 门行两层表述")
+edit(A, "- **[MUST] 注释卫生**: 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文); 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动",
+        "- **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 commit 文本默认遵循 agentspace-code-clean 被动层规则 — 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文), 禁止 why-not-alternative 反馈残留与测试实例引用; 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动; 既有代码/历史的清理与重建仅在用户显式要求时按该 skill 的 CLEANUP 流程执行",
+        "v1.4.0", "AGENTS.md 纪律: 注释卫生升级为代码卫生")
 
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",

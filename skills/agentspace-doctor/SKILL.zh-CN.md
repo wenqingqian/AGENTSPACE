@@ -72,7 +72,7 @@ description: 对已有 AGENTSPACE 工作区的深度健康检查 — 确定性�
   - 内容文档(readme、notes、examples、templates): 直接编辑 — plan 文档永不编辑(任何模式、任何 tier; 见下)
   - 表格(`plan.md` / `iterations.md` / `plan/index.md` / `iterations/index.md` / `register.md`): 只能走脚本, 或用户明确确认的一次性手工例外
 - **优化(蓝)**: 只列建议; 未经用户明确要求绝不执行
-- **[14]/[15] 发现**: [14] 的修复(repos.sh 摘除陈旧登记行、往宿主 .gitignore / .git/info/exclude 补盾牌)一律二级 — 必须用户确认, 绝不自动; [15] 的发现(已落入代码仓库**历史**的记账 id / 实验数据)永远只报告 — 任何 tier 都不改写 git 历史, rebase/filter-repo 是用户的决定与用户自己的操作
+- **[14]/[15] 发现**: [14] 的修复(repos.sh 摘除陈旧登记行、往宿主 .gitignore / .git/info/exclude 补盾牌)一律二级 — 必须用户确认, 绝不自动; [15] 的发现(已落入代码仓库**历史**的记账 id / 实验数据)永远只报告 — 任何 tier 都不改写 git 历史; 重建(rebase/filter-repo)是用户的决定, 显式要求时按 agentspace-code-clean 的 CLEANUP.md 历史重建流程执行
 - **块 6 / 块 7 发现**(notes 内容质量判定、跨 plan 冲突): 永远只报告, 与 [15] 同级 — 任何 tier 都不自动修复, doctor 在本轮运行中即使顺带确认了正确处置也不得就地修复; 处置由用户驱动, 是报告之后的独立工作
 - **plan 文档用户所有 — 所有模式、所有 tier**: doctor 绝不修改 plan 文档内容(`plan/todo/*.md` 与其他 plan 正文), 有无 `--fix` 皆然; 涉及 plan 的发现只报告, 任何 plan 修订都是用户自己的独立工作。视图行的脚本层结构卫生不变(tier-1 经 `doctor.sh --fix` 清理 `plan.md` 的 orphan 行)— 那是脚本独占视图上的索引卫生, 不是 plan 文档编辑
 - **绝不**: 修改进行中 plan/iteration 的状态字段、`data/` 载荷、宿主项目文件(宿主根 AGENTS.md 仅在用户明确批准时)、auto-memory

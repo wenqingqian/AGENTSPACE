@@ -373,6 +373,7 @@ done
 # Each pair belongs to ONE skill; grep that skill's two files.
 for pair in "skills/agentspace-update|skip to the next existing archive|跳过缺失的中间档案" \
             "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身" \
+            "skills/agentspace-code-clean|read CLEANUP.md in this skill directory|阅读本 skill 目录内的 CLEANUP.md" \
             "skills/agentspace-better-exp|enrollment always requires explicit user confirmation, never automatic|登记必须经用户显式确认, 绝不自动进行" \
             "skills/agentspace-exp|at most once per session|同一会话内最多提议一次"; do
   skill="${pair%%|*}"; rest="${pair#*|}"

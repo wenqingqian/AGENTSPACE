@@ -78,6 +78,7 @@ The changelog is the update agent's ONLY source of migration guidance. It MUST b
 3. **Exact insertion points** — specify WHERE in the file to insert (e.g., "before `### utils` in the 模块 section", "after the `iterations/*/data/` line in .gitignore")
 4. **Structure tree updates** — for new modules, include the exact line to add to the 结构 code block in AGENTS.md
 5. **Handled by update flow** — if a change is automatically handled by step 8a (scripts/templates/.gitignore replacement from assets), state this explicitly. The agent doesn't need to do manual work for these changes.
+6. **Focused, commit-grade prose (v1.4.0)** — changelog entries obey the agentspace-code-clean commit-text rules: each Summary bullet is ONE line naming the change plus its effect, stated only in diff-provable facts; each **Why** is one sentence of motivation; never restate **What**, never narrate the editing session. The one exception: a Migration's 8b text operations stay verbatim-complete — that is the execution contract, not narration. Detail lives in Migration ops, not in prose.
 
 Example of a GOOD migration instruction:
 ```markdown
