@@ -16,7 +16,7 @@ HO="$WS/scripts/handoff.sh"
 mc() { git -C "$WS" add -A >/dev/null 2>&1; git -C "$WS" commit -qm "test: t16 milestone" >/dev/null 2>&1 || true; }
 
 # --- 1) complete-plan: result containing a raw pipe must keep the index row
-# intact (7 columns + 1 escaped pipe → awk NF=10) and doctor stays green
+# intact (v1.5.0 schema: 8 columns + 1 escaped pipe → awk NF=11) and doctor stays green
 bash "$NEWP" "pipe result plan" >/dev/null 2>&1
 PLAN="$(ls "$WS"/plan/todo/ | head -1 | cut -d- -f1)"
 PLANFILE="$(ls "$WS"/plan/todo/*.md | head -1)"
@@ -27,7 +27,7 @@ assert_contains "$WS/plan/index.md" "结果 \\| 含管道"
 LINE="$(grep -F "| $PLAN |" "$WS/plan/index.md")"
 [ -n "$LINE" ] || fail "plan/index.md row $PLAN missing"
 NF="$(printf '%s\n' "$LINE" | awk -F'|' '{print NF}')"
-[ "$NF" = "10" ] || fail "plan/index.md row $PLAN NF=$NF (expect 10 = 7 cols + 1 escaped pipe): $LINE"
+[ "$NF" = "11" ] || fail "plan/index.md row $PLAN NF=$NF (expect 11 = 8 cols + 1 escaped pipe): $LINE"
 mc
 assert_ok bash "$DOC"
 

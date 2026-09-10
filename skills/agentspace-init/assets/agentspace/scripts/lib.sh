@@ -38,6 +38,9 @@ readonly SEC_RELATED="相关迭代"
 readonly SEC_REGISTERED="已注册模块"
 readonly SEC_HANDOFF="Handoffs"
 readonly SEC_EXP_DOING="Doing"
+# Base plans (direction anchors) live in plan/base/ and register in the Base
+# section of plan.md + plan/index.md — same section name in both files.
+readonly SEC_BASE="Base 基准计划"
 readonly STATUS_TODO="> 状态: todo"
 readonly STATUS_PROGRESS="> 状态: 进行中"
 readonly STATUS_EXP_DOING="> 状态: doing"
@@ -80,6 +83,9 @@ readonly RESULT_PH_PLAN="<!-- 完成时填写: 一句话结论"
 readonly RESUME_PH_ITER="<!-- 会话续接块:"
 # Gate: complete-exp refuses while present. Template: exp-manual.md "结果"
 readonly RESULT_PH_EXP="<!-- 一句话结论; 关闭 exp 前必填 -->"
+# Gate: activate-base-plan refuses while present — a base plan cannot be
+# frozen as an empty skeleton. Template: base-plan.md "方向" section.
+readonly BASE_PH_DIR="<!-- 方向: 这个基准锚定什么方向"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
@@ -357,6 +363,10 @@ readonly COMMIT_BAN_ITER_RE="iteration_0[0-9]{3,}"
 # regex exists by design — the exp word tight against digits matches common prose
 # ("exp 3") and every false candidate costs agent adjudication on every commit.
 readonly COMMIT_BAN_EXP_RE="exp_0[0-9]{3,}"
+# Base-plan ids are the canonical base:0NNN form (same leading-0 anchor as the
+# plan: colon form). Base plans are ledger-side direction anchors — they never
+# belong in key-repo commit text, same rationale as plan:/iteration_/exp_.
+readonly COMMIT_BAN_BASE_RE="base:[[:space:]]*0[0-9]{3,}"
 # Dash form `plan-NNNN` — the lane branch-name shape (agentspace-parallel). It
 # never belongs in commit TEXT (absorb messages included); the branch name
 # itself is a ref, not text, and stays legal. Report-only heuristic in doctor
@@ -435,7 +445,7 @@ as_msg_title_blank() {
 # must revisit it.
 as_diff_added_hits() {
   (
-    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE}"
+    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE|$COMMIT_BAN_BASE_RE}"
     export AS_EXCERPT_CAP="${AS_EXCERPT_CAP:-$COMMIT_EXCERPT_CAP}"
     export AS_FILE_HITS_CAP="${AS_FILE_HITS_CAP:-$COMMIT_FILE_HITS_CAP}"
     export AS_LINE_MAX="${AS_LINE_MAX:-0}"
@@ -489,7 +499,7 @@ as_diff_added_hits() {
 # it out of every blocking path (it has no exit-code voice).
 as_diff_added_candidates() {
   (
-    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE}"
+    export AS_BAN_RE="${AS_BAN_RE:-$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE|$COMMIT_BAN_BASE_RE}"
     export AS_CAND_RE="${AS_CAND_RE:-$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE}"
     export AS_EXCERPT_CAP="${AS_EXCERPT_CAP:-$COMMIT_EXCERPT_CAP}"
     export AS_FILE_HITS_CAP="${AS_FILE_HITS_CAP:-$COMMIT_FILE_HITS_CAP}"
@@ -708,6 +718,70 @@ as_next_exp_id() {
   printf "%04d" $((max + 1))
 }
 
+# Next base-plan index (scan plan/base/ manuals + Base table rows, max+1).
+# Base rows carry the `base:0NNN` prefix in the ID column — deliberately
+# non-numeric so as_row_ids (the plan/iteration/exp counters) never sees them:
+# the base counter and the plan counter are independent number spaces sharing
+# plan/index.md.
+as_next_base_id() {
+  local max=0 f base n
+  while IFS= read -r -d '' f; do
+    base="$(basename "$f")"
+    n="${base%%-*}"
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    (( 10#$n > max )) && max=$((10#$n))
+  done < <(find "$AS_ROOT/plan/base" -maxdepth 1 \
+    -name '[0-9][0-9][0-9][0-9]-*.md' -print0 2>/dev/null)
+  while IFS= read -r n; do
+    n="${n#base:}"
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    (( 10#$n > max )) && max=$((10#$n))
+  done < <(grep -hoE '^\| *base: *[0-9]+' "$AS_ROOT/plan.md" "$AS_ROOT/plan/index.md" 2>/dev/null | grep -oE '[0-9]+' || true)
+  printf "%04d" $((max + 1))
+}
+
+# Row key for first-column matching: bare numeric plan/iteration/exp ids, or
+# the canonical base-plan id form base:NNNN (zero-padded). Everything that
+# matches rows by first column (as_remove_row / as_remove_row_section /
+# as_row_cell) goes through here — base rows carry the prefix in the ID column
+# so their ids can never collide with the plain numeric id space.
+as_row_key() {
+  local n
+  case "$1" in
+    base:*)
+      n="${1#base:}"
+      [[ "$n" =~ ^[0-9]+$ ]] || as_die "as_row_key: base id must be numeric: $1"
+      printf 'base:%04d' "$((10#$n))"
+      ;;
+    *)
+      [[ "$1" =~ ^[0-9]+$ ]] || as_die "as_row_key: id must be numeric: $1"
+      printf '%04d' "$((10#$1))"
+      ;;
+  esac
+}
+
+# Title→filename slug derivation + hard contract (the title becomes a filename).
+# Single source for new-plan / new-exp / new-base-plan: normalize whitespace
+# (incl. \n\r\t), strip chars unsafe for markdown/filenames, then python3
+# character-aware truncation (awk/cut are byte-aware on macOS and split CJK).
+# PYTHONIOENCODING=utf-8 (3.6+) + PYTHONUTF8=1 (3.7+): under LC_ALL=C python
+# 3.6 reads stdin as ASCII — forcing UTF-8 keeps CJK titles intact on every
+# supported python. Slug contract: lowercase english words + digits + single
+# hyphens; the strip set leaves CJK bytes, uppercase, underscores and most
+# punctuation in place, and a title made only of stripped chars yields an
+# empty slug — every such result dies here, before any file or table row is
+# written. Usage: SLUG="$(as_slug_of "$TITLE" plan)" (noun labels refusals).
+as_slug_of() {
+  local title="$1" noun="$2" slug slug_re
+  command -v python3 >/dev/null 2>&1 \
+    || as_die "$noun creation needs python3 (CJK-aware title truncation) — install it or create the $noun manually"
+  slug="$(printf '%s' "$title" | tr '\n\r\t' '   ' | tr -s ' ' | tr ' ' '-' | tr -d '/\\?*":<>|()[]#!' | PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:40])")"
+  slug_re='^[a-z0-9]+(-[a-z0-9]+)*$'
+  [[ "$slug" =~ $slug_re ]] \
+    || as_die "$noun slug not allowed: \"${slug:-<empty>}\" (generated from title \"$title\") — $noun filenames accept lowercase english words, digits and single hyphens only; retry with a lowercase english title (words joined by hyphens)"
+  printf '%s\n' "$slug"
+}
+
 # Insert a row after the separator line of a "## SECTION" table (becomes first data row).
 # Usage: as_insert_row <file> <section> <row>
 # NOTE: the row travels via ENVIRON, not -v — awk -v would unescape the `\|`
@@ -725,13 +799,13 @@ as_insert_row() {
   as_atomic_write "$file" "$tmp"
 }
 
-# Delete table rows whose first column equals id.
+# Delete table rows whose first column equals id (numeric or base:NNNN).
 # Usage: as_remove_row <file> <id>
 as_remove_row() {
-  local file="$1" tmp
-  [[ "$2" =~ ^[0-9]+$ ]] || as_die "as_remove_row: id must be numeric: $2"
+  local file="$1" tmp id
+  id="$(as_row_key "$2")"
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-  awk -v id="$2" '
+  awk -v id="$id" '
     BEGIN { pat="^ *\\| *" id " *\\|" }
     $0 ~ pat { next }
     { print }
@@ -743,10 +817,10 @@ as_remove_row() {
 # appear in several sections (e.g. a plan id in Todo and in Done).
 # Usage: as_remove_row_section <file> <section> <id>
 as_remove_row_section() {
-  local file="$1" tmp
-  [[ "$3" =~ ^[0-9]+$ ]] || as_die "as_remove_row_section: id must be numeric: $3"
+  local file="$1" tmp id
+  id="$(as_row_key "$3")"
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-  awk -v sec="## $2" -v id="$3" '
+  awk -v sec="## $2" -v id="$id" '
     BEGIN { pat="^ *\\| *" id " *\\|" }
     $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; print; next }
     /^## / { in_sec=0 }
@@ -769,15 +843,16 @@ as_truncate_section() {
   ' "$file" > "$tmp" && as_atomic_write "$file" "$tmp"
 }
 
-# Read the Nth |-delimited field of the row whose first column equals id.
+# Read the Nth |-delimited field of the row whose first column equals id
+# (numeric or base:NNNN).
 # Escape-aware: \| cells are shielded before splitting and restored verbatim,
 # so a title/desc containing an escaped pipe cannot shift the column positions.
 # Usage: as_row_cell <file> <id> <colnum>
 as_row_cell() {
-  [[ "$2" =~ ^[0-9]+$ ]] || as_die "as_row_cell: id must be numeric: $2"
-  local esc
+  local esc id
+  id="$(as_row_key "$2")"
   esc="$(printf '\037')"
-  sed "s/\\\\|/$esc/g" "$1" | awk -F'|' -v id="$2" -v c="$3" -v esc="$esc" '
+  sed "s/\\\\|/$esc/g" "$1" | awk -F'|' -v id="$id" -v c="$3" -v esc="$esc" '
     BEGIN { pat="^\\| *" id " *\\|" }
     $0 ~ pat {
       gsub(/^ +| +$/, "", $c)
@@ -851,13 +926,16 @@ as_insert_after_prefix() {
 
 # Append a line at the end of a section (before next ## or EOF).
 # Usage: as_append_to_section <file> <section> <line>
+# NOTE: the line travels via ENVIRON, not -v — awk -v would unescape the `\|`
+# cells produced by as_cell, silently corrupting escaped pipes (same as
+# as_insert_row).
 as_append_to_section() {
   local file="$1" tmp
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-  awk -v sec="## $2" -v line="$3" '
+  LINE="$3" awk -v sec="## $2" '
     function flush_buf() {
       for (i=1; i<=b; i++) print buf[i]
-      if (!inserted) { print line; inserted=1 }
+      if (!inserted) { print ENVIRON["LINE"]; inserted=1 }
       b=0
     }
     $0 == sec { in_sec=1; print; next }

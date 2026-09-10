@@ -72,7 +72,8 @@ MSG1="$(printf 'plan:%04d 完成' 13)"
 MSG2="$(printf 'PLAN: %04d done' 14)"
 MSG3="$(printf 'iteration_%04d 修复' 9)"
 MSG4="$(printf 'ITERATION_%04d x' 1)"
-for m in "$MSG1" "$MSG2" "$MSG3" "$MSG4"; do
+MSG5="$(printf 'base:%04d direction' 2)"
+for m in "$MSG1" "$MSG2" "$MSG3" "$MSG4" "$MSG5"; do
   set +e; OUT="$(bash "$GATE" . "$m")"; rc=$?; set -e
   [ "$rc" -eq 1 ] || fail "message '$m' must be blocked"
   assert_output_contains "$OUT" "BLOCK"
@@ -84,7 +85,7 @@ set +e; OUT="$(bash "$GATE" . "subject line
 body refers to $BODYID here")"; rc=$?; set -e
 [ "$rc" -eq 1 ] || fail "body-line id must be blocked"
 # natural text must pass (4-digit floor + tight idioms)
-for m in "test plan: 3 phases" "refactor iteration logic" "agentspace: bump version" "roadmap plan: 2026"; do
+for m in "test plan: 3 phases" "refactor iteration logic" "agentspace: bump version" "roadmap plan: 2026" "rebase: 2026 branch order"; do
   set +e; OUT="$(bash "$GATE" . "$m")"; rc=$?; set -e
   [ "$rc" -eq 0 ] || fail "natural message '$m' must pass, got: $OUT"
 done
@@ -198,6 +199,13 @@ printf '# PLAN: %04d upper\n' 13 > "$SB/u.py"
 git -C "$SB" add u.py
 set +e; OUT="$(bash "$GATE" . "upper case")"; rc=$?; set -e
 [ "$rc" -eq 1 ] || fail "uppercase content id must block"
+assert_output_contains "$OUT" "content:"
+git -C "$SB" reset -q
+# base: idiom in an added line → BLOCK (v1.5.0 base plan ledger ids)
+printf '# see %s\n' "$(printf 'base:%04d' 3)" > "$SB/b.py"
+git -C "$SB" add b.py
+set +e; OUT="$(bash "$GATE" . "base link")"; rc=$?; set -e
+[ "$rc" -eq 1 ] || fail "added-line base id must block"
 assert_output_contains "$OUT" "content:"
 git -C "$SB" reset -q
 # per-file hits cap: 7 leaky lines in ONE staged file → exactly the first

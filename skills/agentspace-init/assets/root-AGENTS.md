@@ -29,6 +29,7 @@
 
 - AGENTSPACE 初始化只通过显式 `/agentspace-init` 命令, 绝不自动创建
 - AGENTSPACE 的索引/条目状态(plan.md、iterations.md、exp.md、各 index.md)只能由 `AGENTSPACE/scripts/` 下的脚本改写; 实验(exp)只在用户显式要求走 /agentspace-exp(命令或同名触发器 skill)或经确认提议后登记, 设计对齐走 agentspace-better-exp、报告走 agentspace-better-exp-report
+- 基准计划(base plan, plan/base/)文件一经激活不可修改; 发现基准不可实现或有正确性错误必须显式告知用户, 方向变更由用户决定; 基准计划的创建与修改呈交用户审核 — 草稿写好后直接结束会话, 用户在文件上评论反馈
 - commit 门: 在已登记关键代码仓库(AGENTSPACE/.agentspace-repos)执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 并通过; 未登记仓库先登记(用户确认)后提交
 - 代码/注释/commit 文本卫生遵循 agentspace-code-clean 规则(默认被动层); 对既有代码/历史的清理与重建仅在用户显式要求时执行
 - 禁止读取插件开发数据: `skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等与项目无关, 不在 AGENTSPACE 管理范围内

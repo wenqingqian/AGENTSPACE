@@ -24,11 +24,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Slug derivation + contract — identical to new-plan.sh (title becomes filename).
-command -v python3 >/dev/null 2>&1 || as_die "new-exp.sh needs python3 (CJK-aware title truncation) — install it or create the experiment manually"
-SLUG="$(printf '%s' "$TITLE" | tr '\n\r\t' '   ' | tr -s ' ' | tr ' ' '-' | tr -d '/\\?*":<>|()[]#!' | PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:40])")"
-slug_re='^[a-z0-9]+(-[a-z0-9]+)*$'
-[[ "$SLUG" =~ $slug_re ]] || as_die "exp slug not allowed: \"${SLUG:-<empty>}\" (generated from title \"$TITLE\") — exp filenames accept lowercase english words, digits and single hyphens only; retry with a lowercase english title (words joined by hyphens)"
+# Slug derivation + contract — as_slug_of (same single source as new-plan.sh;
+# title becomes filename).
+SLUG="$(as_slug_of "$TITLE" exp)"
 
 # Lock BEFORE id allocation (t21 contract — same critical-section shape as new-plan/new-iteration).
 as_lock

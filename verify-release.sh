@@ -375,7 +375,8 @@ for pair in "skills/agentspace-update|skip to the next existing archive|跳过�
             "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身" \
             "skills/agentspace-code-clean|read CLEANUP.md in this skill directory|阅读本 skill 目录内的 CLEANUP.md" \
             "skills/agentspace-better-exp|enrollment always requires explicit user confirmation, never automatic|登记必须经用户显式确认, 绝不自动进行" \
-            "skills/agentspace-exp|at most once per session|同一会话内最多提议一次"; do
+            "skills/agentspace-exp|at most once per session|同一会话内最多提议一次" \
+            "skills/agentspace-base-plan|Immediately end the session|直接结束本会话"; do
   skill="${pair%%|*}"; rest="${pair#*|}"
   en="${rest%%|*}"; zh="${rest#*|}"
   grep -Fq -- "$en" "$ROOT/$skill/SKILL.md" || {
@@ -448,7 +449,7 @@ echo "[12] realized-literal guard"
 # derived from lib.sh — single source with the gate (a regex tightening there
 # must not silently desync this guard); -i mirrors the gate's case-insensitive
 # message scan.
-LIT_RE="$(sed -n 's/^readonly COMMIT_BAN_PLAN_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_ITER_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_EXP_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")"
+LIT_RE="$(sed -n 's/^readonly COMMIT_BAN_PLAN_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_ITER_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_EXP_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")|$(sed -n 's/^readonly COMMIT_BAN_BASE_RE="\(.*\)"$/\1/p' "$ASSETS/scripts/lib.sh")"
 lit_hits="$(find "$ROOT" -type f \
   -not -path "$ROOT/.git/*" \
   -not -path "$ROOT/AGENTSPACE/*" \

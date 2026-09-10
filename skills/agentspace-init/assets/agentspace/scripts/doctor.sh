@@ -708,7 +708,7 @@ while IFS= read -r repo; do
   while IFS= read -r sha; do
     [ -n "$sha" ] || continue
     msg="$(git -C "$repo" log -1 --format=%B "$sha" 2>/dev/null || true)"
-    mhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE" 2>/dev/null | head -1 || true)"
+    mhit="$(printf '%s' "$msg" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE|$COMMIT_BAN_BASE_RE" 2>/dev/null | head -1 || true)"
     if [ -n "$mhit" ]; then
       warn "$repo @$sha: commit message 含工作区记账引用 — \"${mhit#*:}\" (已落历史, 只报告: 处置由用户决定)"
     fi
@@ -891,6 +891,169 @@ if [ -f "$AS_ROOT/exp/index.md" ] || [ -d "$AS_ROOT/exp" ]; then
   # ledger's history (silent data-hygiene damage)
   grep -Fqx "exp/exp_data/" "$AS_ROOT/.gitignore" 2>/dev/null \
     || warn ".gitignore missing the exp/exp_data/ line (full experiment output would enter the ledger repo — see v1.3.0 CHANGELOG)"
+fi
+
+# ---- 17. base plans: files ↔ Base rows ↔ immutability ↔ derived-plan links ----
+# Directionality notes:
+# - plan/base/ files ↔ plan/index.md Base rows are checked bidirectionally, but
+#   repair is asymmetric: an orphan ROW (no file) is removed under --fix (same
+#   data-loss-free pattern as [2]/[3]); an orphan FILE is report-only — a row
+#   cannot be rebuilt from the filename alone.
+# - The entry view (plan.md Base section) mirrors only open states (待审核 /
+#   生效); --fix reconciles it against the index both ways (view rows are
+#   deterministically rebuildable from index cells).
+# - Immutability is the load-bearing check: every row carrying a 校验 cell
+#   (pinned by activate-base-plan.sh) must still hash to it. A mismatch is
+#   report-only EVEN under --fix — a frozen anchor that changed is corruption
+#   the user alone adjudicates, never something the scripts rewrite back.
+# - Derived-plan links (regular rows' 基准 cell): a missing target is always
+#   reported; a non-生效 target is reported only while the derived plan is
+#   open (todo) — a replaced/voided anchor with open derived plans is exactly
+#   the direction decision the user must make.
+echo "[17] base plan consistency"
+if [ -d "$AS_ROOT/plan/base" ] || grep -q '^| *base:' "$AS_ROOT/plan/index.md" 2>/dev/null; then
+  _ESC="$(printf '\037')"
+  base_ids="$(grep -hoE '^\| *base: *[0-9]+' "$AS_ROOT/plan/index.md" 2>/dev/null | grep -oE '[0-9]+' | sort -u || true)"
+  # per-row state/hash reader (escape-aware; prints "state<TAB>hash")
+  _base_state() {
+    sed "s/\\\\|/$_ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v id="base:$1" -v esc="$_ESC" '
+      BEGIN { pat="^\\| *" id " *\\|" }
+      $0 ~ pat {
+        s=$4; h=$7; gsub(/^ +| +$/, "", s); gsub(/^ +| +$/, "", h)
+        gsub(esc, "\\|", s); gsub(esc, "\\|", h); print s "\t" h; exit
+      }
+    '
+  }
+  # forward: files → index row. (Entry-view presence for open states is
+  # reported ONCE, with --fix repair, by the open-state reconciliation loop
+  # below — checking it here too would double-warn the same defect.)
+  for f in "$AS_ROOT"/plan/base/[0-9]*.md; do
+    [ -f "$f" ] || continue
+    id="$(basename "$f" | cut -d- -f1)"
+    grep -q "^| *base:$id *|" "$AS_ROOT/plan/index.md" 2>/dev/null \
+      || warn "plan/index.md Base section missing base:$id ($(basename "$f"))"
+  done
+  # reverse: index rows → file; retire-crash window; activation-crash window
+  for id in $base_ids; do
+    key="base:$id"
+    st="$(_base_state "$id")"; state="${st%%$'\t'*}"; hash="${st##*$'\t'}"
+    if ! compgen -G "$AS_ROOT/plan/base/$id-*.md" >/dev/null; then
+      if [ "$FIX" -eq 1 ]; then
+        before="$(wc -l < "$AS_ROOT/plan/index.md")"
+        as_remove_row "$AS_ROOT/plan/index.md" "$key"
+        if [ "$(wc -l < "$AS_ROOT/plan/index.md")" -lt "$before" ]; then
+          ok "removed orphan Base row $key (no file)"
+        else
+          warn "plan/index.md orphan Base row $key NOT removed (row drifted)"
+        fi
+        as_remove_row "$AS_ROOT/plan.md" "$key" 2>/dev/null || true
+      else
+        warn "plan/index.md Base row $key has no file in plan/base/ (orphan row)"
+      fi
+      continue
+    fi
+    [ "$state" = "生效" ] && [ -z "$hash" ] \
+      && warn "$key is 生效 but carries no activation checksum (activation crash window — discuss with the user, do not hand-edit)"
+  done
+  # entry view ↔ index open states (reconcile under --fix)
+  view_keys="$(awk -F'|' -v sec="$SEC_BASE" '
+    $0 ~ ("^## " sec "[[:space:]]*$") { f=1; next }
+    /^## / { f=0 }
+    f && /^\| base:/ { c=$2; gsub(/^ +| +$/, "", c); print c }
+  ' "$AS_ROOT/plan.md" 2>/dev/null || true)"
+  for key in $view_keys; do
+    st="$(_base_state "${key#base:}")"; state="${st%%$'\t'*}"
+    if [ -z "$state" ]; then
+      if [ "$FIX" -eq 1 ]; then
+        before="$(wc -l < "$AS_ROOT/plan.md")"
+        as_remove_row "$AS_ROOT/plan.md" "$key"
+        [ "$(wc -l < "$AS_ROOT/plan.md")" -lt "$before" ] \
+          && ok "removed orphan plan.md Base row $key (no index row)" \
+          || warn "plan.md orphan Base row $key NOT removed (section \"$SEC_BASE\" missing or drifted)"
+      else
+        warn "plan.md Base row $key has no plan/index.md Base row (orphan row)"
+      fi
+    elif [ "$state" != "待审核" ] && [ "$state" != "生效" ]; then
+      if [ "$FIX" -eq 1 ]; then
+        before="$(wc -l < "$AS_ROOT/plan.md")"
+        as_remove_row "$AS_ROOT/plan.md" "$key"
+        [ "$(wc -l < "$AS_ROOT/plan.md")" -lt "$before" ] \
+          && ok "removed retired $key from plan.md Base view (index says $state — retire crash window)" \
+          || warn "plan.md Base row $key NOT removed (section \"$SEC_BASE\" missing or drifted)"
+      else
+        warn "plan.md Base row $key still listed while index says $state (retire crash window — run --fix)"
+      fi
+    fi
+  done
+  for id in $base_ids; do
+    key="base:$id"
+    st="$(_base_state "$id")"; state="${st%%$'\t'*}"
+    [ "$state" = "待审核" ] || [ "$state" = "生效" ] || continue
+    awk -F'|' -v sec="## $SEC_BASE" -v id="$key" '
+      $0 ~ ("^" sec "[[:space:]]*$") { f=1; next }
+      /^## / { f=0 }
+      f && /^\| base:/ { c=$2; gsub(/^ +| +$/, "", c); if (c == id) { found=1; exit } }
+      END { exit found ? 0 : 1 }
+    ' "$AS_ROOT/plan.md" 2>/dev/null && continue
+    if [ "$FIX" -eq 1 ]; then
+      title="$(as_row_cell "$AS_ROOT/plan/index.md" "$key" 3)"
+      mdate="$(as_row_cell "$AS_ROOT/plan/index.md" "$key" 5)"
+      mfile="$(compgen -G "$AS_ROOT/plan/base/$id-*.md" | head -1)"
+      [ -n "$mfile" ] || continue
+      dest="plan/base/$(basename "$mfile")"
+      as_insert_row "$AS_ROOT/plan.md" "$SEC_BASE" \
+        "| $key | $title | $state | $mdate | [$dest]($dest) |"
+      ok "plan.md Base view re-added $key ($state)"
+    else
+      warn "plan.md Base section missing open $key (run --fix to re-add from the index)"
+    fi
+  done
+  # immutability: rows carrying a 校验 cell must still hash to it (report-only
+  # under --fix as well — a frozen anchor is never rewritten by the scripts)
+  if command -v python3 >/dev/null 2>&1; then
+    pin_rows="$(sed "s/\\\\|/$_ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v esc="$_ESC" '
+      /^\| *base:/ {
+        id=$2; h=$7; gsub(/^ +| +$/, "", id); gsub(/^ +| +$/, "", h)
+        gsub(esc, "\\|", id); gsub(esc, "\\|", h)
+        if (h != "") print id "\t" h
+      }
+    ')"
+    while IFS=$'\t' read -r key hash; do
+      [ -n "$key" ] && [ -n "$hash" ] || continue
+      id="${key#base:}"
+      f="$(compgen -G "$AS_ROOT/plan/base/$id-*.md" | head -1 || true)"
+      [ -n "$f" ] || continue
+      now="$(PYTHONIOENCODING=utf-8 python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest()[:12])" "$f" 2>/dev/null || true)"
+      [ "$now" = "$hash" ] || warn "$key no longer matches its activation checksum ($hash → ${now:-unreadable}) — a base plan is immutable once activated; do NOT rewrite or restore it yourself, the user decides"
+    done <<< "$pin_rows"
+  else
+    printf '  [note] python3 not found — base plan checksum verification skipped\n'
+  fi
+  # derived-plan links: 基准 cells in regular index rows (escape-aware read)
+  link_rows="$(sed "s/\\\\|/$_ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v esc="$_ESC" '
+    /^\| [0-9]/ {
+      gsub(/^ +| +$/, "", $2)
+      b=$5; gsub(/^ +| +$/, "", b); gsub(esc, "\\|", b)
+      if (b != "" && b != "-") { s=$4; gsub(/^ +| +$/, "", s); print $2 "\t" s "\t" b }
+    }
+  ')"
+  while IFS=$'\t' read -r pid pstate cell; do
+    [ -n "$pid" ] || continue
+    IFS=',' read -r -a _toks <<< "$cell"
+    for tok in "${_toks[@]}"; do
+      tok="$(printf '%s' "$tok" | sed 's/^ *//; s/ *$//')"
+      case "$tok" in
+        base:*) ;;
+        *) warn "plan:$pid 基准 cell token \"$tok\" malformed (expected base:NNNN)" ; continue ;;
+      esac
+      bid="${tok#base:}"
+      grep -q "^| *base:$bid *|" "$AS_ROOT/plan/index.md" 2>/dev/null \
+        || { warn "plan:$pid 基准 links $tok but no such Base row exists"; continue; }
+      [ "$pstate" = "todo" ] || continue
+      tstate="$(_base_state "$bid")"; tstate="${tstate%%$'\t'*}"
+      [ "$tstate" = "生效" ] || warn "plan:$pid derives from $tok which is \"$tstate\" — the anchor was retired/awaiting review while the plan is open; the user decides the direction (report-only)"
+    done
+  done <<< "$link_rows"
 fi
 
 echo

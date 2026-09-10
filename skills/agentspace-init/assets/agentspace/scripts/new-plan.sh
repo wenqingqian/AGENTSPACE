@@ -1,51 +1,72 @@
 #!/usr/bin/env bash
 # Create a new plan: allocate global index, instantiate plan/todo/NNNN-slug.md,
 # insert row in plan.md Todo table, append to plan/index.md.
-# Usage: new-plan.sh "Plan title"
+# Usage: new-plan.sh "Plan title" [--base NNNN[,NNNN...]]
 #   The title must yield a compliant slug — lowercase english words, digits
 #   and single hyphens only; CJK / uppercase / punctuation titles are refused
 #   before anything is written (new plans only — existing plan files are
 #   never touched).
+#   --base links the plan to one or more base plans (direction anchors): each
+#   id must exist in the plan/index.md Base section; the link lands in the
+#   基准 column of plan.md Todo and plan/index.md.
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 TITLE="${1:-}"
-[ -n "$TITLE" ] || as_die "Usage: new-plan.sh \"Plan title\""
+[ -n "$TITLE" ] || as_die "Usage: new-plan.sh \"Plan title\" [--base NNNN[,NNNN...]]"
+shift || true
+
+BASE_ARG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --base) [ $# -ge 2 ] || as_die "--base needs a value"; BASE_ARG="$2"; shift 2 ;;
+    *) as_die "unknown argument: $1 (Usage: new-plan.sh \"Plan title\" [--base NNNN[,NNNN...]])" ;;
+  esac
+done
+
+# Slug derivation + contract — as_slug_of dies before any write on a
+# non-compliant title (see lib.sh).
+SLUG="$(as_slug_of "$TITLE" plan)"
 
 # Lock BEFORE id allocation (t21): as_next_plan_id reads the index — computing
 # it pre-lock let every concurrent creator read the same "next id" and collide
 # on the same plan/todo/NNNN file. The lock covers the whole read-compute-write.
 as_lock
 
+# --base: comma-separated ids, each normalized; the base plan must exist in the
+# plan/index.md Base section (any state — doctor [17] reports links to a
+# non-active base for the user to adjudicate; a base may be replaced while
+# derived plans stay open). Cell form "base:NNNN, base:NNNN", or "-" unlinked.
+BASE_CELL="-"
+if [ -n "$BASE_ARG" ]; then
+  BASE_CELL=""
+  IFS=',' read -r -a _bids <<< "$BASE_ARG"
+  for b in "${_bids[@]}"; do
+    [ -n "$b" ] || continue
+    bid="$(as_norm_id "$b")"
+    grep -q "^| *base:$bid *|" "$AS_ROOT/plan/index.md" 2>/dev/null \
+      || as_die "base:$bid not found in plan/index.md Base section (linked base plans must exist)"
+    BASE_CELL="${BASE_CELL:+$BASE_CELL, }base:$bid"
+  done
+  [ -n "$BASE_CELL" ] || BASE_CELL="-"
+fi
+
 ID="$(as_next_plan_id)"
 DATE="$(as_today)"
 CELL="$(as_cell "$TITLE")"
-# Normalize whitespace (incl. \n\r\t) then strip chars unsafe for markdown/filenames.
-# Use python3 for character-aware truncation (awk/cut are byte-aware on macOS, split CJK).
-# PYTHONIOENCODING=utf-8 (3.6+) + PYTHONUTF8=1 (3.7+): under LC_ALL=C python 3.6
-# reads stdin as ASCII — forcing UTF-8 keeps CJK titles intact on every supported
-# python (PYTHONUTF8 alone is ignored by 3.6 — audit R2).
-command -v python3 >/dev/null 2>&1 || as_die "new-plan.sh needs python3 (CJK-aware title truncation) — install it or run the plan creation manually"
-SLUG="$(printf '%s' "$TITLE" | tr '\n\r\t' '   ' | tr -s ' ' | tr ' ' '-' | tr -d '/\\?*":<>|()[]#!' | PYTHONIOENCODING=utf-8 PYTHONUTF8=1 python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:40])")"
-# Slug contract: lowercase english words + digits + single hyphens. The strip
-# set above leaves CJK bytes, uppercase, underscores and most punctuation in
-# place, and a title made only of stripped chars yields an empty slug — every
-# such result is refused here, before any file or table row is written.
-slug_re='^[a-z0-9]+(-[a-z0-9]+)*$'
-[[ "$SLUG" =~ $slug_re ]] || as_die "plan slug not allowed: \"${SLUG:-<empty>}\" (generated from title \"$TITLE\") — plan filenames accept lowercase english words, digits and single hyphens only; retry with a lowercase english title (words joined by hyphens)"
 FILE="plan/todo/${ID}-${SLUG}.md"
 
 PH_ID="$ID" PH_TITLE="$TITLE" PH_DATE="$DATE" \
   as_fill_template "$AS_ROOT/templates/plan.md" "$AS_ROOT/$FILE"
 
 as_insert_row "$AS_ROOT/plan.md" "$SEC_TODO" \
-  "| $ID | $CELL | $DATE | [$FILE]($FILE) |"
+  "| $ID | $CELL | $BASE_CELL | $DATE | [$FILE]($FILE) |"
 
 # Index append via tmp+mv: atomic (audit R8) — a `>>` crash window leaves a
 # half-written index row that doctor [2] cannot repair
 tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-{ cat "$AS_ROOT/plan/index.md" 2>/dev/null || true; echo "| $ID | $CELL | todo | $DATE |  |  | [$FILE]($FILE) |"; } > "$tmp" \
+{ cat "$AS_ROOT/plan/index.md" 2>/dev/null || true; echo "| $ID | $CELL | todo | $BASE_CELL | $DATE |  |  | [$FILE]($FILE) |"; } > "$tmp" \
   && as_atomic_write "$AS_ROOT/plan/index.md" "$tmp"
 
-echo "plan:$ID created → $FILE"
+echo "plan:$ID created → $FILE (base: $BASE_CELL)"
 echo "Next: write the goal/background/plan-steps in that file"

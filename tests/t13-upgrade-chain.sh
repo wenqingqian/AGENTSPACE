@@ -358,6 +358,46 @@ edit(A, "- **[MUST] 注释卫生**: 注释只描述代码意图与约束, 禁止
         "- **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 commit 文本默认遵循 agentspace-code-clean 被动层规则 — 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文), 禁止 why-not-alternative 反馈残留与测试实例引用; 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动; 既有代码/历史的清理与重建仅在用户显式要求时按该 skill 的 CLEANUP 流程执行",
         "v1.4.0", "AGENTS.md 纪律: 注释卫生升级为代码卫生")
 
+# --- v1.5.0: base plan component (8b per the v1.5.0 changelog — AGENTS.md 9
+#     edits + plan.md/plan/index.md schema rebuild + plan/base/ dir). All new
+#     AGENTS.md text is sourced from the canonical asset at replay time (the
+#     v1.0.0/v1.1.0 idiom); only the historical anchors are pinned. The two
+#     plan tables hold no data rows in this replay (no earlier op ever added
+#     one), so the changelog's row-preserving rebuild degenerates to the asset
+#     seeds — copied wholesale like the v0.2.8 entry files; the with-rows path
+#     is exercised by the live rehearsal update against the real ledger. ---
+al = open(f"{ASSET}/AGENTS.md").read().splitlines()
+def aline(prefix):
+    return [l for l in al if l.startswith(prefix)][0]
+edit(A, "├── plan.md            ← plan 入口视图 (Todo + 最近 Done 10 条)",
+        aline("├── plan.md "), "v1.5.0", "AGENTS.md 结构树: plan.md 行")
+edit(A, "├── plan/              ← index.md(全量索引) + todo/ + done/(含 完成/失败/放弃)",
+        aline("├── plan/ "), "v1.5.0", "AGENTS.md 结构树: plan/ 行")
+edit(A, "├── templates/         ← 文档模板(plan / iteration-readme / exp-manual / module-entry / note / handoff)",
+        aline("├── templates/ "), "v1.5.0", "AGENTS.md 结构树: templates 行")
+HOW_OLD = ('- **how**: `scripts/new-plan.sh "标题"` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) '
+           '→ `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`')
+edit(A, HOW_OLD,
+        aline('- **how**: `scripts/new-plan.sh "标题"') + "\n"
+        + aline("- **基准计划(base plan)**") + "\n" + aline("- **base plan 生命周期**"),
+        "v1.5.0", "AGENTS.md plan 模块: how 行 + 基准计划/生命周期 bullets")
+wl = open(A, encoding="utf-8").read().splitlines()
+CREATE2 = [l for l in wl if l.startswith("- **[MUST] 创建前确认**")][0]
+edit(A, CREATE2, CREATE2 + "\n" + aline("- **[MUST] 基准计划不可变**"),
+     "v1.5.0", "AGENTS.md 纪律: 基准计划不可变行")
+edit(A, "- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest(latest 会翻转)",
+        aline("- 相互引用一律用 id:"), "v1.5.0", "AGENTS.md 纪律: 相互引用行")
+edit(A, "plan 创建/完成 · iteration 创建/关闭",
+        "plan 创建/完成 · base plan 创建/激活/取代/废弃 · iteration 创建/关闭",
+        "v1.5.0", "AGENTS.md 里程碑行: base plan 触发点")
+edit(A, "- **message**: 记账 id(plan:NNNN / iteration_NNNN)与记账叙述永不进入代码仓库 commit; 归属由 iteration readme 的宿主 SHA 记录承担。",
+        aline("- **message**:"), "v1.5.0", "AGENTS.md message 行: base/exp 枚举补全")
+cp_asset("plan.md", "plan.md")
+cp_asset("plan/index.md", "plan/index.md")
+os.makedirs(f"{WS}/plan/base", exist_ok=True)
+open(f"{WS}/plan/base/.gitkeep", "w").close()
+log("v1.5.0", "plan.md + plan/index.md schema + plan/base/", "applied")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -390,6 +430,11 @@ assert_not_contains "$WS/AGENTS.md" "agentspace-commit"              # v0.6.4: n
 assert_contains "$WS/AGENTS.md" "并行工作区约定"                        # v1.0.0: 纪律 bullet (8b)
 assert_contains "$WS/AGENTS.md" "用户规则守护"                          # v1.1.0: 纪律 MUST (8b)
 assert_contains "$WS/AGENTS.md" "## 用户规则"                          # v1.1.0: user-owned section (8b)
+assert_contains "$WS/AGENTS.md" "基准计划不可变"                         # v1.5.0: 纪律 MUST (8b)
+assert_contains "$WS/AGENTS.md" "base plan 创建/激活/取代/废弃"           # v1.5.0: milestone trigger (8b)
+assert_contains "$WS/plan.md" "| ID | 计划 | 基准 | 创建日期 | 链接 |"    # v1.5.0: plan.md Todo schema
+assert_contains "$WS/plan/index.md" "| ID | 方向 | 状态 | 创建日期 | 审核日期 | 校验 | 备注 | 链接 |"  # v1.5.0: Base schema
+[ -f "$WS/plan/base/.gitkeep" ] || fail "plan/base/ missing after v1.5.0 replay"
 [ -f "$WS/.agentspace-repos" ] || fail ".agentspace-repos seed missing after v0.6.0 replay"
 [ -f "$WS/scripts/repos.sh" ] && [ -f "$WS/scripts/commit-check.sh" ] \
   || fail "v0.6.0 scripts missing after 8a"

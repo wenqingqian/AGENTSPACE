@@ -73,6 +73,26 @@ EXP_DOING="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/exp.md" 2>/dev/null | awk -F'|' -v s
   f && /^\| [0-9]/ { n++ }
   END { print n+0 }
 ' || true)"
+# 基准计划: 入口视图 Base 节只保留开放态(待审核/生效), 按状态分别计数 —
+# 待审核数同时驱动软告警(审核流: 草稿写好后等待用户在文件上评论)
+BASE_ACTIVE="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan.md" 2>/dev/null | awk -F'|' -v sec="$SEC_BASE" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| base:/ {
+    s=$4; gsub(/^ +| +$/, "", s)
+    if (s == "生效") n++
+  }
+  END { print n+0 }
+' || true)"
+BASE_DRAFT="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan.md" 2>/dev/null | awk -F'|' -v sec="$SEC_BASE" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| base:/ {
+    s=$4; gsub(/^ +| +$/, "", s)
+    if (s == "待审核") n++
+  }
+  END { print n+0 }
+' || true)"
 NOTES="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/notes.md" 2>/dev/null | awk -F'|' '
   # 计数与表无关: 首个分隔行之后所有 `| ` 行都算 (软告警场景下可接受)
   /^\|[ :|-]*-[ :|-]*\|$/ { seen=1; next }
@@ -90,7 +110,7 @@ esac
 
 echo "## 项目总览"
 echo "- 项目: —"
-echo "- 现状: 工作区 v$WS_VERSION | $AP plan / $AI iteration 进行中 | exp $EXP_TODO 待跑 / $EXP_DOING 在跑 | $NOTES 条 notes | next: plan $(as_next_plan_id) / iteration $(as_next_iteration_id) / exp $(as_next_exp_id) | doctor $DOC_MSG"
+echo "- 现状: 工作区 v$WS_VERSION | $AP plan / $AI iteration 进行中 | base $BASE_ACTIVE 生效 / $BASE_DRAFT 待审 | exp $EXP_TODO 待跑 / $EXP_DOING 在跑 | $NOTES 条 notes | next: plan $(as_next_plan_id) / base $(as_next_base_id) / iteration $(as_next_iteration_id) / exp $(as_next_exp_id) | doctor $DOC_MSG"
 echo
 
 # --- 关键代码仓库: 登记处驱动(每仓库一行机械事实: 分支/脏数/最新提交/上下游)。
@@ -211,12 +231,24 @@ echo
 
 # --- 进行中 ---
 echo "## 进行中"
-active="$( { sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan.md" 2>/dev/null | awk -F'|' -v sec="$SEC_TODO" -v esc="$ESC" '
+active="$( { sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan.md" 2>/dev/null | awk -F'|' -v sec="$SEC_BASE" -v esc="$ESC" '
+  $0 == ("## " sec) { f=1; next }
+  /^## / { f=0 }
+  f && /^\| base:/ {
+    gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(/^ +| +$/, "", $4)
+    gsub(esc, "\\|", $3)
+    print "- " $2 " — " $3 " (基准 " $4 ")"
+  }
+' || true
+sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan.md" 2>/dev/null | awk -F'|' -v sec="$SEC_TODO" -v esc="$ESC" '
   $0 == ("## " sec) { f=1; next }
   /^## / { f=0 }
   f && /^\| [0-9]/ {
-    gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(esc, "\\|", $3)
-    print "- plan:" $2 " — " $3
+    gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(/^ +| +$/, "", $4)
+    gsub(esc, "\\|", $3)
+    line="- plan:" $2 " — " $3
+    if ($4 != "" && $4 != "-") line=line " (" $4 ")"
+    print line
   }
 ' || true
 sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations.md" 2>/dev/null | awk -F'|' -v sec="$SEC_PROGRESS" -v esc="$ESC" '
@@ -382,18 +414,30 @@ echo
 echo "### 工作区事件 (最近 10 条)"
 recent="$(
   {
+    # 基准: 创建 / 激活(审核日期) — Base 节行首列形如 base:NNNN, 与普通行
+    # 分流; 行永不从索引消失, 老事件随日期自然出窗。
+    sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
+      /^\| base:/ {
+        gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3)
+        gsub(/^ +| +$/, "", $5); gsub(/^ +| +$/, "", $6)
+        if ($5 != "") { gsub(esc, "\\|", $3); buf[++n] = $5 " 基准创建: " $3 " (" $2 ")" }
+        if ($6 != "") { gsub(esc, "\\|", $3); buf[++n] = $6 " 基准激活: " $3 " (" $2 ")" }
+      }
+      END { for (i = n; i >= 1; i--) print buf[i] }
+    '
     # 计划: 创建(创建日期, 仅未完成时) / 完成·失败·放弃(完成日期) — 同日
     # 闭环的计划由"完成"事件代表, 不再重复"创建", 给提交流留出位置。
     # 末尾追加的索引 → END 反转使流内新→旧。
     # -F'|' 下首列以 | 开头 → $1 恒为空, 实际列从 $2 起(ID) — 全脚本同约定。
+    # 列: $2 ID $3 计划 $4 状态 $5 基准 $6 创建 $7 完成。
     sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan/index.md" 2>/dev/null | awk -F'|' -v esc="$ESC" '
       /^\| [0-9]/ {
         gsub(/^ +| +$/, "", $2); gsub(/^ +| +$/, "", $3); gsub(/^ +| +$/, "", $4)
-        gsub(/^ +| +$/, "", $5); gsub(/^ +| +$/, "", $6)
-        if ($5 != "" && $6 == "") { gsub(esc, "\\|", $3); buf[++n] = $5 " 计划创建: " $3 " (plan:" $2 ")" }
-        if ($6 != "") {
+        gsub(/^ +| +$/, "", $6); gsub(/^ +| +$/, "", $7)
+        if ($6 != "" && $7 == "") { gsub(esc, "\\|", $3); buf[++n] = $6 " 计划创建: " $3 " (plan:" $2 ")" }
+        if ($7 != "") {
           k = ($4 == "失败" ? "失败" : ($4 == "放弃" ? "放弃" : "完成"))
-          gsub(esc, "\\|", $3); buf[++n] = $6 " 计划" k ": " $3 " (plan:" $2 ")"
+          gsub(esc, "\\|", $3); buf[++n] = $7 " 计划" k ": " $3 " (plan:" $2 ")"
         }
       }
       END { for (i = n; i >= 1; i--) print buf[i] }
@@ -485,6 +529,9 @@ for f in plan.md plan/index.md iterations.md iterations/index.md exp.md exp/inde
   # 只有实际产出告警才追加 — 空输出追加会留下每文件一个空行
   [ -n "$a" ] && alerts+="$a"$'\n'
 done
+if [ "${BASE_DRAFT:-0}" -gt 0 ]; then
+  alerts+="  ⚠ base: $BASE_DRAFT 个基准计划待用户审核(草稿已写好, 等待用户在文件上评论反馈)"$'\n'
+fi
 if [ -n "$PLUGIN_VERSION" ] && [ "$WS_VERSION" != "$PLUGIN_VERSION" ]; then
   alerts+="  ⚠ 版本: 工作区 v$WS_VERSION != 插件 v$PLUGIN_VERSION"$'\n'
 fi

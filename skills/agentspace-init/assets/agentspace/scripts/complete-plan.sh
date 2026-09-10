@@ -43,7 +43,8 @@ as_insert_row "$AS_ROOT/plan.md" "$SEC_DONE" \
   "| $ID | $TITLE | $STATUS_CN | $RESULT_CELL | $DATE | [$DEST]($DEST) |"
 as_truncate_section "$AS_ROOT/plan.md" "$SEC_DONE" 10
 
-# plan/index.md: update status/completed-date/result/link.
+# plan/index.md: update status/completed-date/result/link. Columns (awk
+# -F'|'): $4=状态 $7=完成日期 $8=结果 $9=链接 ($5=基准 stays untouched).
 # Escape-aware: \| cells (result) are shielded before the -F'|' split and
 # restored after; RESULT_CELL travels via ENVIRON, not -v (awk -v unescapes
 # the \| cells produced by as_cell — same hazard as lib.sh::as_insert_row).
@@ -53,7 +54,7 @@ sed "s/\\\\|/$ESC/g" "$AS_ROOT/plan/index.md" \
   | RESULT_CELL="$RESULT_CELL" awk -F'|' -v id="$ID" -v st="$STATUS_CN" -v d="$DATE" -v link="[$DEST]($DEST)" -v esc="$ESC" '
     BEGIN { pat="^\\| *" id " *\\|"; found=0; r=ENVIRON["RESULT_CELL"] }
     $0 ~ pat {
-      $4=" " st " "; $6=" " d " "; $7=" " r " "; $8=" " link " "
+      $4=" " st " "; $7=" " d " "; $8=" " r " "; $9=" " link " "
       out=$1; for (i=2; i<=NF; i++) out=out "|" $i
       print out; found=1; next
     }

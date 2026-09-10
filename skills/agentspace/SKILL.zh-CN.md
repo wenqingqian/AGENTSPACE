@@ -34,9 +34,13 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 - **plan 是特定、有界的事件** — 简单的确认、验证、搜索、读文件、回答问题等不要建 plan。plan 用于: 实现功能、修复 bug、重构代码、运行实验、做结构性变更。
 
 ```bash
-AGENTSPACE/scripts/new-plan.sh "English plan title"   # 输出 plan:NNNN
+AGENTSPACE/scripts/new-plan.sh "English plan title" [--base NNNN]   # 输出 plan:NNNN; --base 关联方向锚点(基准计划)
 ```
 然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
+
+### 基准计划 → agentspace-base-plan skill(不可变方向锚点)
+
+同一方向跨多个演进的 plan 且结果不得漂移时, 用 base plan 锚定; 派生 plan 带 `--base NNNN`。基准文件激活后不可变; 发现基准有误必须告知用户 — 方向只能由用户改变。生命周期与用户审核流见 agentspace-base-plan skill。
 
 ### 开始一轮迭代 → 建 iteration(plan-id 必填: 一个 iteration 必属且仅属一个 plan)
 
@@ -96,7 +100,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 - **[MUST] 登记仓库 commit 门** — 在登记于 `AGENTSPACE/.agentspace-repos` 的仓库执行 `git commit` 前, 必须先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"` 且通过才可提交; 未登记仓库一律不 commit(先提议登记, 用户确认后再提交)。完整规则见 agentspace-code-clean skill 与 AGENTS.md "关键代码仓库"节
 - 内容文档(plan 文档 / iteration readme / exp 手册 / notes / utils / tests)由你直接撰写, 使用 `templates/` 模板
-- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest
+- 相互引用一律用 id: `plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest
 - `data/` 不入 git(已 gitignore), 产物全量本地保存
 - **[MUST] 收尾协议** — 结束任何项目工作前, 依次: ① 更新进行中 iteration readme 的"当前状态 · 下一步"(下次会话续接入口 — 用实际内容替换模板引导注释) ② 运行 `AGENTSPACE/scripts/doctor.sh`(硬错误必须解决; 告警必须向用户报告) ③ 里程碑提交(§4)
 - **[MUST] 脚本报错时**(如"Section not found"): 禁止自行手工编辑表格。先跑 `doctor.sh` 定位, 再与用户确认修复方案。**经用户明确确认的一次性手工修复是唯一合法例外**(scripts-only 规则的出口)。适用于 plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md / register.md 及内容文档
@@ -106,7 +110,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 ## 4. 里程碑 git 提交
 
-触发点(具体清单): plan 创建/完成 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 · 脚本/模板更新。
+触发点(具体清单): plan 创建/完成 · 基准计划 创建/激活/退役 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 · 脚本/模板更新。
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <摘要>"
 ```

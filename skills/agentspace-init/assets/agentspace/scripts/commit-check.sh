@@ -93,10 +93,10 @@ done < <(git -C "$REPO" diff --cached -M --name-only -z --diff-filter=ACMRT 2>/d
 # ---- draft message: canonical bookkeeping-id ban (whole message, case-insensitive) ----
 msg_cands=""
 if [ -n "$MSG" ]; then
-  hit="$(printf '%s' "$MSG" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE" 2>/dev/null || true)"
+  hit="$(printf '%s' "$MSG" | grep -inE "$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE|$COMMIT_BAN_BASE_RE" 2>/dev/null || true)"
   if [ -n "$hit" ]; then
     blocks=$((blocks + 1))
-    block_lines="${block_lines}  - message: 含工作区记账引用(plan:NNNN / iteration_NNNN / exp_NNNN) — 归属信息由 iteration readme 的宿主 SHA 记录承担, commit message 不得出现:"$'\n'
+    block_lines="${block_lines}  - message: 含工作区记账引用(plan:NNNN / base:NNNN / iteration_NNNN / exp_NNNN) — 归属信息由 iteration readme 的宿主 SHA 记录承担, commit message 不得出现:"$'\n'
     while IFS= read -r h; do
       block_lines="${block_lines}      第 ${h%%:*} 行: ${h#*:}"$'\n'
     done <<< "$hit"
@@ -137,17 +137,17 @@ _d="$(mktemp)"
 if ! git -C "$REPO" -c diff.noprefix=false -c diff.mnemonicprefix=false diff --cached --no-ext-diff -M -U0 --diff-filter=ACMRT >"$_d" 2>/dev/null; then
   rm -f "$_d"; printf 'error: staged diff unreadable — fails closed\n' >&2; exit 3
 fi
-content_hits="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE" AS_LINE_MAX=0 as_diff_added_hits <"$_d" 2>/dev/null || true)"
+content_hits="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE|$COMMIT_BAN_BASE_RE" AS_LINE_MAX=0 as_diff_added_hits <"$_d" 2>/dev/null || true)"
 # Wide-net candidates on the SAME staged diff, knobs pinned at the call like
 # the ban scan. The candidate layer can never fail the gate (no exit-code
 # voice), so its read fails open to an empty list; dedup vs the canonical pair
 # is enforced inside as_diff_added_candidates — a canonical-hit line is never
 # re-listed here.
-content_cands="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE" AS_CAND_RE="$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE" AS_LINE_MAX=0 as_diff_added_candidates <"$_d" 2>/dev/null || true)"
+content_cands="$(AS_BAN_RE="$COMMIT_BAN_PLAN_RE|$COMMIT_BAN_ITER_RE|$COMMIT_BAN_EXP_RE|$COMMIT_BAN_BASE_RE" AS_CAND_RE="$COMMIT_CANDIDATE_PLAN_RE|$COMMIT_CANDIDATE_ITER_RE" AS_LINE_MAX=0 as_diff_added_candidates <"$_d" 2>/dev/null || true)"
 rm -f "$_d"
 if [ -n "$content_hits" ]; then
   blocks=$((blocks + 1))
-  block_lines="${block_lines}  - content: 新增行(代码/注释)含工作区记账引用(plan:NNNN / iteration_NNNN / exp_NNNN) — 代码与注释描述改动本身, 归属由 iteration readme 的宿主 SHA 承担:"$'\n'
+  block_lines="${block_lines}  - content: 新增行(代码/注释)含工作区记账引用(plan:NNNN / base:NNNN / iteration_NNNN / exp_NNNN) — 代码与注释描述改动本身, 归属由 iteration readme 的宿主 SHA 承担:"$'\n'
   while IFS=$'\t' read -r hp hl hx; do
     [ -n "$hp" ] || continue
     if [ "$hl" = "-more" ]; then

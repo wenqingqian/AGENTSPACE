@@ -9,6 +9,7 @@ All functionality ships as agent skills — every supported platform (ZCode / Co
 ## Core Concepts
 
 - **Plan → Iteration strict one-to-many**: a task becomes one or more plans (globally incrementing index, never reused); each iteration is a code/state change step within a plan, belonging to exactly one plan
+- **Base plans are immutable direction anchors**: a direction spanning many plans is anchored once in `plan/base/` (separate base:NNNN counter); derived plans declare lineage via `--base NNNN`; after user review the file is checksum-frozen, and drift from the anchor becomes an explicit user decision
 - **Entry files are views, filesystem is source of truth**: `plan.md` keeps Todo + latest 10 Done, `iterations.md` keeps in-progress + latest 10 completed; full history in `plan/index.md`/`iterations/index.md`; all indexes written exclusively by `AGENTSPACE/scripts/`
 - **Content documents authored by agent**: plan docs, iteration readmes, notes use `templates/` scaffolds
 - **Experiment data saved locally, excluded from git**: `iteration_NNNN/data/` is gitignored regardless of size
@@ -22,8 +23,8 @@ All functionality ships as agent skills — every supported platform (ZCode / Co
 ├── worktrees/  .locks/        # agentspace-parallel lanes & coordination locks (created on demand; gitignored)
 └── AGENTSPACE/                # Independent git repo
     ├── AGENTS.md              # Core entry: structure / module what-when-how / discipline
-    ├── plan.md                # Entry: Todo + Done (latest 10)
-    ├── plan/{index.md, todo/, done/}
+    ├── plan.md                # Entry: Todo + Done (latest 10) + Base anchors
+    ├── plan/{index.md, todo/, done/, base/}   # base/ = immutable direction anchors
     ├── iterations.md          # Entry: in-progress + latest completed (10)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
     ├── exp.md                 # Entry: Todo + Doing + latest completed (10) — experiments are opt-in (user-confirmed enrollment only)
@@ -63,6 +64,7 @@ Skills are the functional delivery unit — they behave identically on every sup
 | `agentspace-status` | Explicit only | Status workbench — project overview, current state, soft alerts |
 | `agentspace-mode` | Explicit only | Switch workspace mode (hybrid default / standalone); manage the dependency whitelist |
 | `agentspace-handoff` | Explicit only | One-shot session handoffs — produce a context snapshot at session close, consume it (read, then delete) at the next start |
+| `agentspace-base-plan` | Situational — user asks for a base plan or a direction anchor | Base plans — immutable direction anchors in `plan/base/` (separate counter, `--base NNNN` lineage on derived plans); holds the review gate: draft written, session ends, user comments on the file; activation pins a checksum and freezes the file (doctor-audited) |
 | `agentspace-exp` | Explicit — `/agentspace-exp`; situational — one-time offer on an experiment mention | Experiment records — holds the enrollment gate (opt-in only; correctness-verification runs never enrolled) and drives the manual lifecycle; delegates design alignment to agentspace-better-exp and reports to agentspace-better-exp-report |
 | `agentspace-code-clean` | Passive default — before every commit in a registered key repo; active level explicit-only | Two-level hygiene — SKILL.md carries the default rule layer (commit gate, comment tiers, commit-text rules; merged union of x-code-clean and x-better-commit), CLEANUP.md the explicit-only post-processing procedures (clean past code/comments over any range, rewrite commit messages, rebuild history safely) |
 | `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces — one worktree lane per plan, in-lane implementation and verification, one CAS squash-merge commit back to mainline after user confirmation |
@@ -106,7 +108,7 @@ One-shot session handoffs work in any session, with or without in-progress plans
 Experiment projects typically have one or more key code repos alongside the workspace. AGENTSPACE keeps the code repos clean while all bookkeeping stays in the workspace:
 
 - **Registry**: key repos are registered in `AGENTSPACE/.agentspace-repos` (one path per line; registration/removal always requires explicit user confirmation, written only by `scripts/repos.sh`)
-- **Commit gate (MUST)**: before any `git commit` in a registered repo, the agent runs `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commits only on PASS. Blocked: bookkeeping ids (`plan:NNNN` / `iteration_NNNN` / `exp_NNNN` and variant spellings) in the message **and in ADDED code/comment lines**, experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`), blobs ≥ 50MB, and any `AGENTSPACE/` content leaking into the code repo. Blocked experiment output is moved into the iteration's `data/` instead of deleted
+- **Commit gate (MUST)**: before any `git commit` in a registered repo, the agent runs `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commits only on PASS. Blocked: bookkeeping ids (`plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN` and variant spellings) in the message **and in ADDED code/comment lines**, experiment-output signatures (`events.out.tfevents.*`, top-level `wandb/` `mlruns/` `lightning_logs/`), blobs ≥ 50MB, and any `AGENTSPACE/` content leaking into the code repo. Blocked experiment output is moved into the iteration's `data/` instead of deleted
 - **Commit-text quality**: the title is a one-line description of the actual change — no experiment/run identifiers, no bookkeeping narrative; attribution lives in the iteration readme (host start/end commit SHAs), never in the code repo
 - **Code hygiene (built-in)**: code, comments, and commit text in registered repos follow the agentspace-code-clean rules by default (comment tiers: delete feedback-driven why-not-alternative residue, redundancy, test-instance citations; commit title/body rules); cleaning up past code or history runs only on the user's explicit request, per the skill's CLEANUP procedures
 - **Ex-post audit**: `scripts/doctor.sh` (key-repo registry consistency, recent-commit discipline audit) plus `/agentspace-doctor` report violations — report-only; history is never rewritten automatically
@@ -155,6 +157,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.5.0 | 2026-09-10 | Base plans — immutable direction anchors under `plan/base/` (separate base:NNNN counter, Base section in plan indexes, `--base NNNN` lineage); three lifecycle scripts with a checksum-pinned activation freeze, doctor [17] immutability audit, commit-gate ban on base ids, and the 13th skill agentspace-base-plan carrying the user-review flow (draft written → session ends → user comments on the file) |
 | v1.4.0 | 2026-09-09 | agentspace-code-clean restructured into two levels — passive rule layer in SKILL.md (default load; merged rule union of x-code-clean comment tiers and x-better-commit commit-text rules) plus an explicit-only active level (CLEANUP.md post-processing: scope rules, classification, report-then-confirm, commit rewrite, history-rebuild safety); code hygiene becomes a built-in AGENTS.md rule; changelog and README follow the merged commit-text focus rules |
 | v1.3.1 | 2026-09-09 | New `/agentspace-exp` command + trigger skill (experiment-record enrollment gate and lifecycle; design/report delegate to the two better-exp skills); better-exp-report prose rule reframed from an English-term whitelist to a community-default test; READMEs rewritten to one-line skill and release summaries; release-gate description cap tightened to 1000 chars |
 | v1.3.0 | 2026-09-08 | Experiment records (exp module) — opt-in enrollment, manual todo/doing/done lifecycle with three scripts, mandatory configs in `examples/exp_spec/`, local-only full records in `exp_data/`, commit-gate ban on exp ids, doctor [16] consistency, plus two new skills (agentspace-better-exp, agentspace-better-exp-report) |

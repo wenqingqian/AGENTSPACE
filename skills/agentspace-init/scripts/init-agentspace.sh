@@ -23,11 +23,11 @@ fi
 # ---- Create directory tree and copy workspace contents ----
 mkdir -p "$TARGET"
 cp -R "$ASSETS_DIR/agentspace/." "$TARGET/"
-mkdir -p "$TARGET/plan/todo" "$TARGET/plan/done" "$TARGET/iterations" "$TARGET/handoff" \
+mkdir -p "$TARGET/plan/todo" "$TARGET/plan/done" "$TARGET/plan/base" "$TARGET/iterations" "$TARGET/handoff" \
          "$TARGET/exp/todo" "$TARGET/exp/doing" "$TARGET/exp/done" \
          "$TARGET/data" "$TARGET/examples" "$TARGET/utils" "$TARGET/tests" "$TARGET/notes"
 # Git needs files to track empty directories (data/ is gitignored, no .gitkeep needed)
-touch "$TARGET/plan/todo/.gitkeep" "$TARGET/plan/done/.gitkeep" \
+touch "$TARGET/plan/todo/.gitkeep" "$TARGET/plan/done/.gitkeep" "$TARGET/plan/base/.gitkeep" \
       "$TARGET/exp/todo/.gitkeep" "$TARGET/exp/doing/.gitkeep" "$TARGET/exp/done/.gitkeep" \
       "$TARGET/examples/.gitkeep" \
       "$TARGET/utils/.gitkeep" "$TARGET/tests/.gitkeep" "$TARGET/notes/.gitkeep"

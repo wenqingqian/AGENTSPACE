@@ -34,9 +34,13 @@ Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` 
 - **Plans are for specific, bounded events** — do NOT create plans for trivial tasks like: quick confirmation, verification, searching, reading files, answering questions. Plans are for: implementing a feature, fixing a bug, refactoring code, running an experiment, making structural changes.
 
 ```bash
-AGENTSPACE/scripts/new-plan.sh "English plan title"   # Outputs plan:NNNN
+AGENTSPACE/scripts/new-plan.sh "English plan title" [--base NNNN]   # Outputs plan:NNNN; --base links a direction anchor
 ```
 Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. Milestone commit (see §4).
+
+### Base Plans → agentspace-base-plan skill (immutable direction anchors)
+
+When one direction spans many evolving plans and results must not drift from it, anchor it with a base plan; derived plans carry `--base NNNN`. Base files are immutable after activation; if one proves wrong, tell the user — only the user changes direction. Lifecycle and the user review flow live in the agentspace-base-plan skill.
 
 ### Start an Iteration → Create Iteration (plan-id required: each iteration belongs to exactly one plan)
 
@@ -96,7 +100,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 
 - **[MUST] Commit gate for registered key repos** — before any `git commit` in a repo registered in `AGENTSPACE/.agentspace-repos`, run `AGENTSPACE/scripts/commit-check.sh <repo> "<message>"` and commit only on PASS; never commit in unregistered repos (propose registration, user confirms, then commit). Full rules: the agentspace-code-clean skill and AGENTS.md "关键代码仓库"
 - Content documents (plan docs / iteration readmes / exp manuals / notes / utils / tests) are written directly by you, using `templates/` templates
-- Cross-references always use ids: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; never paths, never latest (latest flips)
+- Cross-references always use ids: `plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN`; never paths, never latest (latest flips)
 - `data/` not in git (gitignored); all output saved locally
 - **[MUST] Wrap-up protocol** — before ending any project work session, in order: ① update the in-progress iteration readme's "当前状态 · 下一步" (the re-entry point for the next session — replace the template guidance comment with real content) ② run `AGENTSPACE/scripts/doctor.sh` (hard errors must be resolved; warnings must be reported to the user) ③ milestone commit (§4)
 - **[MUST] On script errors** (e.g., "Section not found"): do NOT hand-edit tables. Run `doctor.sh` to locate the issue, then discuss a repair plan with the user. **A one-time manual fix explicitly confirmed by the user is the only allowed exception** to the scripts-only rule. This applies to plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md / register.md and any content documents
@@ -106,7 +110,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 
 ## 4. Milestone Git Commits
 
-Triggers (specific): plan created/completed · iteration created/closed · exp created/completed · module registered · notes written · tests.md environment changed · examples/data entries registered · user rules written · update applied · scripts/templates updated.
+Triggers (specific): plan created/completed · base plan created/activated/retired · iteration created/closed · exp created/completed · module registered · notes written · tests.md environment changed · examples/data entries registered · user rules written · update applied · scripts/templates updated.
 ```bash
 git -C AGENTSPACE add -A && git -C AGENTSPACE commit -m "<type>: <summary>"
 ```

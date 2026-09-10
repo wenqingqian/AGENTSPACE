@@ -25,7 +25,7 @@ hybrid
 
 - **形态**: 内嵌(工作区在代码仓库内 — 宿主须经 .gitignore 或 .git/info/exclude 豁免 AGENTSPACE/, 宿主历史不出现其内容与 gitlink)或分开存放(仓库在树外, 按路径登记)。形态是派生事实, 不存储。
 - **commit 门(MUST)**: 在登记仓库执行 `git commit` 前, 必须先运行 `scripts/commit-check.sh <仓库> "<message>"` 并通过(exit 0); 未登记仓库(exit 2)先登记后提交。commit 门与全部代码/注释/commit 文本卫生规则见 agentspace-code-clean skill(被动层默认生效; 主动清理既有代码/历史仅经用户显式要求)。
-- **message**: 记账 id(plan:NNNN / iteration_NNNN)与记账叙述永不进入代码仓库 commit; 归属由 iteration readme 的宿主 SHA 记录承担。
+- **message**: 记账 id(plan:NNNN / base:NNNN / iteration_NNNN / exp_NNNN)与记账叙述永不进入代码仓库 commit; 归属由 iteration readme 的宿主 SHA 记录承担。
 - **文件**: 实验产物(`events.out.tfevents.*`、顶层 wandb/mlruns/lightning_logs、≥50MB blob)阻断; 数据扩展名 ≥100KB 与顶层输出目录为 WARN(agent 结合仓库上下文判断); 阻断后导流: unstage → `mv` 进 iteration_NNNN/data/ → 建议补 .gitignore(须用户同意)。
 - **standalone 模式**: 登记仓库是工作对象, 豁免白名单语义(doctor [13] 不报违规)。
 - **审计**: doctor [14](登记一致性/内嵌盾牌/热仓库未登记)与 [15](近期 commit 事后扫描, 只报告不改历史)。
@@ -35,8 +35,8 @@ hybrid
 ```
 AGENTSPACE/
 ├── AGENTS.md          ← 本文件
-├── plan.md            ← plan 入口视图 (Todo + 最近 Done 10 条)
-├── plan/              ← index.md(全量索引) + todo/ + done/(含 完成/失败/放弃)
+├── plan.md            ← plan 入口视图 (Todo + 最近 Done 10 条 + Base 基准计划)
+├── plan/              ← index.md(全量索引, 含 Base 节) + todo/ + done/(含 完成/失败/放弃) + base/(基准计划, 激活后不可变)
 ├── iterations.md      ← iteration 入口视图 (进行中 + 最近完成 10 条)
 ├── iterations/        ← index.md(全量索引) + latest 软连接 + iteration_NNNN/{readme.md, data/(实验产物+代码diff)}
 ├── exp.md             ← exp 入口视图 (Todo + Doing + 最近完成 10 条)
@@ -49,7 +49,7 @@ AGENTSPACE/
 ├── register.md        ← 按需扩展模块注册表
 ├── .agentspace-repos  ← 关键代码仓库登记处(一行一路径; 只能由 scripts/repos.sh 改写)
 ├── handoff/           ← 一次性会话交接文件 + index.md(由 scripts/handoff.sh 维护, 文件不入 git)
-├── templates/         ← 文档模板(plan / iteration-readme / exp-manual / module-entry / note / handoff)
+├── templates/         ← 文档模板(plan / base-plan / iteration-readme / exp-manual / module-entry / note / handoff)
 └── scripts/           ← 状态流转与登记脚本(索引/条目/登记处的唯一写入口) + commit 检查门(commit-check.sh)
 ```
 
@@ -58,7 +58,9 @@ AGENTSPACE/
 ### plan —— 任务计划 (plan.md + plan/)
 - **what**: 一个任务写成一个或多个 plan; 索引自项目创建起全局递增、永不复用
 - **when**: 有新任务/目标时创建; 到达明确终点(完成/失败/放弃)时关闭
-- **how**: `scripts/new-plan.sh "标题"` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) → `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`
+- **how**: `scripts/new-plan.sh "标题" [--base NNNN]` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) → `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`
+- **基准计划(base plan)**: 方向锚点, 服务于"同一方向出现多个 plan、且最终结果不得漂移"的场景。位置 plan/base/, 单独计数(id 形如 base:NNNN), 登记于 plan/index.md 与 plan.md 的 Base 节; 语义上作为由它派生的一切任务(plan/iteration/exp)的最基础约束, 派生 plan 用 `--base NNNN` 声明归属(索引 基准 列)
+- **base plan 生命周期**: `scripts/new-base-plan.sh "方向标题"`(产出待审核草稿) → 填写方向/约束/边界 → **直接结束会话呈交用户审核**(不走 agent plan 模式审核; 用户在文件上以评论形式反馈, 待审核期间 agent 可按评论修订草稿) → 用户批准后 `scripts/activate-base-plan.sh <id>`(钉定 sha256 校验, 文件自此**物理不可变**, 任何脚本不再写该文件) → 方向变更只能新建 base plan 后 `scripts/retire-base-plan.sh <id> <replaced|voided> "原因" [--by NNNN]`(旧文件永不改写)。生命周期与审核流细则见 agentspace-base-plan skill
 
 ### iterations —— 代码变更迭代 (iterations.md + iterations/)
 - **what**: 实现 plan 过程中的一次**代码/仓库状态变更**(递进关系, 一轮接一轮); 常伴随实验验证, 所以有 readme + data/; **每个 iteration 必属且仅属一个 plan**, 一个 plan 可含多个 iteration
@@ -118,6 +120,7 @@ AGENTSPACE/
 
 - **[MUST] scripts-only**: plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md 与 .agentspace-repos **只能由 scripts/ 改写**, 禁止手工编辑
 - **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建; 开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)
+- **[MUST] 基准计划不可变**: plan/base/ 下的 base plan 文件激活后严禁修改(激活时校验和已钉定, 改动即损坏, 由 doctor 报出; agent 不得自行改写或"恢复"); 发现 base plan 不可实现或有正确性错误时必须**显式告知用户**, 方向变更(新基准取代/废弃)只能由用户决定; base plan 的创建与修改必须呈交用户审核 — 草稿写好后直接结束会话, 由用户在文件上以评论形式反馈, 激活须待用户明确批准
 - **[MUST] commit 门**: 登记仓库 commit 前必过 `scripts/commit-check.sh <仓库> "<message>"`(见 关键代码仓库 节); 未登记仓库先登记后提交; 登记/出册必须用户显式确认
 - **[MUST] 并行工作区约定**: 多 plan 并行开发走 agentspace-parallel skill(PR-like 本地泳道)。固定位置 `worktrees/<plan-id>/<仓库名>/` 与锁目录 `.locks/` 在**项目根**(非 AGENTSPACE/ 内); 内嵌形态下宿主仓库必须先经 .gitignore 豁免这两个路径(锁 owner 文件含记账 id 字面量, 被 `git add -A` 扫入会触发 commit 门)。并行期台账写操作: 脚本自带锁, 内容文档写前取 `.locks/ledger/`; 永不 `git -C AGENTSPACE add -A` 一把梭(逐路径 add)
 - **[MUST] 收尾协议**: 结束项目工作前依次执行 — ① 更新进行中 readme 的"当前状态 · 下一步" ② 运行 `scripts/doctor.sh`(硬错误必须解决, 告警报告用户) ③ 里程碑提交
@@ -125,8 +128,8 @@ AGENTSPACE/
 - **[MUST] 用户规则守护**: 用户规则节的写入/修改/删除只能经用户显式确认; agent 永不自动创建或改写用户规则; agent 提议仅限当前会话内工作或用户指示显现强规则性质时启发式提出(附现象证据), 用户拒绝后同一提议不再重复
 - **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 commit 文本默认遵循 agentspace-code-clean 被动层规则 — 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文), 禁止 why-not-alternative 反馈残留与测试实例引用; 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动; 既有代码/历史的清理与重建仅在用户显式要求时按该 skill 的 CLEANUP 流程执行
 - 内容文档(plan 文档 / iteration readme / exp 手册 / notes / utils / tests)由 agent 直接撰写, 使用 templates/ 模板
-- 相互引用一律用 id: `plan:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest(latest 会翻转)
-- **里程碑 git 提交**(具体触发点): plan 创建/完成 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 → `git -C AGENTSPACE add -A && commit`, 并告知用户
+- 相互引用一律用 id: `plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest(latest 会翻转)
+- **里程碑 git 提交**(具体触发点): plan 创建/完成 · base plan 创建/激活/取代/废弃 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 → `git -C AGENTSPACE add -A && commit`, 并告知用户
 - agentspace 记账的 git 操作只在 AGENTSPACE/ 内; 代码仓库的 commit 受 commit 门约束(见 关键代码仓库 节), 代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/
 - 状态自检: `scripts/status.sh`; 收尾后及怀疑损坏时运行 `scripts/doctor.sh`
 - **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用; 这些数据仅用于插件自身开发

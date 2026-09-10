@@ -7,6 +7,7 @@
 ## 核心概念
 
 - **plan → iteration 严格一对多**: 一个任务写成一个或多个 plan(全局递增索引, 永不复用); 每个 iteration 是 plan 内的一次代码/状态变更, 必属且仅属一个 plan
+- **基准计划是不可变方向锚点**: 跨多个 plan 的方向在 `plan/base/` 锚定一次(独立 base:NNNN 计数); 派生 plan 经 `--base NNNN` 声明归属; 用户审核后文件按校验和冻结, 偏离锚点成为必须交用户决断的显性事件
 - **入口是视图, 文件系统是真源**: `plan.md` 只维护 Todo + 最近 10 条 Done, `iterations.md` 只维护进行中 + 最近 10 条完成; 完整历史在 `plan/index.md`/`iterations/index.md`; 所有索引由 `AGENTSPACE/scripts/` 下的脚本改写, agent 不手编表格
 - **内容文档由 agent 撰写**: plan 文档、iteration readme、notes 等使用 `templates/` 模板直接生成
 - **实验产物全量本地保存**: `iteration_NNNN/data/` 已 gitignore, 不入 git
@@ -20,8 +21,8 @@
 ├── worktrees/  .locks/        # agentspace-parallel 泳道与协同锁(按需创建; gitignore)
 └── AGENTSPACE/                # 独立 git 仓库
     ├── AGENTS.md              # 核心入口: 结构/模块 what-when-how/纪律
-    ├── plan.md                # 入口: Todo + Done(最近10条)
-    ├── plan/{index.md, todo/, done/}
+    ├── plan.md                # 入口: Todo + Done(最近10条) + Base 基准计划
+    ├── plan/{index.md, todo/, done/, base/}   # base/ = 不可变方向锚点
     ├── iterations.md          # 入口: 进行中 + 最近完成(10条)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
     ├── exp.md                 # 入口: Todo + Doing + 最近完成(10条) — 实验仅限主动登记(用户确认后才入册)
@@ -61,6 +62,7 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | `agentspace-status` | 仅显式 | 状态工作台 — 项目总览、现状、软告警 |
 | `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理依赖白名单 |
 | `agentspace-handoff` | 仅显式 | 一次性会话交接 — 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
+| `agentspace-base-plan` | 场景 — 用户要求建基准计划/锚定方向 | 基准计划 — `plan/base/` 下的不可变方向锚点(独立计数, 派生 plan `--base NNNN` 关联); 持有审核门: 草稿写好后结束会话, 用户在文件上评论; 激活钉定校验并冻结文件(doctor 审计) |
 | `agentspace-exp` | 显式 — `/agentspace-exp`; 场景 — 实验意向时的一次性提议 | 实验记录 — 持有登记门(仅限主动; 开发收尾的正确性验证绝不登记)并驱动手册生命周期; 设计对齐委托 agentspace-better-exp, 报告委托 agentspace-better-exp-report |
 | `agentspace-code-clean` | 被动默认 — 登记仓库每次 commit 前; 主动层仅显式 | 两级卫生 — SKILL.md 为默认规则层(commit 门、注释四类分级、commit 文本规则; 融合 x-code-clean 与 x-better-commit 并集), CLEANUP.md 为仅显式的后处理流程(任意范围清理既有代码/注释、改写 commit、安全重建历史) |
 | `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区 — 每个 plan 一条泳道, 泳道内实施与验证, 用户确认后 CAS squash 合回主线恰好一个 commit |
@@ -104,7 +106,7 @@ plan 标题必须能产出合规文件名 slug — 只接受小写英文词、�
 实验型项目通常在台账之外还有若干关键代码仓库。AGENTSPACE 让代码仓库保持干净, 记账全部留在工作区:
 
 - **登记处**: 关键仓库登记在 `AGENTSPACE/.agentspace-repos`(一行一路径; 登记/出册始终须用户显式确认, 只能由 `scripts/repos.sh` 改写)
-- **commit 门(MUST)**: 在登记仓库执行任何 `git commit` 前, agent 先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"`, 仅 PASS 才提交。阻断项: message **与新增代码/注释行**中的记账 id(`plan:NNNN` / `iteration_NNNN` / `exp_NNNN` 及变体拼写)、实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)、≥50MB blob、任何 `AGENTSPACE/` 内容泄漏进代码仓库。被阻断的实验产物移入本轮 iteration 的 `data/` 而非删除
+- **commit 门(MUST)**: 在登记仓库执行任何 `git commit` 前, agent 先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"`, 仅 PASS 才提交。阻断项: message **与新增代码/注释行**中的记账 id(`plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN` 及变体拼写)、实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)、≥50MB blob、任何 `AGENTSPACE/` 内容泄漏进代码仓库。被阻断的实验产物移入本轮 iteration 的 `data/` 而非删除
 - **commit 文本质量**: 标题=对实际改动的一句话描述 — 无实验/run 标识、无记账叙述; 归属由 iteration readme 的宿主起始/结束 commit SHA 承担, 永不进入代码仓库
 - **代码卫生(内置)**: 登记仓库内的代码、注释与 commit 文本默认遵循 agentspace-code-clean 规则(注释分级: 删除 why-not-alternative 反馈残留/冗余复述/测试实例引用; commit 标题与正文规范); 对既有代码/历史的清理仅在用户显式要求时按该 skill 的 CLEANUP 流程执行
 - **事后审计**: `scripts/doctor.sh`(关键仓库登记一致性、近期 commit 纪律审计)加上 `/agentspace-doctor`, 报告违规 — 只报告, 绝不自动改写历史
@@ -153,6 +155,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.5.0 | 2026-09-10 | 基准计划 — `plan/base/` 下的不可变方向锚点(独立 base:NNNN 计数、plan 索引 Base 节、派生 plan `--base NNNN` 归属); 三个生命周期脚本 + 校验和钉定的激活冻结 + doctor [17] 不可变审计 + commit 门禁 base id; 第 13 个 skill agentspace-base-plan 持有用户审核流(草稿写好 → 结束会话 → 用户在文件上评论) |
 | v1.4.0 | 2026-09-09 | agentspace-code-clean 双层化 — SKILL.md 被动规则层(默认加载; 融合 x-code-clean 注释分级与 x-better-commit commit 文本规则的并集)+ 仅显式的主动层 CLEANUP.md(范围规则、分级应用、先报告后确认、commit 改写、历史重建安全); 代码卫生成为 AGENTS.md 内置规则; changelog 与 README 按融合后 commit 文本规则聚焦 |
 | v1.3.1 | 2026-09-09 | 新增 `/agentspace-exp` 命令 + 触发器 skill(实验记录登记门与生命周期; 设计/报告委托两个 better-exp skill); better-exp-report 文字规范从英文白名单改为社区默认判据; 双 README 重写为单行式 skill 与版本摘要; 发布门 description 上限收紧到 1000 字符 |
 | v1.3.0 | 2026-09-08 | 实验记录(exp 模块)— 主动登记、todo/doing/done 手册生命周期(三脚本)、配置强制入 `examples/exp_spec/`、全量记录本机存 `exp_data/`、commit 门禁 exp id、doctor [16] 一致性, 新增 agentspace-better-exp 与 agentspace-better-exp-report 双 skill |
