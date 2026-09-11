@@ -70,3 +70,4 @@ tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
 
 echo "plan:$ID created → $FILE (base: $BASE_CELL)"
 echo "Next: write the goal/background/plan-steps in that file"
+as_commit_hint "plan: open $ID" plan.md plan/index.md "$FILE"

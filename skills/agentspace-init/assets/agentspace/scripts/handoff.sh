@@ -143,6 +143,14 @@ EOF
       as_die "handoff not indexed: $NAME (run --list)"
     fi
     [ -f "$FILE" ] || as_die "handoff file missing: $FILE"
+    # Consume = read first: the file is git-ignored and destroyed below, so an
+    # unprinted delete would lose the content unrecoverably. Dump it to stdout
+    # before any state change (v1.5.1).
+    echo "---- handoff content: $LOC ----"
+    cat "$FILE"
+    # guard a file without a trailing newline so the end marker stays on its own line
+    [ "$(tail -c 1 "$FILE" | wc -l | tr -d ' ')" = "1" ] || echo ""
+    echo "---- end of handoff content ----"
     as_lock
     if [ "$KEEP" -eq 1 ]; then
       # Mark the snapshot so doctor [11] skips it — a kept handoff is

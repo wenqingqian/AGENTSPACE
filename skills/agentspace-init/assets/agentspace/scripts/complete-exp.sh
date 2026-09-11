@@ -45,9 +45,10 @@ if [ "$STATUS_OLD" = "doing" ]; then
 else
   grep -qx "$STATUS_TODO" "$SRC" || as_die "exp_$ID status line is not $STATUS_TODO (status anomaly — run doctor.sh)"
 fi
-# Gate: results section must be filled (template placeholder gone)
-if grep -Fq "$RESULT_PH_EXP" "$SRC"; then
-  as_die "Results section not filled (template placeholder still present): $SRC"
+# Gate: results section carries a real conclusion (non-comment content —
+# keeping the template guidance comments is fine, they are not content)
+if ! as_section_filled "$SRC" "结果"; then
+  as_die "Results section is empty: $SRC — write the conclusion under '## 结果' (template guidance comments don't count as content)"
 fi
 
 # Gate: the config contract — every registered experiment carries its configs in
@@ -138,3 +139,4 @@ fi
 
 echo "exp_$ID → $STATUS_CN ($DEST)"
 echo "Next [SHOULD]: reports/figures follow the agentspace-better-exp-report skill; transferable conclusions go to notes with source exp_$ID"
+as_commit_hint "exp: complete $ID" exp.md exp/index.md exp/todo exp/doing "$DEST"

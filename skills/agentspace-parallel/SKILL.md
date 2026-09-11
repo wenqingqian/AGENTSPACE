@@ -104,7 +104,9 @@ takeover to the user — never silently break a lock.
    worktree, repos you don't change resolve from the main checkout**.
 3. **Self-check triple** (all three must pass): ① env-script output points dependency sources at
    the expected checkouts; ② the target package imports resolve to worktree paths; ③
-   `commit-check.sh <worktree-path> "self-check"` exits 0 (registration recognized).
+   `commit-check.sh <worktree-path> "self-check"` exits 0 (registration recognized) — stage a
+   token file first (`git add` a scratch file): the gate refuses empty staging (exit 3), which
+   is a precondition error, not a registration failure.
 4. **Record the base**: one row per repo in the iteration readme's environment section —
    `<repo> plan-<id>:<base-sha>` (a PERMANENT anchor; it stays reachable on the mainline forever).
 

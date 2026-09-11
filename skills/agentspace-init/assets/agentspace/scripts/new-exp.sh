@@ -52,6 +52,7 @@ fi
 # (open or closed — a closed iteration's data may still be the exp's subject).
 ITER_CELL="-"
 ITER_IDS=""
+ITER_READMES=""
 if [ -n "$ITER_ARG" ]; then
   ITER_CELL=""
   IFS=',' read -r -a _iids <<< "$ITER_ARG"
@@ -107,7 +108,9 @@ while IFS= read -r iid; do
     as_append_to_section "$README" "相关实验" "<!-- 由 new-exp.sh 自动追加(关联本 iteration 的 exp), 请勿手工编辑 -->"
   fi
   as_append_to_section "$README" "相关实验" "$ENTRY"
+  ITER_READMES="$ITER_READMES iterations/iteration_$iid/readme.md"
 done <<< "$ITER_IDS"
 
 echo "exp_$ID created → $FILE (plan: $PLAN_CELL / iteration: $ITER_CELL)"
 echo "Next: run the agentspace-better-exp alignment if not done yet, fill the manual, put configs into examples/exp_spec/exp_$ID/; launch with start-exp.sh $ID"
+as_commit_hint "exp: enroll $ID" exp.md exp/index.md "$FILE"$ITER_READMES "examples/exp_spec/exp_$ID"

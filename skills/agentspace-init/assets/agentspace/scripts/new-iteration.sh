@@ -56,6 +56,8 @@ tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
 # Append to plan document's "相关迭代" section
 ENTRY="- [iteration_$ID](../../iterations/iteration_$ID/readme.md) — $CELL ($DATE)"
 as_append_to_section "$PLAN_FILE" "$SEC_RELATED" "$ENTRY"
+echo "appended 相关迭代 → $PLAN_FILE (re-read that file before further edits — this append invalidates stale reads)"
 
 echo "iteration_$ID created (plan:$PLAN_ID) → $DIR/"
 echo "Next: update readme goal/change-summary; place experiment output in $DIR/data/"
+as_commit_hint "iteration: open $ID (plan:$PLAN_ID)" iterations.md iterations/index.md "$DIR" "plan/todo/$(basename "$PLAN_FILE")"

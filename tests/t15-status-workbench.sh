@@ -111,7 +111,13 @@ assert_output_contains "$OUT_MID" "$(date +%F) 测试: t15 milestone"  # 台账(
 # 宿主代码提交块: feat commit 在列
 assert_output_contains "$OUT_MID" "feat: host side change"
 # 关闭: 结果节填满 → close (结果含原始管道) → index 行必须完整 (8 列 + 2 转义管)
-grep -vF "指标 / 结论" "$WS/iterations/iteration_$ITER/readme.md" > "$WS/iterations/iteration_$ITER/readme.md.tmp" && mv "$WS/iterations/iteration_$ITER/readme.md.tmp" "$WS/iterations/iteration_$ITER/readme.md"
+python3 - "$WS/iterations/iteration_$ITER/readme.md" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+s = s.replace("<!-- 指标 / 结论; 关闭 iteration 前必填 -->", "指标: a | b (raw pipes stay section-local)")
+open(p, "w").write(s)
+PYEOF
 assert_ok bash "$WS/scripts/close-iteration.sh" "$ITER" "esc | result"
 LINE="$(grep -F "| $ITER |" "$WS/iterations/index.md")"
 [ -n "$LINE" ] || fail "index row for iteration_$ITER missing"

@@ -15,16 +15,27 @@
 # for explicit agent adjudication and NEVER alter the exit code — hard hits
 # stay hard hits (exit 1), and the candidate list rides along either way for
 # full attribution.
-# READ-ONLY: never touches the repo, its index, or the workspace. No --force
-# valve by design — a blocked commit is rewritten, not forced through.
+#   commit-check.sh <repo-path> --commit "<message>"
+#       Gate, then commit the gated message in one step with
+#       --cleanup=verbatim — the message the gate approved is what git
+#       records (copy-paste drift between gate and commit is otherwise
+#       undetected). Report-only candidate lines are NOT blockers: --commit
+#       proceeds over listed candidates, adjudication belongs to the caller.
+# READ-ONLY by default: plain mode never touches the repo, its index, or the
+# workspace; --commit obviously performs the commit it names. No --force valve
+# by design — a blocked commit is rewritten, not forced through.
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 # The draft message is REQUIRED: the message ban must never be silently
 # skipped (an omitted message must not produce a PASS identical to a checked
 # one) — fail closed with the usage-error code 3.
-[ $# -ge 2 ] || { printf 'error: usage: commit-check.sh <repo-path> "<draft-message>"\n' >&2; exit 3; }
-REPO_ARG="$1"; MSG="$2"
+[ $# -ge 2 ] || { printf 'error: usage: commit-check.sh <repo-path> "<draft-message>" | commit-check.sh <repo-path> --commit "<message>"\n' >&2; exit 3; }
+REPO_ARG="$1"; MODE="check"; MSG="$2"
+if [ "$MSG" = "--commit" ]; then
+  [ $# -eq 3 ] || { printf 'error: usage: commit-check.sh <repo-path> --commit "<message>"\n' >&2; exit 3; }
+  MODE="commit"; MSG="$3"
+fi
 
 REPO="$(as_repo_canon "$REPO_ARG")" || { printf 'error: not inside a git worktree: %s\n' "$REPO_ARG" >&2; exit 3; }
 # The AGENTSPACE ledger repo is always exempt (repos.sh refuses it at the
@@ -88,7 +99,14 @@ while IFS= read -r -d '' p; do
   if [ -n "$w" ]; then
     warns=$((warns + 1)); warn_lines="${warn_lines}  - $p — $w"$'\n'
   fi
-done < <(git -C "$REPO" diff --cached -M --name-only -z --diff-filter=ACMRT 2>/dev/null || true)
+done < <(git -C "$REPO" diff -M --name-only -z --diff-filter=ACMRT --cached 2>/dev/null || true)
+# Deletions count as staging too (a pure `git rm` commit is a real commit);
+# they are appended after the ACMRT pass so the per-file content scans above
+# keep their code-path (a deleted path has no staged blob to inspect).
+while IFS= read -r -d '' p; do
+  [ -n "$p" ] || continue
+  staged=$((staged + 1))
+done < <(git -C "$REPO" diff --name-only -z --diff-filter=D --cached 2>/dev/null || true)
 
 # ---- draft message: canonical bookkeeping-id ban (whole message, case-insensitive) ----
 msg_cands=""
@@ -194,6 +212,15 @@ if [ "$cands" -gt 0 ]; then
   printf '%s' "$cand_lines"
   echo "  → agent 语义层必须对以上每个候选逐条显式裁决; 裁决结论(放行/否决)与理由由 agent 向用户陈述 — 脚本不代替判定。放行必须给出理由; 否决则改写文本后重新过门。"
 fi
+# Empty staging is a workflow error, not a pass — but only once the message
+# scans have had their voice: with a blocked message the BLOCKED verdict below
+# reports exit 1; with a clean message and nothing staged the gate would
+# certify nothing, so fail closed on the precondition code instead.
+if [ "$staged" -eq 0 ] && [ "$blocks" -eq 0 ]; then
+  printf 'error: nothing staged in %s — the gate validates staged content; git add first, then re-run\n' "$REPO" >&2
+  exit 3
+fi
+
 echo
 if [ "$blocks" -gt 0 ]; then
   echo "== BLOCKED: $blocks 项阻断 — 修复后重新过门; 门无放行阀门 =="
@@ -203,4 +230,11 @@ if [ "$cands" -gt 0 ]; then
   echo "== PASS ($warns 项提醒; $cands 个候选已列上方 — 由 agent 裁决, 不阻断) =="
 else
   echo "== PASS ($warns 项提醒) =="
+fi
+
+# --commit mode: the ONLY writer path, reached strictly after a full PASS —
+# the committed message is byte-identical to the gated one by construction.
+if [ "$MODE" = "commit" ]; then
+  git -C "$REPO" commit --cleanup=verbatim -m "$MSG" && \
+    git -C "$REPO" log -1 --format='committed: %h %s'
 fi

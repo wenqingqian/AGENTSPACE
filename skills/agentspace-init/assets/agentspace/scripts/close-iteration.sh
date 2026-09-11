@@ -13,10 +13,11 @@ DIR="iterations/iteration_$ID"
 README="$AS_ROOT/$DIR/readme.md"
 [ -f "$README" ] || as_die "iteration_$ID does not exist"
 # Gate: exact match on status line
-grep -qx "$STATUS_PROGRESS" "$README" || as_die "iteration_$ID is not in progress (already closed or status anomaly)"
-# Gate: results section must be filled (template placeholder gone)
-if grep -Fq "$RESULT_PH_ITER" "$README"; then
-  as_die "Results section not filled (template placeholder still present): $README"
+grep -qx "$STATUS_PROGRESS" "$README" || as_die "iteration_$ID is not in progress (already closed or status anomaly) — close reads the readme '> 状态:' line; if you pre-filled the readme, set its status line back to '> 状态: 进行中' first"
+# Gate: results section carries a real conclusion (non-comment content —
+# keeping the template guidance comments is fine, they are not content)
+if ! as_section_filled "$README" "结果"; then
+  as_die "Results section is empty: $README — write the conclusion under '## 结果' (template guidance comments don't count as content)"
 fi
 
 PLANREF="$(as_row_cell "$AS_ROOT/iterations.md" "$ID" 3)"
@@ -114,3 +115,4 @@ if [ "${OPEN_EXPS:-0}" -gt 0 ]; then
   echo "note: $OPEN_EXPS linked open experiment(s) reference iteration_$ID — copy this iteration's data/ artifacts into exp/exp_data/exp_*/ before closing the exp"
 fi
 echo "Next [SHOULD]: if the result holds transferable lessons, write a note (templates/note.md) with source iteration_$ID, back-linking this readme in 详情"
+as_commit_hint "iteration: close $ID" iterations.md iterations/index.md "$DIR/readme.md"

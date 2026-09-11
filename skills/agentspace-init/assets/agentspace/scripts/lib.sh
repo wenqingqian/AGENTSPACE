@@ -75,13 +75,16 @@ AS_LOCK_STALE_HOURS="${AS_LOCK_STALE_HOURS:-6}"
 case "$AS_LOCK_STALE_HOURS" in ''|*[!0-9]*) AS_LOCK_STALE_HOURS="6" ;; esac
 readonly AS_LOCK_STALE_HOURS
 # ---- Placeholder constants (must match template comments exactly; doctor [5] checks drift) ----
-# Gate: close-iteration refuses while present. Template: iteration-readme.md "结果"
+# Fill-state gates do NOT key on these since v1.5.1: a filled section keeps its
+# guidance comments, so gates test section content via as_section_filled. The
+# constants remain as the doctor [5] template-drift anchors.
+# Template-drift anchor for doctor [5] only (gates use as_section_filled since v1.5.1). Template: iteration-readme.md "结果"
 readonly RESULT_PH_ITER="<!-- 指标 / 结论; 关闭 iteration 前必填 -->"
-# Gate: complete-plan refuses while present. Template: plan.md "结果" (first line of 2-line comment)
+# Template-drift anchor for doctor [5] only (gates use as_section_filled since v1.5.1). Template: plan.md "结果" (first line of 2-line comment)
 readonly RESULT_PH_PLAN="<!-- 完成时填写: 一句话结论"
 # Warning: doctor flags in-progress readmes while present. Template: iteration-readme.md "当前状态 · 下一步"
 readonly RESUME_PH_ITER="<!-- 会话续接块:"
-# Gate: complete-exp refuses while present. Template: exp-manual.md "结果"
+# Template-drift anchor for doctor [5] only (gates use as_section_filled since v1.5.1). Template: exp-manual.md "结果"
 readonly RESULT_PH_EXP="<!-- 一句话结论; 关闭 exp 前必填 -->"
 # Gate: activate-base-plan refuses while present — a base plan cannot be
 # frozen as an empty skeleton. Template: base-plan.md "方向" section.
@@ -863,6 +866,56 @@ as_row_cell() {
   '
 }
 
+# Fill-state gate: does the section under "## <heading>" carry real content?
+# HTML comments (single- or multi-line) are guidance, not content — a filled
+# section keeps its template comments, so emptiness is judged on what remains
+# after stripping them. Exit 0 = non-empty non-comment line present.
+# Usage: as_section_filled <file> <heading>
+as_section_filled() {
+  local file="$1"
+  [ -f "$file" ] || return 1
+  awk -v sec="## $2" '
+    # text outside comment spans in s, when NOT currently inside a comment;
+    # a span left open at end-of-line sets inc (the region continues next line)
+    function strip_rest(s) {
+      out = ""
+      while (match(s, /<!--/)) {
+        out = out substr(s, 1, RSTART - 1)
+        s = substr(s, RSTART + 4)
+        if (match(s, /-->/)) { s = substr(s, RSTART + 3) } else { inc = 1; return out }
+      }
+      return out s
+    }
+    {
+      h = $0; sub(/[ \t\r]+$/, "", h)
+      if (!in_sec && h == sec) { if (seen++) exit; in_sec=1; next }
+      if (in_sec && /^## /) { in_sec=0 }
+      if (in_sec) {
+        line = ""
+        if (!inc) line = strip_rest($0)
+        else if (match($0, /-->/)) { inc = 0; line = strip_rest(substr($0, RSTART + 3)) }
+        gsub(/^[ \t\r]+|[ \t\r]+$/, "", line)
+        if (line != "") { print "filled"; exit }
+      }
+    }
+  ' "$file" | grep -q filled
+}
+
+# Milestone boundary: print the exact ledger-commit command for the paths a
+# transition script just touched. Scripts are the only writers of the ledger,
+# so only they know the path set — printing it makes the per-transition commit
+# one paste away instead of an agent-memory task (folded milestones were the
+# failure mode). Call it LAST in a transition script: content work (readme
+# updates, note distillation) lands in the same milestone commit. Paths are
+# workspace-relative; the command pins $AS_ROOT absolute so it works from any
+# cwd, including parallel swimlanes.
+# Usage: as_commit_hint <commit-message> <relative-path>...
+as_commit_hint() {
+  local msg="$1"; shift
+  echo "Next [MUST]: ledger-commit now (content work above rides the same commit) —"
+  echo "  git -C \"$AS_ROOT\" add $* && git -C \"$AS_ROOT\" commit -m \"$msg\""
+}
+
 # Fill template placeholders {{ID}} {{TITLE}} {{DATE}} {{PLAN_ID}} {{NAME}} {{PURPOSE}}.
 # Usage: PH_ID=.. PH_TITLE=.. as_fill_template <src> <dst>
 # Intentionally direct (no tmp+mv): dst is always a NEW file — there is no
@@ -929,17 +982,26 @@ as_insert_after_prefix() {
 # NOTE: the line travels via ENVIRON, not -v — awk -v would unescape the `\|`
 # cells produced by as_cell, silently corrupting escaped pipes (same as
 # as_insert_row).
+# A blank separator line is kept between the section's last content line and
+# the next heading (appends used to butt the entry against the following
+# "## ..." with no blank line). Stale trailing blanks are dropped before the
+# insert so repeated appends stay single-spaced.
 as_append_to_section() {
   local file="$1" tmp
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
   LINE="$3" awk -v sec="## $2" '
     function flush_buf() {
+      while (b > 0 && buf[b] ~ /^[ \t]*$/) b--
       for (i=1; i<=b; i++) print buf[i]
-      if (!inserted) { print ENVIRON["LINE"]; inserted=1 }
+      if (!inserted) { print ENVIRON["LINE"]; inserted=1; last=ENVIRON["LINE"] }
       b=0
     }
     $0 == sec { in_sec=1; print; next }
-    in_sec && /^## / { flush_buf(); in_sec=0; print; next }
+    in_sec && /^## / {
+      flush_buf()
+      if (last !~ /^[ \t]*$/) { print ""; last="" }
+      in_sec=0; print; next
+    }
     in_sec { buf[++b] = $0; next }
     { print }
     END {

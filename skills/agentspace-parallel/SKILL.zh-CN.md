@@ -62,7 +62,7 @@ description: AGENTSPACE 项目的并行开发 — 每 plan 一组 git worktree, 
    ```
    只为**本 plan 实际要改**的仓库建 worktree; 不改的绝不建。不变量: **plan 是唯一组织轴**(`<plan-id>/` 目录随 plan 生死); 位置永远在所有登记仓库之外(内嵌型项目走 §1 的 .gitignore); 多仓库 plan 在每个仓库用**同一分支名** `plan-<plan-id>`(各自命名空间, 不撞)。
 2. **依赖重定向**(通用模式, 接线按项目发现结果): worktree 检出的环境脚本以自身位置为锚解析同级仓库(sibling checkout); 对不建的仓库, 用项目文档载明的 override 变量指回主检出, 或放一个指回主检出的符号链接——二者取项目既有约定。原则: **动的仓库从 worktree 解析, 不动的从主检出解析**。
-3. **自检三连**(全过才算拉起成功): ① 环境脚本输出的依赖源指向预期检出; ② 目标包 import 解析到 worktree 路径; ③ `commit-check.sh <worktree路径> "自检"` 退出 0(登记被识别)。
+3. **自检三连**(全过才算拉起成功): ① 环境脚本输出的依赖源指向预期检出; ② 目标包 import 解析到 worktree 路径; ③ `commit-check.sh <worktree路径> "自检"` 退出 0(登记被识别) — 先 `git add` 一个占位文件再探: 门对空暂存报前置错误(exit 3), 那是流程顺序错, 不是登记失败。
 4. **记基准**: iteration readme 环境节每仓库一行——`<repo> plan-<id>:<base-sha>`(**永久锚点**, 在主线上永远可达)。
 
 ## 4. 角色与冻结

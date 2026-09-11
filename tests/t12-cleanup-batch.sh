@@ -48,8 +48,14 @@ mc
 printf 'host change for diff\n' >> "$SB/AGENTS.md"
 git -C "$SB" add -A >/dev/null 2>&1
 git -C "$SB" -c user.name=test -c user.email=test@test commit -qm "test: host change" >/dev/null 2>&1
-# fill the 结果 section (close gate) and close
-grep -vF "指标 / 结论" "$WS/iterations/iteration_$ITER/readme.md" > "$WS/iterations/iteration_$ITER/readme.md.tmp" && mv "$WS/iterations/iteration_$ITER/readme.md.tmp" "$WS/iterations/iteration_$ITER/readme.md"
+# fill the 结果 section (close gate — content, comments may stay) and close
+python3 - "$WS/iterations/iteration_$ITER/readme.md" <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+s = s.replace("<!-- 指标 / 结论; 关闭 iteration 前必填 -->", "指标: diff collected")
+open(p, "w").write(s)
+PYEOF
 OUT="$(bash "$CLOSE" "$ITER" "diff collected automatically" 2>&1)"
 assert_output_contains "$OUT" "code diff saved"
 PATCH="$(ls "$WS/iterations/iteration_$ITER"/data/diff-*.patch 2>/dev/null | head -1)"

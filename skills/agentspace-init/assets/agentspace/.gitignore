@@ -1,5 +1,7 @@
 # ---- 实验数据: 全量本地保存, 不入 git ----
 iterations/*/data/
+# latest 软连接: 脚本运行时状态, 契约禁止引用(id 才是引用形态), 不入 git
+iterations/latest
 
 # ---- exp 完整实验记录: 本机全量, 不入 git ----
 exp/exp_data/
