@@ -34,7 +34,7 @@ Recovery sequence (session start / uncertain state): `AGENTS.md` → `tests.md` 
 - **Plans are for specific, bounded events** — do NOT create plans for trivial tasks like: quick confirmation, verification, searching, reading files, answering questions. Plans are for: implementing a feature, fixing a bug, refactoring code, running an experiment, making structural changes.
 
 ```bash
-AGENTSPACE/scripts/new-plan.sh "English plan title" [--base NNNN]   # Outputs plan:NNNN; --base links a direction anchor
+AGENTSPACE/scripts/new-plan.sh "English plan title" [--base NNNN] [--claim NNNN]   # Outputs plan:NNNN; --base links a direction anchor; --claim atomically reserves a specific id (parallel lanes)
 ```
 Then write the generated `plan/todo/NNNN-*.md`: goal / background / plan steps. Milestone commit (see §4).
 

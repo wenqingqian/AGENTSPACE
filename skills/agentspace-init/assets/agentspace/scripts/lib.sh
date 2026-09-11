@@ -588,7 +588,9 @@ as_repos() {
 # both key off this. Prints nothing and returns 1 when not determinable.
 as_repo_main_worktree() {
   local wt
-  wt="$(git -C "$1" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')" || return 1
+  # Whole-line field: porcelain worktree paths may contain spaces — a
+  # field-splitting parser ($2) would truncate them (v1.5.2 review F2).
+  wt="$(git -C "$1" worktree list --porcelain 2>/dev/null | awk '/^worktree /{ sub(/^worktree /, ""); print; exit }')" || return 1
   [ -n "$wt" ] || return 1
   (cd -P "$wt" 2>/dev/null && pwd -P) || return 1
 }

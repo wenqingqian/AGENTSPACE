@@ -74,10 +74,22 @@ echo
 # ---- 0. git worktree: uncommitted changes (milestone commit may have been skipped) ----
 # F2 (audit): require the workspace's OWN .git dir — rev-parse alone walks up and
 # would report the HOST repo's dirty state when the workspace has no own repo.
+# v1.5.2: with parallel lanes active, dirty files may belong to a lane (its
+# in-flight edits or merge window) rather than to the mainline session — the
+# warning names the active lanes so the dirt gets attributed before a commit.
 echo "[0] git worktree"
 if [ -e "$AS_ROOT/.git" ]; then  # -e covers git worktrees (.git as file), matches init contract
   dirty="$(git -C "$AS_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)"
-  [ "${dirty:-0}" -eq 0 ] || warn "uncommitted changes ($dirty file(s)); run a milestone commit"
+  if [ "${dirty:-0}" -ne 0 ]; then
+    lanes=""
+    [ -f "$AS_ROOT/.agentspace-parallel-workspace.txt" ] && \
+      lanes="$(awk -F'|' '$1 == "PLAN" { s = s (s ? ", " : "") $2 ":" $3 } END { print s }' "$AS_ROOT/.agentspace-parallel-workspace.txt" 2>/dev/null || true)"
+    if [ -n "$lanes" ]; then
+      warn "uncommitted changes ($dirty file(s)); run a milestone commit — 并行泳道活跃 ($lanes): 先归属再提交, 脏文件可能属于某条泳道的工作或 merge 窗口(merge 态归属持锁泳道)"
+    else
+      warn "uncommitted changes ($dirty file(s)); run a milestone commit"
+    fi
+  fi
 fi
 
 # ---- 1. latest symlink ----

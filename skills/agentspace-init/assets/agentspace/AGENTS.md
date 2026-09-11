@@ -58,7 +58,7 @@ AGENTSPACE/
 ### plan —— 任务计划 (plan.md + plan/)
 - **what**: 一个任务写成一个或多个 plan; 索引自项目创建起全局递增、永不复用
 - **when**: 有新任务/目标时创建; 到达明确终点(完成/失败/放弃)时关闭
-- **how**: `scripts/new-plan.sh "标题" [--base NNNN]` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) → `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`
+- **how**: `scripts/new-plan.sh "标题" [--base NNNN] [--claim NNNN]` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) → `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`
 - **基准计划(base plan)**: 方向锚点, 服务于"同一方向出现多个 plan、且最终结果不得漂移"的场景。位置 plan/base/, 单独计数(id 形如 base:NNNN), 登记于 plan/index.md 与 plan.md 的 Base 节; 语义上作为由它派生的一切任务(plan/iteration/exp)的最基础约束, 派生 plan 用 `--base NNNN` 声明归属(索引 基准 列)
 - **base plan 生命周期**: `scripts/new-base-plan.sh "方向标题"`(产出待审核草稿) → 填写方向/约束/边界 → **直接结束会话呈交用户审核**(不走 agent plan 模式审核; 用户在文件上以评论形式反馈, 待审核期间 agent 可按评论修订草稿) → 用户批准后 `scripts/activate-base-plan.sh <id>`(钉定 sha256 校验, 文件自此**物理不可变**, 任何脚本不再写该文件) → 方向变更只能新建 base plan 后 `scripts/retire-base-plan.sh <id> <replaced|voided> "原因" [--by NNNN]`(旧文件永不改写)。生命周期与审核流细则见 agentspace-base-plan skill
 

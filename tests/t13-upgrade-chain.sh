@@ -377,8 +377,13 @@ edit(A, "├── templates/         ← 文档模板(plan / iteration-readme /
         aline("├── templates/ "), "v1.5.0", "AGENTS.md 结构树: templates 行")
 HOW_OLD = ('- **how**: `scripts/new-plan.sh "标题"` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) '
            '→ `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`')
+# v1.5.2 lesson (v1.4.0's "renamed line can no longer be sourced live"): the
+# asset how line now carries [--claim NNNN], so the v1.5.0 op's target text is
+# pinned inline — frozen history, not live-sourced.
+HOW_V150 = ('- **how**: `scripts/new-plan.sh "标题" [--base NNNN]` → 撰写 plan/todo/NNNN-*.md(目标/背景/方案步骤) '
+            '→ `scripts/complete-plan.sh <id> <done|failed|abandoned> "结果"`')
 edit(A, HOW_OLD,
-        aline('- **how**: `scripts/new-plan.sh "标题"') + "\n"
+        HOW_V150 + "\n"
         + aline("- **基准计划(base plan)**") + "\n" + aline("- **base plan 生命周期**"),
         "v1.5.0", "AGENTS.md plan 模块: how 行 + 基准计划/生命周期 bullets")
 wl = open(A, encoding="utf-8").read().splitlines()
@@ -397,6 +402,12 @@ cp_asset("plan/index.md", "plan/index.md")
 os.makedirs(f"{WS}/plan/base", exist_ok=True)
 open(f"{WS}/plan/base/.gitkeep", "w").close()
 log("v1.5.0", "plan.md + plan/index.md schema + plan/base/", "applied")
+
+# --- v1.5.2: parallel primitives (8b per the v1.5.2 changelog — AGENTS.md 1
+#     edit: the plan how line gains [--claim NNNN]; target live-sourced from
+#     the canonical asset). v1.5.1 had no text ops (8a-only release). ---
+edit(A, HOW_V150, aline('- **how**: `scripts/new-plan.sh "标题"'),
+     "v1.5.2", "AGENTS.md plan 模块: how 行加 --claim")
 
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
@@ -432,6 +443,7 @@ assert_contains "$WS/AGENTS.md" "用户规则守护"                          # 
 assert_contains "$WS/AGENTS.md" "## 用户规则"                          # v1.1.0: user-owned section (8b)
 assert_contains "$WS/AGENTS.md" "基准计划不可变"                         # v1.5.0: 纪律 MUST (8b)
 assert_contains "$WS/AGENTS.md" "base plan 创建/激活/取代/废弃"           # v1.5.0: milestone trigger (8b)
+assert_contains "$WS/AGENTS.md" '[--claim NNNN]'                       # v1.5.2: plan how line (8b)
 assert_contains "$WS/plan.md" "| ID | 计划 | 基准 | 创建日期 | 链接 |"    # v1.5.0: plan.md Todo schema
 assert_contains "$WS/plan/index.md" "| ID | 方向 | 状态 | 创建日期 | 审核日期 | 校验 | 备注 | 链接 |"  # v1.5.0: Base schema
 [ -f "$WS/plan/base/.gitkeep" ] || fail "plan/base/ missing after v1.5.0 replay"

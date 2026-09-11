@@ -97,13 +97,14 @@ OUT="$(bash "$PWS" --recv 1)"
 assert_output_contains "$OUT" "== inbox of 0001: 1 message(s) =="
 assert_output_contains "$OUT" "MSG|0002|all|"
 OUT="$(bash "$PWS" --revc 2)"   # compatibility alias
-assert_output_contains "$OUT" "== inbox of 0002: 2 message(s) =="
+# v1.5.2: no self-echo — 0002's own broadcast is no longer in its own inbox
+assert_output_contains "$OUT" "== inbox of 0002: 1 message(s) =="
+assert_output_not_contains "$OUT" "standup at noon"
 
 OUT="$(bash "$PWS" --withdraw 1)"
 assert_output_contains "$OUT" "withdraw: removed 1 sent message row(s)"
 OUT="$(bash "$PWS" --recv 2)"
-assert_output_contains "$OUT" "== inbox of 0002: 1 message(s) =="
-assert_output_not_contains "$OUT" "hello lane two"
+assert_output_contains "$OUT" "== inbox of 0002: 0 message(s) =="
 OUT="$(bash "$PWS" --withdraw 1)"
 assert_output_contains "$OUT" "has no sent message row(s)"
 

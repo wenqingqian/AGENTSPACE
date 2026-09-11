@@ -34,7 +34,7 @@ description: 在已有 AGENTSPACE 工作区的项目中工作(plan、iterations�
 - **plan 是特定、有界的事件** — 简单的确认、验证、搜索、读文件、回答问题等不要建 plan。plan 用于: 实现功能、修复 bug、重构代码、运行实验、做结构性变更。
 
 ```bash
-AGENTSPACE/scripts/new-plan.sh "English plan title" [--base NNNN]   # 输出 plan:NNNN; --base 关联方向锚点(基准计划)
+AGENTSPACE/scripts/new-plan.sh "English plan title" [--base NNNN] [--claim NNNN]   # 输出 plan:NNNN; --base 关联方向锚点(基准计划); --claim 原子占用指定 id(并行泳道)
 ```
 然后撰写生成的 `plan/todo/NNNN-*.md`: 目标 / 背景 / 方案步骤。里程碑提交(见 §4)。
 

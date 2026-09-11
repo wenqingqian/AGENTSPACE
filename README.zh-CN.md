@@ -155,6 +155,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.5.2 | 2026-09-11 | 实测反馈的并行原语 — `new-plan.sh --claim NNNN` 为并发泳道原子占用指定 id; commit 门把注册仓库的泳道 worktree 经主检出识别为同一仓库(无需逐 worktree 登记); `parallel-workspace.sh --worktree` 按规范布局建泳道(幂等、复用保留分支); `--recv` 不再回显自己的广播; doctor [0] 在台账有脏文件时点名活跃泳道 |
 | v1.5.1 | 2026-09-11 | 门控判据修复(百轮实战反馈) — 结果门按节内容而非模板注释判断; 七个流转脚本打印里程碑提交的精确路径; commit 门拒空暂存并新增 `--commit`(提交消息与过门逐字节一致); handoff consume 先输出快照再销毁 |
 | v1.5.0 | 2026-09-10 | 基准计划 — `plan/base/` 下的不可变方向锚点(独立 base:NNNN 计数、plan 索引 Base 节、派生 plan `--base NNNN` 归属); 三个生命周期脚本 + 校验和钉定的激活冻结 + doctor [17] 不可变审计 + commit 门禁 base id; 第 13 个 skill agentspace-base-plan 持有用户审核流(草稿写好 → 结束会话 → 用户在文件上评论) |
 | v1.4.0 | 2026-09-09 | agentspace-code-clean 双层化 — SKILL.md 被动规则层(默认加载; 融合 x-code-clean 注释分级与 x-better-commit commit 文本规则的并集)+ 仅显式的主动层 CLEANUP.md(范围规则、分级应用、先报告后确认、commit 改写、历史重建安全); 代码卫生成为 AGENTS.md 内置规则; changelog 与 README 按融合后 commit 文本规则聚焦 |

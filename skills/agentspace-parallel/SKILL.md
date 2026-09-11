@@ -89,8 +89,10 @@ takeover to the user — never silently break a lock.
    registered repo; no other location is legal — iron rule 1):
    ```bash
    cd <project-root>
-   git -C <repo> worktree add worktrees/<plan-id>/<repo-name> -b plan-<plan-id> <repo mainline>
-   AGENTSPACE/scripts/repos.sh --add worktrees/<plan-id>/<repo-name>   # every worktree checkout must be registered, or the commit gate won't recognize it
+   AGENTSPACE/scripts/parallel-workspace.sh --worktree <plan-id> <repo>   # canonical form: worktrees/<plan-id>/<repo-name> on branch plan-<id>, idempotent, reuses a kept branch
+   # equivalent manual form: git -C <repo> worktree add worktrees/<plan-id>/<repo-name> -b plan-<plan-id> <repo mainline>
+   # (helper fork point: the main checkout's CURRENT branch at runtime — HEAD when detached)
+   AGENTSPACE/scripts/repos.sh --add worktrees/<plan-id>/<repo-name>   # optional since v1.5.2 — the commit gate resolves a lane worktree to its registered main checkout; register only when the worktree should be a first-class repo object
    ```
    Build worktrees only for repos this plan actually changes — never for untouched ones.
    Invariants: **plan is the only organization axis** (the `<plan-id>/` dir lives and dies with the
@@ -104,7 +106,8 @@ takeover to the user — never silently break a lock.
    worktree, repos you don't change resolve from the main checkout**.
 3. **Self-check triple** (all three must pass): ① env-script output points dependency sources at
    the expected checkouts; ② the target package imports resolve to worktree paths; ③
-   `commit-check.sh <worktree-path> "self-check"` exits 0 (registration recognized) — stage a
+   `commit-check.sh <worktree-path> "self-check"` exits 0 (the lane checkout is recognized via its
+   registered main checkout) — stage a
    token file first (`git add` a scratch file): the gate refuses empty staging (exit 3), which
    is a precondition error, not a registration failure.
 4. **Record the base**: one row per repo in the iteration readme's environment section —
@@ -353,7 +356,7 @@ Fine print:
   through the post-merge dissatisfaction window):
   ```bash
   git -C <repo> worktree remove worktrees/<plan-id>/<repo-name>
-  AGENTSPACE/scripts/repos.sh --remove worktrees/<plan-id>/<repo-name>   # de-registration is user-confirmed
+  AGENTSPACE/scripts/repos.sh --remove worktrees/<plan-id>/<repo-name>   # only if registered in §3; de-registration is user-confirmed
   git -C <repo> branch -D plan-<plan-id>   # squash means -d always refuses; the basis for -D is the §8.1 diff-empty proof + the readme record
   ```
   No push anywhere unless the user explicitly asks. Before destroying: the squash landed (readme

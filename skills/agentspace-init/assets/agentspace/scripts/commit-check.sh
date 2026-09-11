@@ -4,7 +4,8 @@
 # Exit 0 = pass (warnings allowed through, they must be shown to the user);
 # exit 1 = blocked (violations listed, one full batch — never drip-feed);
 # exit 2 = repo not registered in .agentspace-repos (propose registration to
-# the user first; on confirmation: repos.sh --add <path>);
+# the user first; on confirmation: repos.sh --add <path>). A linked worktree
+# of a registered repo gates as that repo (lane checkouts need no own row);
 # exit 3 = usage/precondition error (missing draft-message / not inside a git
 # worktree) — fails closed, never a silent PASS.
 # Checks: staged file paths · staged diff ADDED lines (code/comments/string
@@ -46,9 +47,19 @@ if [ "$REPO" = "$AS_ROOT" ]; then
   exit 2
 fi
 if ! as_repo_registered "$REPO_ARG"; then
-  printf 'error: not a registered key code repo: %s\n' "$REPO" >&2
-  printf '       registration requires user confirmation; then: repos.sh --add <path>\n' >&2
-  exit 2
+  # v1.5.2: a linked worktree of a registered repo IS the registered repo for
+  # gating purposes — resolve its main checkout and check the registry row
+  # against that. An agentspace-parallel lane checkout (branch plan-NNNN) then
+  # passes the gate without its own registration row; staged content is still
+  # read from the worktree being gated ($REPO), only the registry lookup maps
+  # through the main checkout.
+  MAIN_WT="$(as_repo_main_worktree "$REPO" 2>/dev/null || true)"
+  if [ -z "$MAIN_WT" ] || [ "$MAIN_WT" = "$REPO" ] || ! as_repo_registered "$MAIN_WT"; then
+    printf 'error: not a registered key code repo: %s\n' "$REPO" >&2
+    printf '       registration requires user confirmation; then: repos.sh --add <path>\n' >&2
+    exit 2
+  fi
+  printf 'note: %s is a linked worktree of registered repo %s — gated as the same repo\n' "$REPO" "$MAIN_WT"
 fi
 
 blocks=0; warns=0; block_lines=""; warn_lines=""

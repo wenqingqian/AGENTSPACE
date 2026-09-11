@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create a new plan: allocate global index, instantiate plan/todo/NNNN-slug.md,
 # insert row in plan.md Todo table, append to plan/index.md.
-# Usage: new-plan.sh "Plan title" [--base NNNN[,NNNN...]]
+# Usage: new-plan.sh "Plan title" [--base NNNN[,NNNN...]] [--claim NNNN]
 #   The title must yield a compliant slug — lowercase english words, digits
 #   and single hyphens only; CJK / uppercase / punctuation titles are refused
 #   before anything is written (new plans only — existing plan files are
@@ -9,18 +9,23 @@
 #   --base links the plan to one or more base plans (direction anchors): each
 #   id must exist in the plan/index.md Base section; the link lands in the
 #   基准 column of plan.md Todo and plan/index.md.
+#   --claim NNNN reserves a SPECIFIC id instead of taking the next free one —
+#   the id must be unused (no todo/done file, no index row); check and create
+#   run inside the same lock, so two parallel lanes announcing the same id
+#   cannot both have it: the first claim wins, the second refuses.
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 TITLE="${1:-}"
-[ -n "$TITLE" ] || as_die "Usage: new-plan.sh \"Plan title\" [--base NNNN[,NNNN...]]"
+[ -n "$TITLE" ] || as_die "Usage: new-plan.sh \"Plan title\" [--base NNNN[,NNNN...]] [--claim NNNN]"
 shift || true
 
-BASE_ARG=""
+BASE_ARG=""; CLAIM_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) [ $# -ge 2 ] || as_die "--base needs a value"; BASE_ARG="$2"; shift 2 ;;
-    *) as_die "unknown argument: $1 (Usage: new-plan.sh \"Plan title\" [--base NNNN[,NNNN...]])" ;;
+    --claim) [ $# -ge 2 ] || as_die "--claim needs a value"; CLAIM_ARG="$2"; shift 2 ;;
+    *) as_die "unknown argument: $1 (Usage: new-plan.sh \"Plan title\" [--base NNNN[,NNNN...]] [--claim NNNN])" ;;
   esac
 done
 
@@ -32,6 +37,20 @@ SLUG="$(as_slug_of "$TITLE" plan)"
 # it pre-lock let every concurrent creator read the same "next id" and collide
 # on the same plan/todo/NNNN file. The lock covers the whole read-compute-write.
 as_lock
+
+# --claim: the id must be free — any todo/done file or index row (plain plan
+# rows; Base rows are base:NNNN and never match the plain-id anchor) refuses
+# the claim. Inside the lock, so a concurrent claim of the same id serializes:
+# first claim creates, second claim sees the file/row and refuses.
+if [ -n "$CLAIM_ARG" ]; then
+  CLAIM_ID="$(as_norm_id "$CLAIM_ARG")"
+  if compgen -G "$AS_ROOT/plan/todo/$CLAIM_ID-*.md" >/dev/null \
+    || compgen -G "$AS_ROOT/plan/done/$CLAIM_ID-*.md" >/dev/null \
+    || grep -q "^| *$CLAIM_ID *|" "$AS_ROOT/plan/index.md" 2>/dev/null \
+    || grep -q "^| *$CLAIM_ID *|" "$AS_ROOT/plan.md" 2>/dev/null; then
+    as_die "plan:$CLAIM_ID already exists — a claimed id must be free (todo/done file or index row present)"
+  fi
+fi
 
 # --base: comma-separated ids, each normalized; the base plan must exist in the
 # plan/index.md Base section (any state — doctor [17] reports links to a
@@ -51,7 +70,7 @@ if [ -n "$BASE_ARG" ]; then
   [ -n "$BASE_CELL" ] || BASE_CELL="-"
 fi
 
-ID="$(as_next_plan_id)"
+if [ -n "$CLAIM_ARG" ]; then ID="$CLAIM_ID"; else ID="$(as_next_plan_id)"; fi
 DATE="$(as_today)"
 CELL="$(as_cell "$TITLE")"
 FILE="plan/todo/${ID}-${SLUG}.md"
@@ -68,6 +87,6 @@ tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
 { cat "$AS_ROOT/plan/index.md" 2>/dev/null || true; echo "| $ID | $CELL | todo | $BASE_CELL | $DATE |  |  | [$FILE]($FILE) |"; } > "$tmp" \
   && as_atomic_write "$AS_ROOT/plan/index.md" "$tmp"
 
-echo "plan:$ID created → $FILE (base: $BASE_CELL)"
+echo "plan:$ID created$( [ -n "$CLAIM_ARG" ] && printf ' (claimed)') → $FILE (base: $BASE_CELL)"
 echo "Next: write the goal/background/plan-steps in that file"
 as_commit_hint "plan: open $ID" plan.md plan/index.md "$FILE"

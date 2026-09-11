@@ -29,10 +29,23 @@
 #       --revc is a compatibility alias.
 #   parallel-workspace.sh --withdraw <plan_id>
 #       Remove the plan's sent MSG rows (src==id); strips blank lines.
+#   parallel-workspace.sh --worktree <plan_id> <repo_path>
+#       Create the plan's lane checkout at the agentspace-parallel skill's only
+#       legal location (<project-root>/worktrees/<plan-id>/<repo-name/>, iron
+#       rule 1) on branch plan-<plan-id>, forked from the main checkout's
+#       current branch. Idempotent: an existing worktree of the same repo at
+#       the same path reports success without rebuilding; an existing
+#       plan-<id> branch is reused, not -b-recreated (dissatisfaction tiers
+#       keep iterating on the same branch). The plan must be registered
+#       (--init) first. Since v1.5.2 the commit gate recognizes the lane
+#       checkout through the main repo's registration — no per-worktree
+#       repos.sh row is needed.
 #
 # Data file: $AS_ROOT/.agentspace-parallel-workspace.txt (inside the AGENTSPACE
 # ledger; MUST stay gitignored — the .gitignore entry ships with the release
-# material wave, not with this script; this script performs NO git operations).
+# material wave, not with this script). The data-file layer performs NO git
+# operations; the ONE exception is the --worktree layout helper, which operates
+# on the TARGET repo only, never on the ledger.
 # Line-oriented, '|'-separated; free text (desc/info/msg) is escaped on write
 # via lib.sh as_cell ('|'->'\|', newline/tab->space, CR dropped) and presented
 # verbatim on read:
@@ -87,6 +100,7 @@ usage: parallel-workspace.sh <subcommand> [args]
   --send --src <id> --dst <id|all> --msg xxx        append a message row
   --recv <id>                                       print inbox (dst==id or dst==all); --revc 兼容别名
   --withdraw <plan_id>                              remove the plan's sent MSG rows (src==id)
+  --worktree <plan_id> <repo_path>                  create worktrees/<plan-id>/<repo-name> on branch plan-<id> (idempotent)
 EOF
 }
 ws_usage_err() {
@@ -182,22 +196,26 @@ ws_print_plans() {
   ' "$WS_FILE" || true
 }
 
-# MSG rows addressed to <id> or broadcast (dst==all); lines verbatim.
+# MSG rows addressed to <id> or broadcast (dst==all), EXCLUDING the plan's own
+# rows (src==id): a broadcast already reached its audience when it was sent —
+# hearing your own broadcast back on --recv is self-echo, not new mail (v1.5.2).
 ws_recv_rows() {
   [ -f "$WS_FILE" ] || return 0
   ID="$1" awk -F'|' '
-    $1 == "MSG" && ($3 == ENVIRON["ID"] || $3 == "all") { print }
+    $1 == "MSG" && $2 != ENVIRON["ID"] && ($3 == ENVIRON["ID"] || $3 == "all") { print }
   ' "$WS_FILE" || true
 }
 
-# Count MSG rows for <id> by mode: src (sent), dst (inbox incl. all), both
-# (the --remove cascade surface).
+# Count MSG rows for <id> by mode: src (sent), dst (inbox incl. all, minus
+# self-echo — same filter as ws_recv_rows so the inbox header count always
+# matches the rows beneath it), both (the --remove cascade surface, which must
+# still see the plan's own rows to clear them).
 ws_count_msgs() {
   [ -f "$WS_FILE" ] || { printf '0\n'; return 0; }
   MODE="$1" ID="$2" awk -F'|' '
     $1 != "MSG" { next }
     ENVIRON["MODE"] == "src"  && $2 == ENVIRON["ID"] { c++; next }
-    ENVIRON["MODE"] == "dst"  && ($3 == ENVIRON["ID"] || $3 == "all") { c++; next }
+    ENVIRON["MODE"] == "dst"  && $2 != ENVIRON["ID"] && ($3 == ENVIRON["ID"] || $3 == "all") { c++; next }
     ENVIRON["MODE"] == "both" && ($2 == ENVIRON["ID"] || $3 == ENVIRON["ID"]) { c++; next }
     END { print c + 0 }
   ' "$WS_FILE" 2>/dev/null || printf '0\n'
@@ -279,6 +297,17 @@ ws_print_inbox() {  # <id> <reason-label>
 
 ws_require_plan() {  # <id> <context>
   ws_plan_exists "$1" || { printf 'error: plan not registered: %s (%s)\n' "$1" "$2" >&2; exit 1; }
+}
+
+# All worktree paths git has recorded for a repo, one per line, each
+# canonicalized like the helper's own pwd -P spellings. Porcelain values are
+# whole-line fields (absolute paths may contain spaces — field-splitting
+# parsers truncate them); each path is resolved through cd -P so a worktree
+# recorded under a symlinked spelling still matches.
+ws_worktree_paths() {
+  git -C "$1" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | while IFS= read -r wt; do
+    (cd -P "$wt" 2>/dev/null && pwd -P) || printf '%s\n' "$wt"
+  done
 }
 
 # ---- subcommand bodies (dispatched inside the lock) ----
@@ -417,6 +446,77 @@ op_withdraw() {  # <id>
   printf 'withdraw: removed %d sent message row(s) of plan %s\n' "$n" "$1"
 }
 
+# --worktree surface: the layout helper for the skill's fixed worktree form
+# (<project-root>/worktrees/<plan-id>/<repo-name>, branch plan-<plan-id>).
+# Idempotent and branch-preserving: re-entry after a session restart must not
+# rebuild anything, and a kept branch from a previous merge round is reused
+# (dissatisfaction tiers iterate on the SAME branch — never rebuilt).
+op_worktree() {  # <id> <repo_arg>
+  local repo main start branch wtpath hostroot projroot rel cur_br
+  ws_require_plan "$1" "--worktree (register the plan with --init first)"
+  # Pre-guard before as_repo_canon: a dangling path would resolve via dirname
+  # to the CONTAINING repo (lib.sh contract) — a typo must not lane the wrong
+  # repo with a success-looking creation.
+  [ -d "$2" ] || { printf 'error: no such directory: %s\n' "$2" >&2; exit 3; }
+  repo="$(as_repo_canon "$2")" || { printf 'error: not inside a git worktree: %s\n' "$2" >&2; exit 3; }
+  # The AGENTSPACE ledger repo never gets lane worktrees (same exemption the
+  # commit gate applies to itself).
+  if [ "$repo" = "$AS_ROOT" ]; then
+    printf 'error: the AGENTSPACE ledger repo never gets lane worktrees\n' >&2
+    exit 1
+  fi
+  main="$(as_repo_main_worktree "$repo" 2>/dev/null || true)"
+  [ -n "$main" ] || main="$repo"
+  start="$(git -C "$main" branch --show-current 2>/dev/null || true)"
+  [ -n "$start" ] || start="HEAD"
+  branch="plan-$1"
+  projroot="$(cd "$AS_ROOT/.." && pwd -P)"
+  wtpath="$projroot/worktrees/$1/$(basename "$main")"
+  if [ -d "$wtpath" ]; then
+    if ws_worktree_paths "$main" | grep -Fx "$wtpath" >/dev/null; then
+      cur_br="$(git -C "$wtpath" branch --show-current 2>/dev/null || true)"
+      if [ "$cur_br" = "$branch" ]; then
+        printf 'worktree already exists: %s (branch %s) — idempotent, nothing rebuilt\n' "$wtpath" "$branch"
+      else
+        printf 'error: worktree already exists at %s on branch %s (expected %s) — refusing to rebuild; switch or remove it by hand first\n' "$wtpath" "${cur_br:-<detached>}" "$branch" >&2
+        exit 1
+      fi
+      return 0
+    fi
+    printf 'error: worktree path exists but is not %s worktree: %s (remove it by hand first, then re-run)\n' "$main" "$wtpath" >&2
+    exit 1
+  fi
+  # Embedded-form guard (skill §1): when the project root sits inside a git
+  # repo, the lane checkout would surface in that repo's status — the lane
+  # branches carry plan-NNNN names, so a stray host `git add -A` would trip
+  # the commit gate. Report-only: gitignoring is the host repo's own decision.
+  # The ignore check runs on the HOSTROOT-RELATIVE lane path — the project
+  # root may be nested deeper inside the host repo than its root.
+  hostroot="$(git -C "$AS_ROOT/.." rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -n "$hostroot" ]; then
+    rel="worktrees/$1"
+    case "$projroot" in
+      "$hostroot"/) rel="${projroot#"$hostroot"}/worktrees/$1" ;;
+      "$hostroot"/*) rel="${projroot#"$hostroot"/}/worktrees/$1" ;;
+    esac
+    if ! git -C "$hostroot" check-ignore -q "$rel" 2>/dev/null; then
+      printf 'warning: %s is inside git repo %s and %s is not ignored there — add it to that .gitignore before the next milestone commit\n' "$wtpath" "$hostroot" "$rel" >&2
+    fi
+  fi
+  mkdir -p "$(dirname "$wtpath")"
+  if git -C "$main" show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
+    git -C "$main" worktree add "$wtpath" "$branch"
+  else
+    git -C "$main" worktree add "$wtpath" -b "$branch" "$start"
+  fi
+  printf 'worktree ready: %s (branch %s, forked from %s of %s)\n' "$wtpath" "$branch" "$start" "$main"
+  if as_repo_registered "$main"; then
+    printf 'Next: the commit gate recognizes this lane checkout via the main registration — commit-check.sh "%s" "<message>" (stage a token file first: the gate refuses empty staging)\n' "$wtpath"
+  else
+    printf 'Next: the main checkout %s is NOT registered — the commit gate refuses this lane until it is: repos.sh --add "%s"; then commit-check.sh "%s" "<message>"\n' "$main" "$main" "$wtpath"
+  fi
+}
+
 # ---- argument parsing (pure — no workspace access, runs before the lock) ----
 
 CMD="${1:-}"
@@ -444,6 +544,11 @@ case "$CMD" in
   --withdraw)
     [ $# -eq 1 ] || ws_usage_err "--withdraw <plan_id>"
     OP_ID="$(as_norm_id "$1")"
+    ;;
+  --worktree)
+    [ $# -eq 2 ] || ws_usage_err "--worktree <plan_id> <repo_path>"
+    OP_ID="$(as_norm_id "$1")"
+    OP_REPO="$2"
     ;;
   --recv|--revc)
     [ $# -eq 1 ] || ws_usage_err "--recv <plan_id> (--revc 兼容别名)"
@@ -533,6 +638,7 @@ case "$CMD" in
   --update)      op_update "$OP_ID" ;;
   --merge)       op_merge "$OP_ID" ;;
   --withdraw)    op_withdraw "$OP_ID" ;;
+  --worktree)    op_worktree "$OP_ID" "$OP_REPO" ;;
   --send)        op_send ;;
   --recv|--revc) ws_print_inbox "$OP_ID" "" ;;
 esac
