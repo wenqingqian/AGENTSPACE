@@ -30,6 +30,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Light-workspace guard (lib.sh): refuse before any read or mutation.
+as_require_module exp.md exp
+
 # Locate the manual: doing/ first, then todo/ (start ceremony is optional).
 SRC=""
 STATUS_OLD=""

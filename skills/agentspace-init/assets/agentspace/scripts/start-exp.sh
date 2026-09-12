@@ -8,6 +8,9 @@ source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
 ID="$(as_norm_id "${1:-}")"
 
+# Light-workspace guard (lib.sh): refuse before any read or mutation.
+as_require_module exp.md exp
+
 SRC=( "$AS_ROOT"/exp/todo/exp_"$ID"-*.md )
 [ -e "${SRC[0]}" ] || as_die "exp_$ID not in exp/todo/ (does not exist, already running, or already completed)"
 

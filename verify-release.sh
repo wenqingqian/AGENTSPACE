@@ -13,6 +13,7 @@
 #   [4] constants contract (+reverse: lib.sh COMMIT_* → architecture)
 #   [13] assets gitignore contracts
 #   [14] skill/command frontmatter YAML (real PyYAML parse)
+#   [15] init-light asset contract (subset of latest archive)
 # Usage: bash verify-release.sh
 set -euo pipefail
 # Byte-exact, locale-independent semantics for the whole gate (grep/sed/python
@@ -73,6 +74,7 @@ marks = {
     "marketplace.json plugins[0]": jget(f"{root}/marketplace.json", lambda d: d["plugins"][0]["version"]),
     "assets/.agentspace-version.json": jget(f"{assets}/.agentspace-version.json", lambda d: d["version"]),
     "assets/.agentspace-architecture.json": jget(f"{assets}/.agentspace-architecture.json", lambda d: d["version"]),
+    "init-light assets/.agentspace-architecture.json": jget(f"{root}/skills/agentspace-init-light/assets/agentspace/.agentspace-architecture.json", lambda d: d["version"]),
 }
 for k, v in marks.items():
     if v != latest:
@@ -372,6 +374,7 @@ done
 # (e.g. the skip-missing-archive rule once existed only in SKILL.md).
 # Each pair belongs to ONE skill; grep that skill's two files.
 for pair in "skills/agentspace-update|skip to the next existing archive|跳过缺失的中间档案" \
+            "skills/agentspace-update|Light workspace detection and expansion|light 工作区检测与扩展" \
             "skills/agentspace-code-clean|rewrite the comment/code line so it describes the change itself|改写该注释/代码行, 使其描述改动本身" \
             "skills/agentspace-code-clean|read CLEANUP.md in this skill directory|阅读本 skill 目录内的 CLEANUP.md" \
             "skills/agentspace-code-clean|MUST carry no machine fingerprints or secrets|MUST 无机器指纹与秘密" \
@@ -533,6 +536,92 @@ else
   if ! python3 -c "$FM_PY" $FM_FILES; then
     issues=$((issues+1))
   fi
+fi
+
+# --- [15] init-light asset contract ------------------------------------------
+# The light init ships its own architecture snapshot (plan module only). It
+# must stay a faithful DERIVED subset of the latest full archive: files exactly
+# the full set minus the not-initialized module files, modules == [plan], and
+# the light-specific assets present with the edition marker. Without this
+# check a full-architecture change (file added/removed) would silently leave
+# the light snapshot stale and doctor [9]/update diffs lying on light
+# workspaces.
+echo "[15] init-light asset contract"
+if [ -n "$LATEST" ] && ! LIGHT_OUT="$(python3 - "$ROOT" "${LATEST#v}" <<'EOF'
+import json, os, sys
+root, latest = sys.argv[1], sys.argv[2]
+issues = []
+def jget(path):
+    try:
+        return json.load(open(path))
+    except Exception:
+        return None
+full = jget(f"{root}/skills/agentspace-update/versions/v{latest}/architecture.json")
+light_path = f"{root}/skills/agentspace-init-light/assets/agentspace/.agentspace-architecture.json"
+light = jget(light_path)
+if not isinstance(light, dict):
+    issues.append("init-light .agentspace-architecture.json missing/invalid")
+elif not isinstance(full, dict):
+    issues.append("latest archive architecture.json unreadable")
+else:
+    absent = {
+        "iterations.md", "iterations/index.md", "exp.md", "exp/index.md",
+        "register.md", "data.md", "examples.md", "utils.md", "tests.md",
+        "notes.md", "handoff/index.md",
+    }
+    expect = sorted(set(full.get("files", {})) - absent)
+    got = sorted(light.get("files", {}))
+    if got != expect:
+        only_full = sorted(set(expect) - set(got))
+        only_light = sorted(set(got) - set(expect))
+        issues.append(f"files drift vs full archive minus module files (missing: {only_full}; extra: {only_light})")
+    if light.get("modules") != ["plan"]:
+        issues.append(f"modules must be exactly ['plan'], got {light.get('modules')}")
+    if light.get("version") != latest:
+        issues.append(f"version {light.get('version')} != latest v{latest}")
+    if light.get("constants") != full.get("constants"):
+        issues.append("constants drift vs full archive (light shares the lib.sh contract)")
+    light_dir = f"{root}/skills/agentspace-init-light/assets/agentspace"
+    full_assets = f"{root}/skills/agentspace-init/assets/agentspace"
+    for f in got:
+        if os.path.exists(f"{light_dir}/{f}"):
+            continue
+        if not os.path.exists(f"{full_assets}/{f}"):
+            issues.append(f"light file {f} present in neither light nor full assets")
+    ag = open(f"{light_dir}/AGENTS.md", encoding="utf-8").read() if os.path.exists(f"{light_dir}/AGENTS.md") else ""
+    if "## agentspace edition" not in ag or "\nlight" not in ag:
+        issues.append("light AGENTS.md missing the '## agentspace edition: light' marker")
+    sec = light.get("files", {}).get("AGENTS.md", {}).get("sections", {})
+    if isinstance(sec, dict):
+        import re
+        for name in sec:
+            if f"## {name}" not in ag:
+                issues.append(f"AGENTS.md section '## {name}' missing in light asset")
+        fence = chr(96) * 3
+        in_fence = False
+        for line in ag.splitlines():
+            s = line.rstrip()
+            if s.startswith(fence):
+                in_fence = not in_fence
+                continue
+            if not in_fence and s.startswith("## "):
+                name = s[3:].strip()
+                if name not in sec:
+                    issues.append(f"light AGENTS.md section '## {name}' missing from architecture record")
+for msg in issues:
+    print("issue: " + msg)
+EOF
+)"; then
+  echo "  [issue] light-asset check failed"
+  issues=$((issues+1))
+else
+  # an empty result is success — the herestring would otherwise feed one
+  # empty line and count as an issue
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    echo "  $line"
+    issues=$((issues+1))
+  done <<< "$LIGHT_OUT"
 fi
 
 # --- summary ----------------------------------------------------------------

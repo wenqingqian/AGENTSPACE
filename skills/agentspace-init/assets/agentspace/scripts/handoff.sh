@@ -33,6 +33,12 @@ done
 
 [ -n "$ACTION" ] || as_die "usage: handoff.sh --produce|--list|--consume [--keep] [--name X] [--description Y]"
 
+# Light-workspace guard (lib.sh): handoff is a full-workspace module — refuse
+# before any read or mutation. The entry is the handoff/ DIRECTORY (the index
+# self-initializes when absent, so a removed index.md in a full workspace is
+# still an initialized module).
+as_require_module handoff handoff
+
 HANDOFF_DIR="$AS_ROOT/handoff"
 INDEX="$HANDOFF_DIR/index.md"
 

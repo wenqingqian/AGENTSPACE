@@ -24,6 +24,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Light-workspace guard (lib.sh): exp is a full-workspace module — refuse
+# before any read, lock or mutation.
+as_require_module exp.md exp
+
 # Slug derivation + contract — as_slug_of (same single source as new-plan.sh;
 # title becomes filename).
 SLUG="$(as_slug_of "$TITLE" exp)"

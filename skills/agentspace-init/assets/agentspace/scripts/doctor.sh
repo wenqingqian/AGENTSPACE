@@ -308,7 +308,9 @@ for f in "$AS_ROOT"/notes/*.md; do
     esac
   fi
 done
-# entry rows must point at existing files (agent-maintained table → same link check as [4])
+# entry rows must point at existing files (agent-maintained table → same link check as [4]);
+# light workspaces (init-light, plan module only) have no notes.md — skip silently
+if [ -f "$AS_ROOT/notes.md" ]; then
 while IFS= read -r target; do
   [ -n "$target" ] || continue
   case "$target" in
@@ -316,6 +318,7 @@ while IFS= read -r target; do
   esac
   [ -e "$AS_ROOT/${target%%#*}" ] || warn "notes.md broken link → $target"
 done < <(grep '^| ' "$AS_ROOT/notes.md" | grep -o ']([^)]*)' | sed 's/^](//; s/)$//')
+fi
 
 # ---- 8. back-link discipline: iteration-sourced notes must link their readme ----
 echo "[8] note back-links (iteration-sourced)"

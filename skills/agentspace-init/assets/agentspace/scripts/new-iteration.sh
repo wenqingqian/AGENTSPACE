@@ -11,6 +11,10 @@ PLAN_ARG="${1:-}"
 TITLE="${2:-}"
 [ -n "$PLAN_ARG" ] && [ -n "$TITLE" ] || as_die "Usage: new-iteration.sh <plan-id> \"iteration content\""
 
+# Light-workspace guard (lib.sh): iterations is a full-workspace module —
+# refuse before any read, lock or mutation.
+as_require_module iterations.md iterations
+
 # Lock BEFORE any workspace-state read (t21): the plan-todo glob and the id
 # allocation must sit in the same critical section as the writes — computing
 # the id pre-lock let every concurrent creator read the same "next id" and

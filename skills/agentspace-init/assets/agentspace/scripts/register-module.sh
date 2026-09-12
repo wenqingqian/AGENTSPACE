@@ -11,6 +11,10 @@ PURPOSE="${2:-}"
 [[ "$NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]] || as_die "Module name must be lowercase alphanumeric/hyphen: $NAME"
 [ ! -e "$AS_ROOT/$NAME.md" ] && [ ! -e "$AS_ROOT/$NAME" ] || as_die "Module already exists: $NAME"
 
+# Light-workspace guard (lib.sh): module registration extends the full
+# workspace shape — refuse before any read or mutation.
+as_require_module register.md register
+
 DATE="$(as_today)"
 
 as_lock

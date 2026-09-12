@@ -4,7 +4,9 @@
 
 A cross-platform plugin providing git-managed agent workspaces for experiment/iteration-driven projects.
 
-All functionality ships as agent skills — every supported platform (ZCode / Codex / Kimi) loads them from `skills/`; platforms with slash commands (ZCode) additionally get thin `/agentspace-*` command wrappers that delegate to the skills. Initialize explicitly (ZCode: `/agentspace-init`; elsewhere: ask the agent to run the `agentspace-init` skill) to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
+All functionality ships as agent skills — every supported platform (ZCode / Codex / Kimi) loads them from `skills/`; platforms with slash commands (ZCode) additionally get thin `/agentspace-*` command wrappers that delegate to the skills. Initialize explicitly (ZCode: `/agentspace-init`; elsewhere: ask the agent to run the `agentspace-init` skill) to create `AGENTSPACE/` (independent git repo) + root `AGENTS.md` guide in your project — or `/agentspace-init-light` (skill `agentspace-init-light`) for a plan-only light workspace. The agent then maintains workspace state automatically in sessions involving experiments, code changes, or project iteration, with milestone commits.
+
+A **light workspace** contains only the plan module — `plan.md` + `plan/` with the full base-plan lifecycle — while shipping the complete `scripts/` + `templates/` set; module-bound transition scripts (iterations, exp, register, handoff) refuse with an actionable hint, and `/agentspace-update` expands the workspace to the full shape (plans and user content preserved).
 
 ## Core Concepts
 
@@ -59,6 +61,7 @@ Skills are the functional delivery unit — they behave identically on every sup
 | --- | --- | --- |
 | `agentspace` | Automatic (guarded) | Daily workspace management in sessions involving experiments, code changes, or iteration; stays out of project-unrelated chat |
 | `agentspace-init` | Explicit only | Initialize the workspace — the only entry, idempotent |
+| `agentspace-init-light` | Explicit only | Initialize a light workspace — plan module only (plans + base plans; iterations/exp/... not initialized; expand later via /agentspace-update) |
 | `agentspace-update` | Explicit only | Migrate the workspace to the current plugin version; conservative by default, `--force` for aggressive |
 | `agentspace-doctor` | Explicit only | Deep health check — deterministic consistency, `--minor` per-file review, `--major` cross-history audit, `--fix` tiered repairs |
 | `agentspace-status` | Explicit only | Status workbench — project overview, current state, soft alerts |
@@ -77,6 +80,7 @@ On ZCode, each explicit skill also has a slash command that delegates to it via 
 
 ```text
 /agentspace-init                                # initialize          (skill agentspace-init)
+/agentspace-init-light                          # initialize light — plan module only (skill agentspace-init-light)
 /agentspace-update [--force]                    # migrate workspace   (skill agentspace-update)
 /agentspace-doctor [--minor | --major] [--fix]  # deep health check   (skill agentspace-doctor)
 /agentspace-status                              # status workbench    (skill agentspace-status)
@@ -124,6 +128,7 @@ marketplace.json                  # Marketplace listing
 icons/icon.png                    # Marketplace icon
 commands/                         # ZCode slash commands (thin wrappers delegating via skills: frontmatter)
 ├── agentspace-init.md
+├── agentspace-init-light.md
 ├── agentspace-update.md
 ├── agentspace-doctor.md
 ├── agentspace-status.md
@@ -134,6 +139,7 @@ commands/                         # ZCode slash commands (thin wrappers delegati
 skills/                           # The functional unit — portable across platforms
 ├── agentspace/                   # Daily management (automatic, guarded)
 ├── agentspace-init/              # Initialization (explicit only) + init script + all template assets
+├── agentspace-init-light/        # Light initialization (explicit only) — plan module only + init script + light assets
 ├── agentspace-update/            # Update/migration (explicit only) + version archives + DEVELOPMENT.md
 ├── agentspace-doctor/            # Deep audit (explicit only)
 ├── agentspace-status/            # Status workbench (explicit only)
@@ -157,6 +163,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.6.0 | 2026-09-13 | New skill agentspace-init-light + /agentspace-init-light — plan-only light workspace (plan.md + plan/ with the base-plan lifecycle; the full scripts/templates set shared with init); module-bound scripts refuse with an expansion hint via the new lib.sh as_require_module guard; complete-plan adapts its closing hint when the notes module is absent; the update flow gains the light→full expansion contract (expand from the canonical assets before the changelog chain); release gate gains the init-light asset contract check [15] |
 | v1.5.3 | 2026-09-12 | code-clean rule hardening from file review — comments must be self-contained in the current code (feedback-driven and context-missing comments banned; the pre-change code counts as missing context); the four-way tier bullet split into individual MUSTs; process narration upgraded from WARN to MUST; a new MUST bans machine fingerprints (IPs, hostnames, user paths) and secrets; the comment rules now bind commit text explicitly; the SKILL descriptions slimmed to a must-read-this-file directive |
 | v1.5.2 | 2026-09-11 | Parallel primitives from the field test — `new-plan.sh --claim NNNN` atomically reserves a specific id for concurrent lanes; the commit gate recognizes a lane worktree of a registered repo through its main checkout (no per-worktree registration); `parallel-workspace.sh --worktree` builds the canonical lane layout (idempotent, reuses a kept branch); `--recv` no longer echoes own broadcasts; doctor [0] names active lanes when the ledger is dirty |
 | v1.5.1 | 2026-09-11 | Gate-criteria fixes from the 100-round field test — results gates read section content instead of template-comment presence; transition scripts pin the milestone commit with the exact path list; the commit gate refuses empty staging and gains `--commit` (committed message byte-identical to the gated one); handoff consume dumps the snapshot before destroying it |

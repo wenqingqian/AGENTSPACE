@@ -96,6 +96,7 @@ targets = [
     (f"{root}/marketplace.json", lambda d: [d.__setitem__("version", ver), d["plugins"][0].__setitem__("version", ver)]),
     (f"{root}/skills/agentspace-init/assets/agentspace/.agentspace-version.json", lambda d: d.__setitem__("version", ver)),
     (f"{root}/skills/agentspace-init/assets/agentspace/.agentspace-architecture.json", lambda d: d.__setitem__("version", ver)),
+    (f"{root}/skills/agentspace-init-light/assets/agentspace/.agentspace-architecture.json", lambda d: d.__setitem__("version", ver)),
 ]
 docs = []
 errors = []
@@ -120,7 +121,7 @@ echo ""
 echo "Scaffolded v$NEW (from v$LATEST):"
 echo "  - versions/v$NEW/CHANGELOG.md      (fill in migration details)"
 echo "  - versions/v$NEW/architecture.json (adjust sections/columns/constants to the actual changes)"
-echo "  - version fields bumped in all three plugin manifests / marketplace.json / init assets"
+echo "  - version fields bumped in all three plugin manifests / marketplace.json / init assets / init-light architecture asset"
 echo ""
 echo "Next:"
 echo "  1. Write CHANGELOG migration steps (DEVELOPMENT.md quality requirements)"

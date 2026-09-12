@@ -92,6 +92,19 @@ readonly BASE_PH_DIR="<!-- 方向: 这个基准锚定什么方向"
 
 as_die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+# Light-workspace guard: module-bound transition scripts call this before any
+# read or mutation so a workspace initialized by /agentspace-init-light (plan
+# module only) gets one actionable refusal instead of an awk "section not
+# found" from the absent entry file. <entry> is the module's entry path (an
+# entry FILE for most modules, the module DIRECTORY for self-initializing
+# ones like handoff) — its presence IS the module-initialized contract (a full
+# workspace always has it; a light workspace never does). Idempotent with the
+# update expansion flow: the refusal names the exact command that creates the
+# missing module files.
+as_require_module() {
+  [ -e "$AS_ROOT/$1" ] || as_die "$2 module is not initialized in this workspace (light init — plan module only); run /agentspace-update to expand to the full workspace first"
+}
+
 # Atomic replace: mv is same-filesystem ($AS_TMPDIR lives in $AS_ROOT) and
 # atomic, so a crash cannot truncate the target mid-write. mktemp creates
 # 0600 — copy the target's mode onto the tmp first so permissions are kept.

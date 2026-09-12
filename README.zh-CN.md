@@ -2,7 +2,9 @@
 
 跨平台插件, 为实验/迭代型项目提供 **git 管理的 agent 工作区**。
 
-全部功能以 agent skill 交付 — 三个受支持平台(ZCode / Codex / Kimi)都从 `skills/` 加载; 支持斜杠命令的平台(ZCode)额外获得委托给 skill 的轻量 `/agentspace-*` 命令包装。通过显式初始化(ZCode: `/agentspace-init`; 其他平台: 让 agent 运行 `agentspace-init` skill)在项目根目录创建 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
+全部功能以 agent skill 交付 — 三个受支持平台(ZCode / Codex / Kimi)都从 `skills/` 加载; 支持斜杠命令的平台(ZCode)额外获得委托给 skill 的轻量 `/agentspace-*` 命令包装。通过显式初始化(ZCode: `/agentspace-init`; 其他平台: 让 agent 运行 `agentspace-init` skill)在项目根目录创建 `AGENTSPACE/`(独立 git 仓库) + 项目根 `AGENTS.md` 引导文件 — 或 `/agentspace-init-light`(skill `agentspace-init-light`)创建仅含 plan 模块的轻量工作区; 之后 agent 在涉及实验/代码改动/项目迭代的会话中自动按规范维护工作区状态, 并在里程碑时自动提交。
+
+**轻量工作区**只含 plan 模块 — `plan.md` + `plan/`(含完整 base plan 生命周期), 但 scripts/ + templates/ 整套照常部署; 模块流转脚本(iterations/exp/register/handoff)会拒绝并给出可操作提示, `/agentspace-update` 可扩展为完整工作区(plan 数据与用户内容全保留)。
 
 ## 核心概念
 
@@ -57,6 +59,7 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | --- | --- | --- |
 | `agentspace` | 自动(带守卫) | 涉及实验/代码改动/迭代的会话中的日常管理; 项目无关会话不介入 |
 | `agentspace-init` | 仅显式 | 初始化工作区 — 唯一入口, 幂等 |
+| `agentspace-init-light` | 仅显式 | 初始化轻量工作区 — 仅 plan 模块(plan + 基准计划; iterations/exp/... 不初始化; 之后经 /agentspace-update 扩展) |
 | `agentspace-update` | 仅显式 | 把工作区迁移到当前插件版本; 默认保守, `--force` 激进 |
 | `agentspace-doctor` | 仅显式 | 深度健康检查 — 确定性一致性 + `--minor` 逐文件审查 + `--major` 跨历史审计 + `--fix` 分级修复 |
 | `agentspace-status` | 仅显式 | 状态工作台 — 项目总览、现状、软告警 |
@@ -75,6 +78,7 @@ ZCode 上每个显式 skill 另有斜杠命令, 经命令的 `skills:` 前置字
 
 ```text
 /agentspace-init                                # 初始化            (skill agentspace-init)
+/agentspace-init-light                          # 初始化轻量工作区 — 仅 plan 模块(skill agentspace-init-light)
 /agentspace-update [--force]                    # 迁移工作区        (skill agentspace-update)
 /agentspace-doctor [--minor | --major] [--fix]  # 深度健康检查      (skill agentspace-doctor)
 /agentspace-status                              # 状态工作台        (skill agentspace-status)
@@ -122,6 +126,7 @@ marketplace.json                  # 市场清单
 icons/icon.png                    # 市场图标
 commands/                         # ZCode 斜杠命令(轻量包装, 经 skills: 前置字段委托给 skill)
 ├── agentspace-init.md
+├── agentspace-init-light.md
 ├── agentspace-update.md
 ├── agentspace-doctor.md
 ├── agentspace-status.md
@@ -132,6 +137,7 @@ commands/                         # ZCode 斜杠命令(轻量包装, 经 skills:
 skills/                           # 功能交付单元 — 跨平台可移植
 ├── agentspace/                   # 日常管理(自动触发, 带守卫)
 ├── agentspace-init/              # 初始化(仅显式)+ init 脚本 + 全部模板 assets
+├── agentspace-init-light/        # 轻量初始化(仅显式)— 仅 plan 模块 + init 脚本 + light assets
 ├── agentspace-update/            # 更新/迁移(仅显式)+ 版本档案 + DEVELOPMENT.md
 ├── agentspace-doctor/            # 深度审计(仅显式)
 ├── agentspace-status/            # 状态工作台(仅显式)
@@ -155,6 +161,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.6.0 | 2026-09-13 | 新增 skill agentspace-init-light + 命令 /agentspace-init-light — 仅 plan 模块的轻量工作区(plan.md + plan/ 含基准计划生命周期; scripts/templates 整套与 init 同源共享); 模块流转脚本经新的 lib.sh as_require_module 守卫拒绝并提示扩展路径; complete-plan 在 notes 模块缺席时适配收尾提示; update 流新增 light→full 扩展契约(走 changelog 链前先从规范资产扩展); 发布门新增 [15] init-light 资产契约检查 |
 | v1.5.3 | 2026-09-12 | 文件评审驱动的 code-clean 规则硬化 — 注释必须自洽于改动后的代码(禁反馈驱动与缺失上下文, 改动前的代码属于缺失上下文); 四类分级单条拆为逐条 MUST; 过程叙述由 WARN 升 MUST; 新增 MUST 禁机器指纹(IP/主机名/用户路径)与秘密; 注释规则明确同样约束 commit 文本; SKILL description 去举例、改为必读本文 |
 | v1.5.2 | 2026-09-11 | 实测反馈的并行原语 — `new-plan.sh --claim NNNN` 为并发泳道原子占用指定 id; commit 门把注册仓库的泳道 worktree 经主检出识别为同一仓库(无需逐 worktree 登记); `parallel-workspace.sh --worktree` 按规范布局建泳道(幂等、复用保留分支); `--recv` 不再回显自己的广播; doctor [0] 在台账有脏文件时点名活跃泳道 |
 | v1.5.1 | 2026-09-11 | 门控判据修复(百轮实战反馈) — 结果门按节内容而非模板注释判断; 七个流转脚本打印里程碑提交的精确路径; commit 门拒空暂存并新增 `--commit`(提交消息与过门逐字节一致); handoff consume 先输出快照再销毁 |

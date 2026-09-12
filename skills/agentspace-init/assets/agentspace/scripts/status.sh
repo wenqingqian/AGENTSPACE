@@ -565,7 +565,7 @@ LATEST_CLOSED="$(sed "s/\\\\|/$ESC/g" "$AS_ROOT/iterations/index.md" 2>/dev/null
     if ($7 != "" && $7 >= best) { best=$7; id=$2; title=$4 }
   }
   END { if (best != "") { gsub(esc, "\\|", title); print id "|" best "|" title } }
-')"
+' || true)"
 if [ -n "$LATEST_CLOSED" ]; then
   lid="${LATEST_CLOSED%%|*}"; lrest="${LATEST_CLOSED#*|}"; ldate="${lrest%%|*}"; ltitle="${lrest#*|}"
   lsha="$(grep -E '^> 宿主结束 commit: [0-9a-f]+' "$AS_ROOT/iterations/iteration_$lid/readme.md" 2>/dev/null | head -1 | grep -oE '[0-9a-f]{4,40}' || true)"

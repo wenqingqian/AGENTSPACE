@@ -121,6 +121,7 @@ Key fields:
 3. If new files added: include them in `skills/agentspace-init/assets/agentspace/`
 4. If files removed: remove from `skills/agentspace-init/assets/agentspace/`
 5. If table schemas changed: update the corresponding template files in `assets/agentspace/templates/`
+6. If the full file set changed: re-derive the light snapshot `skills/agentspace-init-light/assets/agentspace/.agentspace-architecture.json` = full files minus the not-initialized module files (`iterations.md`, `iterations/index.md`, `exp.md`, `exp/index.md`, `register.md`, `data.md`, `examples.md`, `utils.md`, `tests.md`, `notes.md`, `handoff/index.md`), `modules` = `["plan"]` (verify-release [15] enforces this)
 
 ### Step 5: Update Scripts
 
@@ -204,7 +205,7 @@ Any mismatch means a rule exists in one language only — fix before release.
 
 Fixed gate sequence for every release (hard gates, agent-driven execution — there is no single one-command pipeline; the gates below are the template):
 
-1. `new-version.sh X.Y.Z` — 7 version markers (all three plugin manifests, marketplace top + plugins[0], asset version + architecture) + the `versions/vX.Y.Z/` archive skeleton.
+1. `new-version.sh X.Y.Z` — 8 version markers (all three plugin manifests, marketplace top + plugins[0], init asset version + architecture, init-light asset architecture) + the `versions/vX.Y.Z/` archive skeleton.
 2. Write `versions/vX.Y.Z/CHANGELOG.md` — every change block carries Migration instructions (8a scripts / 8b AGENTS.md text ops / 8c markers / plugin-side / dev-only); this is the upgrade chain's instruction sheet.
 3. **Rehearse the update (MUST for every new changelog)**: `bash rehearse-update.sh <old-ref> <new-version>` — sandbox built from the previous version's assets (`git archive <old-ref>`), the new changelog's Migration instructions applied (8a + 8c mechanical; 8b agent-executed per the changelog), convergence verified (markers / scripts byte-identical / doctor green / status renders). Writes the record `versions/vX.Y.Z/rehearsal.md`; a release with a new changelog but no PASSING record fails verify-release [11].
 4. `bash verify-release.sh` → [pass] (checks [0]-[14], incl. the rehearsal record, the realized-literal guard, the parallel-workspace gitignore contract, and skill/command frontmatter YAML).

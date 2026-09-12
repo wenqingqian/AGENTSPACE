@@ -9,6 +9,9 @@ ID="$(as_norm_id "${1:-}")"
 RESULT="${2:-}"
 [ -n "$RESULT" ] || as_die "Usage: close-iteration.sh <id> \"result\""
 
+# Light-workspace guard (lib.sh): refuse before any read or mutation.
+as_require_module iterations.md iterations
+
 DIR="iterations/iteration_$ID"
 README="$AS_ROOT/$DIR/readme.md"
 [ -f "$README" ] || as_die "iteration_$ID does not exist"

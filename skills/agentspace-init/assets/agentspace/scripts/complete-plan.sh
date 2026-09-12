@@ -84,6 +84,14 @@ if [ "${OPEN_EXPS:-0}" -gt 0 ]; then
   echo "note: $OPEN_EXPS linked open experiment(s) reference plan:$ID — they stay open (an exp may outlive its plan); remember to close them separately"
 fi
 # v0.3.2: lesson distillation upgraded from SHOULD to MUST — every completed
-# plan's transferable lessons must land in notes/ before the milestone commit
-echo "Next [MUST]: review this plan's iterations (结果/code-diff) and distill transferable lessons into notes with source plan:$ID"
-as_commit_hint "plan: complete $ID + notes" plan.md plan/index.md "plan/todo/$(basename "${SRC[0]}")" "$DEST" notes.md notes/
+# plan's transferable lessons must land in notes/ before the milestone commit.
+# Light workspaces (plan module only) have no notes module: the MUST adapts to
+# the plan doc's own 结果 section and the commit hint drops the notes paths
+# (git add on absent paths would error).
+if [ -f "$AS_ROOT/notes.md" ]; then
+  echo "Next [MUST]: review this plan's iterations (结果/code-diff) and distill transferable lessons into notes with source plan:$ID"
+  as_commit_hint "plan: complete $ID + notes" plan.md plan/index.md "plan/todo/$(basename "${SRC[0]}")" "$DEST" notes.md notes/
+else
+  echo "Next: light workspace (no iterations/notes module) — record transferable lessons in the plan doc's 结果 section with source plan:$ID"
+  as_commit_hint "plan: complete $ID" plan.md plan/index.md "plan/todo/$(basename "${SRC[0]}")" "$DEST"
+fi

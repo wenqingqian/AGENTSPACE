@@ -70,6 +70,12 @@ description: 将现有 AGENTSPACE 工作区更新至当前插件版本。仅由�
 - 检查用户是否有自定义内容会受影响
 - 统计 schema 变更影响的数据行数
 
+**c2. light 工作区检测与扩展**（构建更新方案前执行）：工作区由 `/agentspace-init-light` 创建时（AGENTS.md 带 `## agentspace edition` 块且值为 `light`；等价判据：`.agentspace-architecture.json` 的 modules 是同版本档案 modules 的真子集），先扩展为完整工作区形态，再应用 changelog 链：
+1. 目标架构声明而磁盘缺失的模块文件/目录，从规范资产 `skills/agentspace-init/assets/agentspace/` 复制（iterations.md + iterations/、exp.md + exp/、data.md + data/、examples.md + examples/、utils.md + utils/、tests.md + tests/、notes.md + notes/、register.md、handoff/index.md）
+2. AGENTS.md 按规范资产智能合并到完整形态：结构树与模块节补上缺失模块、读取规则/纪律恢复完整措辞、**删除 `## agentspace edition` 块** — 项目简介/根仓库简介/用户规则逐字保留（同 8b 规则）
+3. 扩展在迁移台账记为 `applied — light expansion`；属于已扩展模块的 changelog 条目改为对照目标 architecture.json 验证终态（复制来的文件已带目标形态，确认后记 `not-applicable`），不盲目重放
+4. 用户拒绝属于某缺失模块的 changelog 条目时，该模块保持缺失（扩展与条目一并跳过）
+
 **d. 构建更新方案**：
 - **安全替换**：scripts/*.sh、templates/*.md、.gitignore（无用户内容）
 - **Schema 转换**：列变更的 view 文件（列出列差异 + 影响行数）

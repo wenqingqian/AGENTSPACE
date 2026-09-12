@@ -75,6 +75,12 @@ This is the intelligent analysis step. The agent (you) must:
 - Check if user has custom content that would be affected
 - Count affected data rows for schema changes (how many plan/iteration entries have the old column layout)
 
+**c2. Light workspace detection and expansion** (before building the update plan): when the workspace was initialized by `/agentspace-init-light` (its AGENTS.md carries a `## agentspace edition` block with value `light`; equivalent test: its `.agentspace-architecture.json` module list is a strict subset of the same-version archive's), expand it to the full workspace shape BEFORE applying the changelog chain:
+1. Copy every module file/directory the target architecture declares but the disk lacks from the canonical assets `skills/agentspace-init/assets/agentspace/` (iterations.md + iterations/, exp.md + exp/, data.md + data/, examples.md + examples/, utils.md + utils/, tests.md + tests/, notes.md + notes/, register.md, handoff/index.md)
+2. Smart-merge AGENTS.md to the full shape from the canonical asset: add the missing module sections to the 结构 tree and the 模块 section, restore the full 读取规则/纪律 wording, and REMOVE the `## agentspace edition` block — preserving 项目简介/根仓库简介/用户规则 verbatim (same rules as 8b)
+3. Record the expansion in the migration ledger (`applied — light expansion`); changelog items belonging to an expanded module are then verified against the target architecture.json instead of blind-applied (the copied files already carry the target shape — verify each item's end state, then mark `not-applicable`)
+4. If the user refuses a changelog item that belongs to an absent module, keep that module absent (skip both the expansion and the item)
+
 **d. Build update plan** — a structured summary of what the update will do:
 - **Safe replacements**: scripts/*.sh, templates/*.md, .gitignore (always safe, no user content)
 - **Schema transforms**: view files with column changes (show column diff + affected row count)

@@ -6,6 +6,7 @@
       "managedBy": "agent",
       "sections": {
         "agentspace mode": {},
+        "agentspace edition": {},
         "项目简介": {},
         "根仓库简介": {},
         "关键代码仓库": {},
@@ -13,15 +14,7 @@
         "模块: what / when / how": {
           "subsections": [
             "plan —— 任务计划 (plan.md + plan/)",
-            "iterations —— 代码变更迭代 (iterations.md + iterations/)",
-            "exp —— 实验记录 (exp.md + exp/)",
-            "data —— 公用数据 (data.md + data/)",
-            "examples —— 实验配置 (examples.md + examples/)",
-            "utils —— 复用工具 (utils.md + utils/)",
-            "tests —— 实验环境与测试 (tests.md + tests/)",
-            "notes —— 持久知识 (notes.md + notes/)",
-            "register —— 按需扩展模块 (register.md)",
-            "handoff —— 一次性会话交接 (handoff/)"
+            "未初始化模块(light 工作区)"
           ]
         },
         "读取规则": {},
@@ -104,173 +97,6 @@
         }
       }
     },
-    "iterations.md": {
-      "type": "view",
-      "managedBy": "scripts",
-      "sections": {
-        "进行中": {
-          "columns": [
-            "ID",
-            "Plan",
-            "内容",
-            "开始日期",
-            "链接"
-          ],
-          "maxRows": null
-        },
-        "最近完成 (10 条)": {
-          "columns": [
-            "ID",
-            "Plan",
-            "内容",
-            "结果",
-            "完成日期",
-            "链接"
-          ],
-          "maxRows": 10
-        }
-      }
-    },
-    "iterations/index.md": {
-      "type": "index",
-      "managedBy": "scripts",
-      "sections": {
-        "_default": {
-          "columns": [
-            "ID",
-            "Plan",
-            "内容",
-            "状态",
-            "开始日期",
-            "完成日期",
-            "结果",
-            "链接"
-          ]
-        }
-      }
-    },
-    "exp.md": {
-      "type": "view",
-      "managedBy": "scripts",
-      "sections": {
-        "Todo": {
-          "columns": [
-            "ID",
-            "实验",
-            "创建日期",
-            "链接"
-          ],
-          "maxRows": null
-        },
-        "Doing": {
-          "columns": [
-            "ID",
-            "实验",
-            "开始日期",
-            "链接"
-          ],
-          "maxRows": null
-        },
-        "最近完成 (10 条)": {
-          "columns": [
-            "ID",
-            "实验",
-            "状态",
-            "结果",
-            "完成日期",
-            "链接"
-          ],
-          "maxRows": 10
-        }
-      }
-    },
-    "exp/index.md": {
-      "type": "index",
-      "managedBy": "scripts",
-      "sections": {
-        "_default": {
-          "columns": [
-            "ID",
-            "实验",
-            "状态",
-            "关联 plan",
-            "关联 iteration",
-            "关键 commits",
-            "配置",
-            "创建日期",
-            "完成日期",
-            "结果",
-            "链接"
-          ]
-        }
-      }
-    },
-    "register.md": {
-      "type": "view",
-      "managedBy": "scripts",
-      "sections": {
-        "已注册模块": {
-          "columns": [
-            "模块",
-            "用途",
-            "入口",
-            "注册日期"
-          ],
-          "maxRows": null
-        }
-      }
-    },
-    "utils.md": {
-      "type": "content",
-      "managedBy": "agent",
-      "sections": {
-        "_default": {
-          "columns": [
-            "工具",
-            "用途",
-            "何时使用",
-            "用法",
-            "链接"
-          ]
-        }
-      }
-    },
-    "tests.md": {
-      "type": "content",
-      "managedBy": "agent",
-      "sections": {
-        "实验环境": {
-          "columns": [
-            "项",
-            "值"
-          ]
-        },
-        "测试脚本": {
-          "columns": [
-            "脚本",
-            "目的",
-            "用法",
-            "链接"
-          ]
-        }
-      }
-    },
-    "notes.md": {
-      "type": "content",
-      "managedBy": "agent",
-      "sections": {
-        "_default": {
-          "columns": [
-            "主题",
-            "标签",
-            "一句话结论",
-            "来源",
-            "日期",
-            "链接"
-          ]
-        }
-      }
-    },
     "templates/plan.md": {
       "type": "template",
       "managedBy": "plugin",
@@ -327,6 +153,20 @@
         "详情"
       ]
     },
+    "templates/handoff.md": {
+      "type": "template",
+      "managedBy": "plugin"
+    },
+    "templates/base-plan.md": {
+      "type": "template",
+      "managedBy": "plugin",
+      "sections": [
+        "方向",
+        "约束",
+        "边界",
+        "用户审核记录"
+      ]
+    },
     "scripts/lib.sh": {
       "type": "script",
       "managedBy": "plugin"
@@ -371,71 +211,13 @@
       "type": "script",
       "managedBy": "plugin"
     },
-    ".gitignore": {
-      "type": "config",
-      "managedBy": "plugin"
-    },
-    "data.md": {
-      "type": "content",
-      "managedBy": "agent",
-      "sections": {
-        "数据清单": {
-          "columns": [
-            "名称",
-            "说明",
-            "来源",
-            "链接"
-          ]
-        }
-      }
-    },
-    "examples.md": {
-      "type": "content",
-      "managedBy": "agent",
-      "sections": {
-        "配置清单": {
-          "columns": [
-            "配置",
-            "说明",
-            "关联测试",
-            "链接"
-          ]
-        }
-      }
-    },
-    "handoff/index.md": {
-      "type": "index",
-      "managedBy": "scripts",
-      "sections": {
-        "Handoffs": {
-          "columns": [
-            "name",
-            "description",
-            "location",
-            "time"
-          ]
-        }
-      }
-    },
-    "templates/handoff.md": {
-      "type": "template",
-      "managedBy": "plugin"
-    },
     "scripts/handoff.sh": {
       "type": "script",
-      "managedBy": "plugin"
-    },
-    ".agentspace-whitelist": {
-      "type": "config",
       "managedBy": "plugin"
     },
     "scripts/mode.sh": {
       "type": "script",
       "managedBy": "plugin"
-    },
-    ".agentspace-repos": {
-      "type": "config",
-      "managedBy": "scripts"
     },
     "scripts/repos.sh": {
       "type": "script",
@@ -449,16 +231,6 @@
       "type": "script",
       "managedBy": "plugin"
     },
-    "templates/base-plan.md": {
-      "type": "template",
-      "managedBy": "plugin",
-      "sections": [
-        "方向",
-        "约束",
-        "边界",
-        "用户审核记录"
-      ]
-    },
     "scripts/new-base-plan.sh": {
       "type": "script",
       "managedBy": "plugin"
@@ -470,19 +242,22 @@
     "scripts/retire-base-plan.sh": {
       "type": "script",
       "managedBy": "plugin"
+    },
+    ".gitignore": {
+      "type": "config",
+      "managedBy": "plugin"
+    },
+    ".agentspace-whitelist": {
+      "type": "config",
+      "managedBy": "plugin"
+    },
+    ".agentspace-repos": {
+      "type": "config",
+      "managedBy": "scripts"
     }
   },
   "modules": [
-    "plan",
-    "iterations",
-    "exp",
-    "data",
-    "examples",
-    "utils",
-    "tests",
-    "notes",
-    "register",
-    "handoff"
+    "plan"
   ],
   "constants": {
     "SEC_TODO": "Todo",
