@@ -64,7 +64,7 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | `agentspace-handoff` | 仅显式 | 一次性会话交接 — 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
 | `agentspace-base-plan` | 场景 — 用户要求建基准计划/锚定方向 | 基准计划 — `plan/base/` 下的不可变方向锚点(独立计数, 派生 plan `--base NNNN` 关联); 持有审核门: 草稿写好后结束会话, 用户在文件上评论; 激活钉定校验并冻结文件(doctor 审计) |
 | `agentspace-exp` | 显式 — `/agentspace-exp`; 场景 — 实验意向时的一次性提议 | 实验记录 — 持有登记门(仅限主动; 开发收尾的正确性验证绝不登记)并驱动手册生命周期; 设计对齐委托 agentspace-better-exp, 报告委托 agentspace-better-exp-report |
-| `agentspace-code-clean` | 被动默认 — 登记仓库每次 commit 前; 主动层仅显式 | 两级卫生 — SKILL.md 为默认规则层(commit 门、注释四类分级、commit 文本规则; 融合 x-code-clean 与 x-better-commit 并集), CLEANUP.md 为仅显式的后处理流程(任意范围清理既有代码/注释、改写 commit、安全重建历史) |
+| `agentspace-code-clean` | 被动默认 — 登记仓库每次 commit 前; 主动层仅显式 | 两级卫生 — SKILL.md 为默认规则层(commit 门、注释 MUST、commit 文本规则; 融合 x-code-clean 与 x-better-commit 并集), CLEANUP.md 为仅显式的后处理流程(任意范围清理既有代码/注释、改写 commit、安全重建历史) |
 | `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区 — 每个 plan 一条泳道, 泳道内实施与验证, 用户确认后 CAS squash 合回主线恰好一个 commit |
 | `agentspace-better-exp` | 场景触发 — 用户选择登记实验之后 | 开跑前的实验设计讯问 — 五轴(范围、基线与对照公平、测量准确、数据完整、可复现与终止), 每次一问并附推荐答案 |
 | `agentspace-better-exp-report` | 场景触发 — 基于已记录实验数据写报告/总结/图时 | 实验报告的作图与文字规范 — 复用项目做图工具、色盲友好配色、误差棒注明 n; 自完备是核心文字规则 |
@@ -108,7 +108,7 @@ plan 标题必须能产出合规文件名 slug — 只接受小写英文词、�
 - **登记处**: 关键仓库登记在 `AGENTSPACE/.agentspace-repos`(一行一路径; 登记/出册始终须用户显式确认, 只能由 `scripts/repos.sh` 改写)
 - **commit 门(MUST)**: 在登记仓库执行任何 `git commit` 前, agent 先运行 `AGENTSPACE/scripts/commit-check.sh <仓库> "<message>"`, 仅 PASS 才提交。阻断项: message **与新增代码/注释行**中的记账 id(`plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN` 及变体拼写)、实验输出特征(`events.out.tfevents.*`、顶层 `wandb/` `mlruns/` `lightning_logs/`)、≥50MB blob、任何 `AGENTSPACE/` 内容泄漏进代码仓库。被阻断的实验产物移入本轮 iteration 的 `data/` 而非删除
 - **commit 文本质量**: 标题=对实际改动的一句话描述 — 无实验/run 标识、无记账叙述; 归属由 iteration readme 的宿主起始/结束 commit SHA 承担, 永不进入代码仓库
-- **代码卫生(内置)**: 登记仓库内的代码、注释与 commit 文本默认遵循 agentspace-code-clean 规则(注释分级: 删除 why-not-alternative 反馈残留/冗余复述/测试实例引用; commit 标题与正文规范); 对既有代码/历史的清理仅在用户显式要求时按该 skill 的 CLEANUP 流程执行
+- **代码卫生(内置)**: 登记仓库内的代码、注释与 commit 文本默认遵循 agentspace-code-clean 规则(注释 MUST: 禁反馈驱动与缺失上下文残留/冗余复述/测试实例引用/过程叙述/机器标识与秘密; commit 标题与正文规范); 对既有代码/历史的清理仅在用户显式要求时按该 skill 的 CLEANUP 流程执行
 - **事后审计**: `scripts/doctor.sh`(关键仓库登记一致性、近期 commit 纪律审计)加上 `/agentspace-doctor`, 报告违规 — 只报告, 绝不自动改写历史
 
 ## 插件结构
@@ -155,6 +155,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.5.3 | 2026-09-12 | 文件评审驱动的 code-clean 规则硬化 — 注释必须自洽于改动后的代码(禁反馈驱动与缺失上下文, 改动前的代码属于缺失上下文); 四类分级单条拆为逐条 MUST; 过程叙述由 WARN 升 MUST; 新增 MUST 禁机器指纹(IP/主机名/用户路径)与秘密; 注释规则明确同样约束 commit 文本; SKILL description 去举例、改为必读本文 |
 | v1.5.2 | 2026-09-11 | 实测反馈的并行原语 — `new-plan.sh --claim NNNN` 为并发泳道原子占用指定 id; commit 门把注册仓库的泳道 worktree 经主检出识别为同一仓库(无需逐 worktree 登记); `parallel-workspace.sh --worktree` 按规范布局建泳道(幂等、复用保留分支); `--recv` 不再回显自己的广播; doctor [0] 在台账有脏文件时点名活跃泳道 |
 | v1.5.1 | 2026-09-11 | 门控判据修复(百轮实战反馈) — 结果门按节内容而非模板注释判断; 七个流转脚本打印里程碑提交的精确路径; commit 门拒空暂存并新增 `--commit`(提交消息与过门逐字节一致); handoff consume 先输出快照再销毁 |
 | v1.5.0 | 2026-09-10 | 基准计划 — `plan/base/` 下的不可变方向锚点(独立 base:NNNN 计数、plan 索引 Base 节、派生 plan `--base NNNN` 归属); 三个生命周期脚本 + 校验和钉定的激活冻结 + doctor [17] 不可变审计 + commit 门禁 base id; 第 13 个 skill agentspace-base-plan 持有用户审核流(草稿写好 → 结束会话 → 用户在文件上评论) |

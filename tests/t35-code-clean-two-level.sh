@@ -21,14 +21,23 @@ for s in "## The Commit Gate (MUST)" \
          "## Comment Rules" \
          "why the code is not written some other way" \
          "<type>: <summary>" \
+         "apply the Comment Rules below to commit text too" \
+         "no feedback-driven, no context-missing comments" \
+         "MUST carry no machine fingerprints or secrets" \
          "read CLEANUP.md in this skill directory"; do
   assert_contains "$EN" "$s"
 done
 for s in "## 注释规则" \
          "为什么没用另一种写法" \
+         "注释规则同样约束 commit 文本" \
+         "禁反馈驱动, 禁缺失上下文" \
+         "无机器指纹与秘密" \
          "阅读本 skill 目录内的 CLEANUP.md"; do
   assert_contains "$ZH" "$s"
 done
+# v1.5.3: process narration upgraded WARN -> MUST; the WARN framing must not survive
+assert_not_contains "$EN" "WARN process-narrative"
+assert_not_contains "$ZH" "WARN 过程叙述"
 
 # --- Level 2: procedure doc carries the workflows, never the default load ---
 CU="$CC/CLEANUP.md"; CUZ="$CC/CLEANUP.zh-CN.md"

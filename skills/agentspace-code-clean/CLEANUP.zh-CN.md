@@ -1,6 +1,6 @@
 # Code-Clean 后处理流程(主动层)
 
-agentspace-code-clean 的流程半边。SKILL.md 承担常驻规则(commit 门、commit 文本规则、注释分级、文件规则); 本文档承担对**既有**代码的清理流程。只有经 SKILL.md 的指针规则才会读到本文档 — 用户显式要求清理过去代码/注释、跑风格检查、改写 commit message 或重建历史。绝不自动触发本层; 绝不自行扩大范围。默认姿态: 先报告, 用户确认后才动手(用户明确说"直接修"可跳过报告步)。
+agentspace-code-clean 的流程半边。SKILL.md 承担常驻规则(commit 门、commit 文本规则、注释规则、文件规则); 本文档承担对**既有**代码的清理流程。只有经 SKILL.md 的指针规则才会读到本文档 — 用户显式要求清理过去代码/注释、跑风格检查、改写 commit message 或重建历史。绝不自动触发本层; 绝不自行扩大范围。默认姿态: 先报告, 用户确认后才动手(用户明确说"直接修"可跳过报告步)。
 
 ## 范围(动手前先定)
 
@@ -16,9 +16,9 @@ agentspace-code-clean 的流程半边。SKILL.md 承担常驻规则(commit 门�
 - 其他语言按扩展名的注释标记启发式扫描 — 结果只当候选清单, 逐条对照真实文件核实。
 - 无论用什么方法, 报告引用的 `文件:行号` 与文本必须来自真实文件(区间模式下: `git show <end>:<file>`), 绝不转述提取器的一面之词。
 
-## 分级(SKILL.md 四类, 应用于存量注释)
+## 分级(SKILL.md 注释 MUST, 应用于存量注释)
 
-- **① 删除 — 反馈式 "why not alternative X"。** 可识别措辞: 否定式("not a load-balancing choice"); 防御性对冲("kept as a safeguard"、"normally unreachable"); 替代方案对比("without using retain_graph=True"、"deliberately does not implement `__getattr__`"); 解释两个函数为何不共享代码的注记; 会话指令残留("do not duplicate these checks elsewhere"); 测试实例引用("we tested with the 4b config")。
+- **① 删除 — 反馈式 "why not alternative X"。** 可识别措辞: 否定式("not a load-balancing choice"); 防御性对冲("kept as a safeguard"、"normally unreachable"); 替代方案对比("without using retain_graph=True"、"deliberately does not implement `__getattr__`"); 解释两个函数为何不共享代码的注记; 改动前引用("no longer does X"、"changed from Y to Z"); 会话指令残留("do not duplicate these checks elsewhere"); 测试实例引用("we tested with the 4b config")。
 - **② 删除 — 冗余注释**: 逐字复述代码或兄弟 docstring。
 - **③ 精简 — 过长 prose** 到核心 what/why(去掉对冲与重复从句)。
 - **④ 保留/微调 — 非显然 what/why、接口契约、节分隔线、一行用途 docstring、版权头(永远保留; 只修事实错误与非局部假设)。** 长 docstring 不天然有罪: 文件格式契约、WARNING/caveat 块、带真实不变量的设计注记都留下。引用本代码具体失败模式的 "why not" 是设计注记 → 归 ④ 不归 ①。
@@ -65,5 +65,5 @@ agentspace-code-clean 的流程半边。SKILL.md 承担常驻规则(commit 门�
 - **范围(铁律)**: 仅这些文件 — 对本会话 commit 或给定区间跑 `git diff --name-only`。绝不自行扩大到仓库其余部分; 永不自动全仓扫查。
 - **全文件注释**: 范围内每个文件全量审查 — 文件里的每一条注释, 不只本轮新增行 — 连新增行门看不到的存量叙述(旧日期戳、旧来源注记)也一并抓出。
 - **多 subagent**: 把范围内文件切分给并行 subagent。每个 subagent 只读分配到的文件、只返回发现(文件:行 · 摘录 · 命中维度 · 建议方向)— 绝不编辑。发现聚合到你, 由你向用户呈现一份合并报告。
-- **维度**: 语义层对新增行执法的一切(任何拼写的记账引用、实验/run 标识、diff 形状粘贴)加上过程叙述维度(日期叙述、工具/skill 来源)— 按全文件评估, 存量注释也在内, 外加 SKILL.md 四类分级。
+- **维度**: 语义层对新增行执法的一切(任何拼写的记账引用、实验/run 标识、diff 形状粘贴)加上整条注释级 MUST(过程叙述、机器指纹、秘密)— 按全文件评估, 存量注释也在内, 外加上述 ①–④ 类。
 - **只报告**: 报告即本模式终点。修复是独立的、用户驱动的另一次 commit — 提出修复批次并等用户点头; 绝不未经要求把修复混进进行中的 commit。

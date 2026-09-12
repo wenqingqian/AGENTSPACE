@@ -409,6 +409,14 @@ log("v1.5.0", "plan.md + plan/index.md schema + plan/base/", "applied")
 edit(A, HOW_V150, aline('- **how**: `scripts/new-plan.sh "标题"'),
      "v1.5.2", "AGENTS.md plan 模块: how 行加 --claim")
 
+# --- v1.5.3: code-clean rule hardening (8b per the v1.5.3 changelog — AGENTS.md
+#     1 edit: the 代码卫生 line gains the machine-fingerprint/secret ban; old
+#     text pinned inline per the v1.5.2 lesson — the canonical asset already
+#     carries the new wording, new text live-sourced). ---
+edit(A, "- **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 commit 文本默认遵循 agentspace-code-clean 被动层规则 — 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文), 禁止 why-not-alternative 反馈残留与测试实例引用; 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动; 既有代码/历史的清理与重建仅在用户显式要求时按该 skill 的 CLEANUP 流程执行",
+        aline("- **[MUST] 代码卫生**"),
+     "v1.5.3", "AGENTS.md 纪律: 代码卫生行加机器标识/秘密禁令")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -444,6 +452,7 @@ assert_contains "$WS/AGENTS.md" "## 用户规则"                          # v1.
 assert_contains "$WS/AGENTS.md" "基准计划不可变"                         # v1.5.0: 纪律 MUST (8b)
 assert_contains "$WS/AGENTS.md" "base plan 创建/激活/取代/废弃"           # v1.5.0: milestone trigger (8b)
 assert_contains "$WS/AGENTS.md" '[--claim NNNN]'                       # v1.5.2: plan how line (8b)
+assert_contains "$WS/AGENTS.md" "禁止 IP/主机名等机器标识与秘密"          # v1.5.3: 代码卫生行 (8b)
 assert_contains "$WS/plan.md" "| ID | 计划 | 基准 | 创建日期 | 链接 |"    # v1.5.0: plan.md Todo schema
 assert_contains "$WS/plan/index.md" "| ID | 方向 | 状态 | 创建日期 | 审核日期 | 校验 | 备注 | 链接 |"  # v1.5.0: Base schema
 [ -f "$WS/plan/base/.gitkeep" ] || fail "plan/base/ missing after v1.5.0 replay"
