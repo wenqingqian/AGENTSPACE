@@ -5,8 +5,11 @@
 # each linked iteration's "相关实验" section.
 # Usage: new-exp.sh "Experiment title" [--plan NNNN[,NNNN...]] [--iteration NNNN[,NNNN...]]
 #   Enrollment is user-confirmed BEFORE this script runs (AGENTS.md exp module rule):
-#   correctness-verification runs are never auto-enrolled. The title slug contract
-#   is the same as new-plan.sh (lowercase english words, digits, single hyphens).
+#   correctness-verification runs are never auto-enrolled, and one exp = ONE GOAL
+#   holding a group of runs — follow-up rounds under the same goal append into an
+#   existing exp (reopen-exp.sh when closed), never a new registration. The title
+#   slug contract is the same as new-plan.sh (lowercase english words, digits,
+#   single hyphens).
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -117,4 +120,5 @@ done <<< "$ITER_IDS"
 
 echo "exp_$ID created → $FILE (plan: $PLAN_CELL / iteration: $ITER_CELL)"
 echo "Next: run the agentspace-better-exp alignment if not done yet, fill the manual, put configs into examples/exp_spec/exp_$ID/; launch with start-exp.sh $ID"
+echo "One exp = one goal: follow-up rounds under the same goal append into THIS exp (manual 轮次 section + configs + data) — never a new exp; if closed, reopen-exp.sh $ID first"
 as_commit_hint "exp: enroll $ID" exp.md exp/index.md "$FILE"$ITER_READMES "examples/exp_spec/exp_$ID"

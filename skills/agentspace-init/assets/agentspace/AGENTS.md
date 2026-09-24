@@ -73,10 +73,11 @@ AGENTSPACE/
   3. fallback → 在工作区找到本轮产出的结果文件, `mv` 进 `iteration_NNNN/data/`
 
 ### exp —— 实验记录 (exp.md + exp/)
-- **what**: 独立登记的实验(度量/验证/调研)。分工: plan 管"为什么/做什么", iteration 管"改代码", exp 管"测代码"; exp 可不关联 plan/iteration(纯度量/调研实验), 关联时经索引的 关联 plan / 关联 iteration 列记录(agentspace-exp 是本模块的触发器 — `/agentspace-exp` 命令 + 同名 skill, 持有登记门与生命周期; 设计对齐/报告由 better-exp 系列两个正式 skill 承担)
-- **when**: **用户显式要求走 /agentspace-exp, 或 agent 在用户提到要做实验时提议一次并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill
-- **how**: `scripts/new-exp.sh "标题" [--plan NNNN] [--iteration NNNN]` → 实验配置**必须**写入 `examples/exp_spec/exp_NNNN/`(脚本预创建) → 运行与结果**全量**落 `exp/exp_data/exp_NNNN/`(关联 iteration 的 data/ 产物复制一份至此; 该目录不入 git, 为本机权威记录) → `scripts/start-exp.sh <id>`(开跑, todo→doing; 小实验可省略) → `scripts/complete-exp.sh <id> <done|failed|abandoned> "结果" [--commit "仓库名@sha,..."]`
-- **commits 语义**: exp 记录测试用关键仓库的 commit **点**(repo@sha, 关闭时落定), 与 iteration 的 commit 窗口(起始/结束)互补; 报告与作图走 agentspace-better-exp-report skill
+- **what**: 独立登记的实验**大目标**(度量/验证/调研)。**一个 exp = 一个大目标下的一组实验轮次**, 不是一轮一个 exp: 目标登记一次, 各轮在 exp 内推进。分工: plan 管"为什么/做什么", iteration 管"改代码", exp 管"测代码"; exp 可不关联 plan/iteration(纯度量/调研实验), 关联时经索引的 关联 plan / 关联 iteration 列记录(agentspace-exp 是本模块的触发器 — `/agentspace-exp` 命令 + 同名 skill, 持有登记门与生命周期; 设计对齐/报告由 better-exp 系列两个正式 skill 承担)
+- **when**: **新的大目标才登记**: 用户显式要求走 /agentspace-exp, 或 agent 在用户提到要做实验时提议一次并经用户确认; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill。**后续轮次归并**: 同一目标下的新参数轮/补测/增量结果追加进**进行中(todo/doing)**的 exp — 手册"轮次"节按轮追加、配置入 examples/exp_spec/、数据入 exp_data/, 不新开 exp、无需再次确认(agent 报备即可); 归属不清(算后续轮次还是新目标)问用户; **已关闭 exp 的后续小更新先 `scripts/reopen-exp.sh <id> ["原因"]` 重开再归并**, 不为此新开 exp
+- **how**: `scripts/new-exp.sh "标题" [--plan NNNN] [--iteration NNNN]` → 实验配置**必须**写入 `examples/exp_spec/exp_NNNN/`(脚本预创建; 多轮建议按轮命名, 如 run1-baseline.yaml) → 运行与结果**全量**落 `exp/exp_data/exp_NNNN/`(建议按轮建子目录; 关联 iteration 的 data/ 产物复制一份至此; 该目录不入 git, 为本机权威记录) → `scripts/start-exp.sh <id>`(开跑, todo→doing; 小实验可省略) → 每一轮在手册"轮次"节追加记录(变更/配置/结果/数据) → `scripts/complete-exp.sh <id> <done|failed|abandoned> "结果" [--commit "仓库名@sha,..."]`(**目标有结论时才关闭**; 每轮结论留在"轮次"节, "结果"节写目标级最终结论)
+- **轮次记录**: 手册"轮次"节 append-only, 每轮一个三级标题(本轮问题/相对上一轮的变更(单变量)/配置/结果/数据); 目标级五轴设计对齐只在登记时做一次, 后续轮次做增量核对(改了什么、是否仍单变量); 重开经 reopen-exp.sh(done→doing, 此前结论留痕于手册"日志"节)
+- **commits 语义**: exp 记录测试用关键仓库的 commit **点**(repo@sha, 关闭时落定; 重开后再关闭时重新快照), 与 iteration 的 commit 窗口(起始/结束)互补; 报告与作图走 agentspace-better-exp-report skill
 
 ### data —— 公用数据 (data.md + data/)
 - **what**: 项目公用数据(训练集、模型权重、预处理数据等); 也可以是对其他位置的软连接
@@ -119,7 +120,7 @@ AGENTSPACE/
 规则分级: `[MUST]` 违反会造成损坏/不可逆; `[SHOULD]` 最佳实践; `[MAY]` 可选。
 
 - **[MUST] scripts-only**: plan.md / iterations.md / exp.md / plan/index.md / iterations/index.md / exp/index.md 与 .agentspace-repos **只能由 scripts/ 改写**, 禁止手工编辑
-- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建; 开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)
+- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建(**新的大目标才登记**; 同一目标的后续轮次归并进行中 exp、已关闭的先重开, 不为此新开 — 见 exp 模块节); 开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)
 - **[MUST] 基准计划不可变**: plan/base/ 下的 base plan 文件激活后严禁修改(激活时校验和已钉定, 改动即损坏, 由 doctor 报出; agent 不得自行改写或"恢复"); 发现 base plan 不可实现或有正确性错误时必须**显式告知用户**, 方向变更(新基准取代/废弃)只能由用户决定; base plan 的创建与修改必须呈交用户审核 — 草稿写好后直接结束会话, 由用户在文件上以评论形式反馈, 激活须待用户明确批准
 - **[MUST] commit 门**: 登记仓库 commit 前必过 `scripts/commit-check.sh <仓库> "<message>"`(见 关键代码仓库 节); 未登记仓库先登记后提交; 登记/出册必须用户显式确认
 - **[MUST] 并行工作区约定**: 多 plan 并行开发走 agentspace-parallel skill(PR-like 本地泳道)。固定位置 `worktrees/<plan-id>/<仓库名>/` 与锁目录 `.locks/` 在**项目根**(非 AGENTSPACE/ 内); 内嵌形态下宿主仓库必须先经 .gitignore 豁免这两个路径(锁 owner 文件含记账 id 字面量, 被 `git add -A` 扫入会触发 commit 门)。并行期台账写操作: 脚本自带锁, 内容文档写前取 `.locks/ledger/`; 永不 `git -C AGENTSPACE add -A` 一把梭(逐路径 add)
@@ -129,7 +130,7 @@ AGENTSPACE/
 - **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 commit 文本默认遵循 agentspace-code-clean 被动层规则 — 注释只描述代码意图与约束, 禁止过程叙述(写作日期、所用工具/skill、记账与会话上下文), 禁止 why-not-alternative 反馈残留与测试实例引用, 禁止 IP/主机名等机器标识与秘密(token、密钥); 违规由 commit 门语义层与 code-clean 审查报出, 修复由用户驱动; 既有代码/历史的清理与重建仅在用户显式要求时按该 skill 的 CLEANUP 流程执行
 - 内容文档(plan 文档 / iteration readme / exp 手册 / notes / utils / tests)由 agent 直接撰写, 使用 templates/ 模板
 - 相互引用一律用 id: `plan:NNNN` / `base:NNNN` / `iteration_NNNN` / `exp_NNNN`; 不用路径, 不用 latest(latest 会翻转)
-- **里程碑 git 提交**(具体触发点): plan 创建/完成 · base plan 创建/激活/取代/废弃 · iteration 创建/关闭 · exp 创建/完成 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 → `git -C AGENTSPACE add -A && commit`, 并告知用户
+- **里程碑 git 提交**(具体触发点): plan 创建/完成 · base plan 创建/激活/取代/废弃 · iteration 创建/关闭 · exp 创建/完成/重开 · 模块注册 · notes 写入 · tests.md 环境变更 · examples/data 登记 · 用户规则写入 · update 应用 → `git -C AGENTSPACE add -A && commit`, 并告知用户
 - agentspace 记账的 git 操作只在 AGENTSPACE/ 内; 代码仓库的 commit 受 commit 门约束(见 关键代码仓库 节), 代码状态用 commit sha 记录, 需要时存 diff(对宿主 HEAD)到 data/
 - 状态自检: `scripts/status.sh`; 收尾后及怀疑损坏时运行 `scripts/doctor.sh`
 - **禁止读取**: 插件开发数据(`skills/agentspace-update/versions/`、`DEVELOPMENT.md`、`marketplace.json` 等)与项目无关, 禁止在项目工作中读取或引用; 这些数据仅用于插件自身开发

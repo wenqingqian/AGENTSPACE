@@ -29,7 +29,7 @@ A **light workspace** contains only the plan module — `plan.md` + `plan/` with
     ├── plan/{index.md, todo/, done/, base/}   # base/ = immutable direction anchors
     ├── iterations.md          # Entry: in-progress + latest completed (10)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
-    ├── exp.md                 # Entry: Todo + Doing + latest completed (10) — experiments are opt-in (user-confirmed enrollment only)
+    ├── exp.md                 # Entry: Todo + Doing + latest completed (10) — one exp = one goal (opt-in enrollment; follow-up rounds fold in, closed goals reopen)
     ├── exp/{index.md, todo/, doing/, done/}   # Manual lifecycle; index links plans/iterations/commits/configs
     ├── exp/exp_data/exp_NNNN/ # Complete local-only experiment record (full logs; gitignored; linked-iteration data copied here)
     ├── data.md + data/        # Shared data (training sets / model weights / symlinks; gitignored)
@@ -68,7 +68,7 @@ Skills are the functional delivery unit — they behave identically on every sup
 | `agentspace-mode` | Explicit only | Switch workspace mode (hybrid default / standalone); manage the dependency whitelist |
 | `agentspace-handoff` | Explicit only | One-shot session handoffs — produce a context snapshot at session close, consume it (read, then delete) at the next start |
 | `agentspace-base-plan` | Situational — user asks for a base plan or a direction anchor | Base plans — immutable direction anchors in `plan/base/` (separate counter, `--base NNNN` lineage on derived plans); holds the review gate: draft written, session ends, user comments on the file; activation pins a checksum and freezes the file (doctor-audited) |
-| `agentspace-exp` | Explicit — `/agentspace-exp`; situational — one-time offer on an experiment mention | Experiment records — holds the enrollment gate (opt-in only; correctness-verification runs never enrolled) and drives the manual lifecycle; delegates design alignment to agentspace-better-exp and reports to agentspace-better-exp-report |
+| `agentspace-exp` | Explicit — `/agentspace-exp`; situational — one-time offer on an experiment mention | Experiment records — one exp = one goal holding a group of rounds: holds the enrollment gate (opt-in only, new GOALS only; correctness-verification runs never enrolled) and drives the manual lifecycle; follow-up rounds under the same goal fold into the open exp (closed goals reopen via reopen-exp.sh), never a new exp per round; delegates design alignment to agentspace-better-exp and reports to agentspace-better-exp-report |
 | `agentspace-code-clean` | Passive default — before every commit in a registered key repo; active level explicit-only | Two-level hygiene — SKILL.md carries the default rule layer (commit gate, comment MUSTs, commit-text rules; merged union of x-code-clean and x-better-commit), CLEANUP.md the explicit-only post-processing procedures (clean past code/comments over any range, rewrite commit messages, rebuild history safely) |
 | `agentspace-parallel` | Situational — when multiple plans proceed in parallel | Local PR-like parallel workspaces — one worktree lane per plan, in-lane implementation and verification, one CAS squash-merge commit back to mainline after user confirmation |
 | `agentspace-better-exp` | Situational — after the user opts into recording an experiment | Experiment-design interrogation before launch — five axes (scope, baseline/control fairness, measurement accuracy, data completeness, reproducibility/stopping), one question at a time with a recommended answer |
@@ -97,8 +97,9 @@ AGENTSPACE/scripts/new-plan.sh "baseline reproduction"
 AGENTSPACE/scripts/new-iteration.sh 1 "run training pipeline"
 AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, target met"
 AGENTSPACE/scripts/complete-plan.sh 1 done "reproduction successful"
-AGENTSPACE/scripts/new-exp.sh "latency benchmark" --plan 1 --iteration 1     # opt-in experiment records (configs → examples/exp_spec/)
+AGENTSPACE/scripts/new-exp.sh "latency benchmark" --plan 1 --iteration 1     # opt-in experiment records (configs → examples/exp_spec/); one exp = one goal — follow-up rounds append into it
 AGENTSPACE/scripts/complete-exp.sh 1 done "baseline 42ms vs optimized 31ms" --commit "myrepo@a1b2c3d"
+AGENTSPACE/scripts/reopen-exp.sh 1 "late follow-up"                       # a closed goal takes follow-up rounds by reopening, never a new exp
 AGENTSPACE/scripts/status.sh          # Status summary
 AGENTSPACE/scripts/doctor.sh          # Consistency check / repair
 ```
@@ -163,6 +164,7 @@ See `skills/agentspace-update/DEVELOPMENT.md` for the contributor guide on addin
 
 | Version | Date | What changed |
 | --- | --- | --- |
+| v1.6.1 | 2026-09-24 | exp goal grouping — one exp = one goal holding a group of experiment rounds: new GOALS only go through the enrollment gate, follow-up rounds (new parameter rounds, re-measurements, incremental results) fold into the open exp via the manual's new 轮次 section (run-prefixed configs, per-run data dirs) with no re-confirmation; closed goals reopen via the new reopen-exp.sh (done→doing, previous conclusion preserved in the manual's 日志, completion snapshot cleared); complete-exp tightens to goal-conclusion timing; as_remove_row_section fixed to match section headings literally (parenthesised names silently never matched); bilingual skills/AGENTS.md assets/README synced, t40 regression, t13/t39/gate extensions |
 | v1.6.0 | 2026-09-13 | New skill agentspace-init-light + /agentspace-init-light — plan-only light workspace (plan.md + plan/ with the base-plan lifecycle; the full scripts/templates set shared with init); module-bound scripts refuse with an expansion hint via the new lib.sh as_require_module guard; complete-plan adapts its closing hint when the notes module is absent; the update flow gains the light→full expansion contract (expand from the canonical assets before the changelog chain); release gate gains the init-light asset contract check [15] |
 | v1.5.3 | 2026-09-12 | code-clean rule hardening from file review — comments must be self-contained in the current code (feedback-driven and context-missing comments banned; the pre-change code counts as missing context); the four-way tier bullet split into individual MUSTs; process narration upgraded from WARN to MUST; a new MUST bans machine fingerprints (IPs, hostnames, user paths) and secrets; the comment rules now bind commit text explicitly; the SKILL descriptions slimmed to a must-read-this-file directive |
 | v1.5.2 | 2026-09-11 | Parallel primitives from the field test — `new-plan.sh --claim NNNN` atomically reserves a specific id for concurrent lanes; the commit gate recognizes a lane worktree of a registered repo through its main checkout (no per-worktree registration); `parallel-workspace.sh --worktree` builds the canonical lane layout (idempotent, reuses a kept branch); `--recv` no longer echoes own broadcasts; doctor [0] names active lanes when the ledger is dirty |

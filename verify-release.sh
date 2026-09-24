@@ -380,6 +380,7 @@ for pair in "skills/agentspace-update|skip to the next existing archive|跳过�
             "skills/agentspace-code-clean|MUST carry no machine fingerprints or secrets|MUST 无机器指纹与秘密" \
             "skills/agentspace-better-exp|enrollment always requires explicit user confirmation, never automatic|登记必须经用户显式确认, 绝不自动进行" \
             "skills/agentspace-exp|at most once per session|同一会话内最多提议一次" \
+            "skills/agentspace-exp|never a new exp per round|绝不一轮一个新 exp" \
             "skills/agentspace-base-plan|Immediately end the session|直接结束本会话"; do
   skill="${pair%%|*}"; rest="${pair#*|}"
   en="${rest%%|*}"; zh="${rest#*|}"

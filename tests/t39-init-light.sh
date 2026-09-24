@@ -2,7 +2,7 @@
 # t39: init-light contract (v1.6.0) — /agentspace-init-light creates a plan-only
 # workspace: exact tree (no module entry files/dirs), edition marker, light
 # architecture snapshot (modules == ["plan"]), doctor green, status renders,
-# plan + base-plan lifecycles work end to end, the seven module-bound scripts
+# plan + base-plan lifecycles work end to end, the eight module-bound scripts
 # refuse with the expansion hint before mutating anything, repos/commit-gate
 # work, re-init is refused, and the mechanical light→full expansion copy
 # converges to a doctor-green full workspace.
@@ -112,6 +112,7 @@ for cmd in "new-iteration.sh 0001 iteration body" \
            "new-exp.sh experiment" \
            "start-exp.sh 0001" \
            "complete-exp.sh 0001 done ok" \
+           "reopen-exp.sh 0001 reason" \
            "register-module.sh viz visuals" \
            "handoff.sh --list"; do
   set +e

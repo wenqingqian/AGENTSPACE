@@ -417,6 +417,29 @@ edit(A, "- **[MUST] 代码卫生**: 登记仓库内写入的代码、注释与 c
         aline("- **[MUST] 代码卫生**"),
      "v1.5.3", "AGENTS.md 纪律: 代码卫生行加机器标识/秘密禁令")
 
+# --- v1.6.1: exp goal grouping (8b per the v1.6.1 changelog — AGENTS.md exp
+#     section full replacement + 创建前确认 line + milestone line; old section
+#     pinned inline per the v1.5.2 lesson, new text live-sourced from the
+#     canonical asset). v1.6.0 had no full-workspace text ops (light-only). ---
+EXP_OLD_V161 = (
+    "### exp —— 实验记录 (exp.md + exp/)\n"
+    "- **what**: 独立登记的实验(度量/验证/调研)。分工: plan 管\"为什么/做什么\", iteration 管\"改代码\", exp 管\"测代码\"; exp 可不关联 plan/iteration(纯度量/调研实验), 关联时经索引的 关联 plan / 关联 iteration 列记录(agentspace-exp 是本模块的触发器 — `/agentspace-exp` 命令 + 同名 skill, 持有登记门与生命周期; 设计对齐/报告由 better-exp 系列两个正式 skill 承担)\n"
+    "- **when**: **用户显式要求走 /agentspace-exp, 或 agent 在用户提到要做实验时提议一次并经用户确认**; 开发收尾的正确性验证等常规实验默认不登记(除非用户确认); 登记前的设计对齐走 agentspace-better-exp skill\n"
+    "- **how**: `scripts/new-exp.sh \"标题\" [--plan NNNN] [--iteration NNNN]` → 实验配置**必须**写入 `examples/exp_spec/exp_NNNN/`(脚本预创建) → 运行与结果**全量**落 `exp/exp_data/exp_NNNN/`(关联 iteration 的 data/ 产物复制一份至此; 该目录不入 git, 为本机权威记录) → `scripts/start-exp.sh <id>`(开跑, todo→doing; 小实验可省略) → `scripts/complete-exp.sh <id> <done|failed|abandoned> \"结果\" [--commit \"仓库名@sha,...\"]`\n"
+    "- **commits 语义**: exp 记录测试用关键仓库的 commit **点**(repo@sha, 关闭时落定), 与 iteration 的 commit 窗口(起始/结束)互补; 报告与作图走 agentspace-better-exp-report skill"
+)
+NEW_EXP_V161 = re.search(r"### exp —— 实验记录.*?(?=\n### data )",
+                         open(f"{ASSET}/AGENTS.md", encoding="utf-8").read(), re.S).group(0).rstrip("\n")
+edit(A, EXP_OLD_V161, NEW_EXP_V161, "v1.6.1", "AGENTS.md 模块节: exp 目标粒度整节替换")
+CREATE_OLD_V161 = ("- **[MUST] 创建前确认**: plan / iteration 创建前必须经用户明确确认; 简单改动不建 plan/iteration。"
+                   "exp 只在用户显式要求走 /agentspace-exp、或 agent 提议并经用户确认后创建; "
+                   "开发收尾的正确性验证等常规实验默认不建 exp(agent 最多提议一次, 用户未确认不登记)")
+CREATE_NEW_V161 = [l for l in open(f"{ASSET}/AGENTS.md", encoding="utf-8").read().splitlines()
+                   if l.startswith("- **[MUST] 创建前确认**")][0]
+edit(A, CREATE_OLD_V161, CREATE_NEW_V161, "v1.6.1", "AGENTS.md 纪律: 创建前确认行目标粒度")
+edit(A, "exp 创建/完成 · 模块注册", "exp 创建/完成/重开 · 模块注册",
+     "v1.6.1", "AGENTS.md 里程碑行: exp 重开触发点")
+
 # ---------- STEP 8c: version markers ----------
 r = subprocess.run(f"cd {WS} && bash {REPO}/skills/agentspace-update/scripts/update-version.sh {CUR}",
                    shell=True, capture_output=True, text=True)
@@ -453,6 +476,11 @@ assert_contains "$WS/AGENTS.md" "基准计划不可变"                         
 assert_contains "$WS/AGENTS.md" "base plan 创建/激活/取代/废弃"           # v1.5.0: milestone trigger (8b)
 assert_contains "$WS/AGENTS.md" '[--claim NNNN]'                       # v1.5.2: plan how line (8b)
 assert_contains "$WS/AGENTS.md" "禁止 IP/主机名等机器标识与秘密"          # v1.5.3: 代码卫生行 (8b)
+assert_contains "$WS/AGENTS.md" "一个 exp = 一个大目标下的一组实验轮次"      # v1.6.1: exp 目标粒度 (8b)
+assert_contains "$WS/AGENTS.md" "后续轮次归并"                             # v1.6.1: exp when 行 (8b)
+assert_contains "$WS/AGENTS.md" "exp 创建/完成/重开"                        # v1.6.1: 里程碑行 (8b)
+[ -f "$WS/scripts/reopen-exp.sh" ] || fail "v1.6.1 reopen-exp.sh missing after 8a"
+assert_contains "$WS/templates/exp-manual.md" "## 轮次"                    # v1.6.1: 模板轮次节 (8a)
 assert_contains "$WS/plan.md" "| ID | 计划 | 基准 | 创建日期 | 链接 |"    # v1.5.0: plan.md Todo schema
 assert_contains "$WS/plan/index.md" "| ID | 方向 | 状态 | 创建日期 | 审核日期 | 校验 | 备注 | 链接 |"  # v1.5.0: Base schema
 [ -f "$WS/plan/base/.gitkeep" ] || fail "plan/base/ missing after v1.5.0 replay"

@@ -81,7 +81,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "结果一句�
 
 ### 跑实验 → agentspace-exp skill(仅限主动登记)
 
-**实验登记 (MUST)**: exp 记录一律经 agentspace-exp skill —— 由显式 `/agentspace-exp` 命令触发, 或用户接受其在实验意向时的一次性提议后触发; 开发收尾的正确性验证绝不登记。设计对齐与报告分别委托 agentspace-better-exp / agentspace-better-exp-report skill。
+**实验登记 (MUST)**: exp 记录一律经 agentspace-exp skill —— 由显式 `/agentspace-exp` 命令触发, 或用户接受其在实验意向时的一次性提议后触发; 开发收尾的正确性验证绝不登记。一个 exp = 一个大目标(其下容纳一组轮次): 同一目标的后续轮次归并进行中 exp(绝不一轮一个新 exp; 已关闭的经 reopen-exp.sh 重开)。设计对齐与报告分别委托 agentspace-better-exp / agentspace-better-exp-report skill。
 
 ### 历史检索(结果定位 / 哪个 plan 动过文件 Y)
 - 小范围: `grep -rn <关键词> plan iterations notes`(排除 `data/`)

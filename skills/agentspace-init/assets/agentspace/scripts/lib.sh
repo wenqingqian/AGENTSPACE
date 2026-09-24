@@ -833,14 +833,21 @@ as_remove_row() {
 # Delete table rows whose first column equals id, bounded to one "## SECTION".
 # Rows outside the section are never touched — the same id may legitimately
 # appear in several sections (e.g. a plan id in Todo and in Done).
+# The heading is matched LITERALLY (regex metachars escaped): a section name
+# like `最近完成 (10 条)` would otherwise be compiled as grouping parens and
+# silently never match, leaving the row in place.
 # Usage: as_remove_row_section <file> <section> <id>
 as_remove_row_section() {
   local file="$1" tmp id
   id="$(as_row_key "$3")"
   tmp="$(mktemp "$AS_TMPDIR/tmp.XXXXXXXX")"
-  awk -v sec="## $2" -v id="$id" '
-    BEGIN { pat="^ *\\| *" id " *\\|" }
-    $0 ~ ("^" sec "[[:space:]]*$") { in_sec=1; print; next }
+  SEC_ESC="$2" awk -v id="$id" '
+    BEGIN {
+      pat="^ *\\| *" id " *\\|"
+      sec="## " ENVIRON["SEC_ESC"]
+      esec=sec; gsub(/[][\\.^$*+?(){}|]/, "\\\\&", esec)
+    }
+    $0 ~ ("^" esec "[[:space:]]*$") { in_sec=1; print; next }
     /^## / { in_sec=0 }
     in_sec && $0 ~ pat { next }
     { print }

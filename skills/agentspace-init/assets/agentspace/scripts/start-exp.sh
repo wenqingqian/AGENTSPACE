@@ -52,4 +52,5 @@ as_replace_line "$AS_ROOT/$DEST" "$STATUS_TODO" "$STATUS_EXP_DOING"
 
 echo "exp_$ID → doing ($DEST)"
 echo "Next: full logs/results into exp/exp_data/exp_$ID/ (copy iteration data/ there too when the exp is linked); close with complete-exp.sh $ID <done|failed|abandoned> \"result\""
+echo "Follow-up rounds under the same goal append into this exp (manual 轮次 section + configs + data) — no new exp per round"
 as_commit_hint "exp: launch $ID" exp.md exp/index.md exp/todo "$DEST"

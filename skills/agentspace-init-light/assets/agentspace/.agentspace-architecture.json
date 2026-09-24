@@ -1,5 +1,5 @@
 {
-  "version": "1.6.0",
+  "version": "1.6.1",
   "files": {
     "AGENTS.md": {
       "type": "content",
@@ -130,6 +130,7 @@
         "实验问题与范围",
         "假设与预期",
         "方案与配置",
+        "轮次",
         "关联",
         "结果",
         "data 产物清单",
@@ -200,6 +201,10 @@
       "managedBy": "plugin"
     },
     "scripts/register-module.sh": {
+      "type": "script",
+      "managedBy": "plugin"
+    },
+    "scripts/reopen-exp.sh": {
       "type": "script",
       "managedBy": "plugin"
     },

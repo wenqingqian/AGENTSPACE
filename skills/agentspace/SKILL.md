@@ -81,7 +81,7 @@ AGENTSPACE/scripts/complete-plan.sh <id> <done|failed|abandoned> "One-line resul
 
 ### Run an Experiment → agentspace-exp skill (opt-in only)
 
-**Experiment enrollment (MUST)**: exp records go through the agentspace-exp skill — triggered by the explicit `/agentspace-exp` command, or when the user accepts its one-time offer made on an experiment mention; correctness-verification runs are never enrolled. Design alignment and reporting delegate to the agentspace-better-exp / agentspace-better-exp-report skills.
+**Experiment enrollment (MUST)**: exp records go through the agentspace-exp skill — triggered by the explicit `/agentspace-exp` command, or when the user accepts its one-time offer made on an experiment mention; correctness-verification runs are never enrolled. One exp = one goal holding a group of rounds: follow-up rounds under the same goal fold into the open exp (never a new exp per round; a closed goal reopens via reopen-exp.sh). Design alignment and reporting delegate to the agentspace-better-exp / agentspace-better-exp-report skills.
 
 ### Historical Search (results / which plan touched file Y)
 - Small scope: `grep -rn <keyword> plan iterations notes` (exclude `data/`)

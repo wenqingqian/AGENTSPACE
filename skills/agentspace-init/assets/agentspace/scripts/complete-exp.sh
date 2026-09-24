@@ -5,7 +5,10 @@
 # Usage: complete-exp.sh <id> <done|failed|abandoned> "result" [--commit "repo@sha[,repo@sha...]"]
 #   A manual still in exp/todo/ is accepted (small experiments may skip the
 #   start ceremony). --commit records the tested key-repo commit POINTS
-# (repo@sha, complementary to an iteration's commit window).
+# (repo@sha, complementary to an iteration's commit window). Close only when
+# the GOAL is concluded (one exp = one goal holding a group of runs; per-round
+# conclusions live in the manual's 轮次 section) — a late follow-up reopens
+# via reopen-exp.sh instead of registering a new exp.
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 
@@ -141,5 +144,6 @@ else
 fi
 
 echo "exp_$ID → $STATUS_CN ($DEST)"
+echo "Close only when the GOAL is concluded — per-round conclusions live in the manual's 轮次 section; a late follow-up under the same goal reopens with reopen-exp.sh $ID (no new exp)"
 echo "Next [SHOULD]: reports/figures follow the agentspace-better-exp-report skill; transferable conclusions go to notes with source exp_$ID"
 as_commit_hint "exp: complete $ID" exp.md exp/index.md exp/todo exp/doing "$DEST"

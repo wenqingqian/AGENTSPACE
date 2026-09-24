@@ -27,7 +27,7 @@
     ├── plan/{index.md, todo/, done/, base/}   # base/ = 不可变方向锚点
     ├── iterations.md          # 入口: 进行中 + 最近完成(10条)
     ├── iterations/{index.md, latest→, iteration_NNNN/{readme.md, data/}}
-    ├── exp.md                 # 入口: Todo + Doing + 最近完成(10条) — 实验仅限主动登记(用户确认后才入册)
+    ├── exp.md                 # 入口: Todo + Doing + 最近完成(10条) — 一个 exp = 一个大目标(主动登记; 后续轮次归并, 已关闭的可重开)
     ├── exp/{index.md, todo/, doing/, done/}   # 实验手册生命周期; 索引关联 plan/iteration/commit 点/配置
     ├── exp/exp_data/exp_NNNN/ # 完整实验记录(全量日志; 本机保存, gitignore; 关联 iteration 的 data/ 复制至此)
     ├── data.md + data/        # 公用数据(训练集/模型权重/软连接; 全部 gitignore)
@@ -66,7 +66,7 @@ Skill 是功能交付单元 — 在所有受支持平台上行为一致。标注
 | `agentspace-mode` | 仅显式 | 工作区模式切换(默认 hybrid / standalone); 管理依赖白名单 |
 | `agentspace-handoff` | 仅显式 | 一次性会话交接 — 收尾时 produce 上下文快照, 下次会话 consume(读后即删) |
 | `agentspace-base-plan` | 场景 — 用户要求建基准计划/锚定方向 | 基准计划 — `plan/base/` 下的不可变方向锚点(独立计数, 派生 plan `--base NNNN` 关联); 持有审核门: 草稿写好后结束会话, 用户在文件上评论; 激活钉定校验并冻结文件(doctor 审计) |
-| `agentspace-exp` | 显式 — `/agentspace-exp`; 场景 — 实验意向时的一次性提议 | 实验记录 — 持有登记门(仅限主动; 开发收尾的正确性验证绝不登记)并驱动手册生命周期; 设计对齐委托 agentspace-better-exp, 报告委托 agentspace-better-exp-report |
+| `agentspace-exp` | 显式 — `/agentspace-exp`; 场景 — 实验意向时的一次性提议 | 实验记录 — 一个 exp = 一个大目标(其下容纳一组轮次): 持有登记门(仅限主动、仅限新目标; 开发收尾的正确性验证绝不登记)并驱动手册生命周期; 同一目标的后续轮次归并进行中 exp(已关闭的经 reopen-exp.sh 重开), 绝不一轮一个新 exp; 设计对齐委托 agentspace-better-exp, 报告委托 agentspace-better-exp-report |
 | `agentspace-code-clean` | 被动默认 — 登记仓库每次 commit 前; 主动层仅显式 | 两级卫生 — SKILL.md 为默认规则层(commit 门、注释 MUST、commit 文本规则; 融合 x-code-clean 与 x-better-commit 并集), CLEANUP.md 为仅显式的后处理流程(任意范围清理既有代码/注释、改写 commit、安全重建历史) |
 | `agentspace-parallel` | 场景触发 — 多 plan 并行推进时 | 本地 PR-like 并行工作区 — 每个 plan 一条泳道, 泳道内实施与验证, 用户确认后 CAS squash 合回主线恰好一个 commit |
 | `agentspace-better-exp` | 场景触发 — 用户选择登记实验之后 | 开跑前的实验设计讯问 — 五轴(范围、基线与对照公平、测量准确、数据完整、可复现与终止), 每次一问并附推荐答案 |
@@ -95,8 +95,9 @@ AGENTSPACE/scripts/new-plan.sh "baseline reproduction"
 AGENTSPACE/scripts/new-iteration.sh 1 "跑通训练 pipeline"
 AGENTSPACE/scripts/close-iteration.sh 1 "acc=0.91, 达标"
 AGENTSPACE/scripts/complete-plan.sh 1 done "复现成功"
-AGENTSPACE/scripts/new-exp.sh "latency benchmark" --plan 1 --iteration 1     # 主动登记的实验记录(配置 → examples/exp_spec/)
+AGENTSPACE/scripts/new-exp.sh "latency benchmark" --plan 1 --iteration 1     # 主动登记的实验记录(配置 → examples/exp_spec/); 一个 exp = 一个大目标, 后续轮次归并进它
 AGENTSPACE/scripts/complete-exp.sh 1 done "baseline 42ms vs 优化后 31ms" --commit "myrepo@a1b2c3d"
+AGENTSPACE/scripts/reopen-exp.sh 1 "late follow-up"                       # 已关闭的目标经重开接纳后续轮次, 不为此新开 exp
 AGENTSPACE/scripts/status.sh      # 状态摘要
 AGENTSPACE/scripts/doctor.sh      # 一致性检查/修复
 ```
@@ -161,6 +162,7 @@ tests/  self-test.sh  verify-release.sh  rehearse-update.sh  new-version.sh  pus
 
 | 版本 | 日期 | 更新内容 |
 | --- | --- | --- |
+| v1.6.1 | 2026-09-24 | exp 目标分组 — 一个 exp = 一个大目标下的一组实验轮次: 只有大目标走登记门, 后续轮次(新参数轮/补测/增量结果)经手册新增的"轮次"节归并进行中 exp(配置按轮命名、数据按轮建目录), 无需再次确认; 已关闭 exp 经新增 reopen-exp.sh 重开(done→doing, 此前结论留痕"日志"节, 完成快照清空); complete-exp 收紧为目标有结论时才关闭; 修复 as_remove_row_section 对含括号节名静默不匹配; 双语 skill/资产 AGENTS.md/README 同步, 新增 t40 回归, t13/t39/发布门扩展 |
 | v1.6.0 | 2026-09-13 | 新增 skill agentspace-init-light + 命令 /agentspace-init-light — 仅 plan 模块的轻量工作区(plan.md + plan/ 含基准计划生命周期; scripts/templates 整套与 init 同源共享); 模块流转脚本经新的 lib.sh as_require_module 守卫拒绝并提示扩展路径; complete-plan 在 notes 模块缺席时适配收尾提示; update 流新增 light→full 扩展契约(走 changelog 链前先从规范资产扩展); 发布门新增 [15] init-light 资产契约检查 |
 | v1.5.3 | 2026-09-12 | 文件评审驱动的 code-clean 规则硬化 — 注释必须自洽于改动后的代码(禁反馈驱动与缺失上下文, 改动前的代码属于缺失上下文); 四类分级单条拆为逐条 MUST; 过程叙述由 WARN 升 MUST; 新增 MUST 禁机器指纹(IP/主机名/用户路径)与秘密; 注释规则明确同样约束 commit 文本; SKILL description 去举例、改为必读本文 |
 | v1.5.2 | 2026-09-11 | 实测反馈的并行原语 — `new-plan.sh --claim NNNN` 为并发泳道原子占用指定 id; commit 门把注册仓库的泳道 worktree 经主检出识别为同一仓库(无需逐 worktree 登记); `parallel-workspace.sh --worktree` 按规范布局建泳道(幂等、复用保留分支); `--recv` 不再回显自己的广播; doctor [0] 在台账有脏文件时点名活跃泳道 |
